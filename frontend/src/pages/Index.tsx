@@ -189,7 +189,7 @@ const Index = () => {
         </div>
 
         {/* Top Artists Section */}
-        <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/20 p-6 flex flex-col">
+        <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/20 p-6 flex flex-col h-full">
           {/* Background glow */}
           <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
 
