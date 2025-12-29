@@ -79,7 +79,7 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
         </div>
 
         {/* Artist name with marquee */}
-        <div ref={nameContainerRef} className="flex-1 min-w-0 overflow-hidden">
+        <div ref={nameContainerRef} className="flex-1 min-w-0 overflow-hidden space-y-0.5">
           <h3
             ref={nameRef}
             className={`font-semibold text-foreground whitespace-nowrap group-hover:text-primary ${nameNeedsMarquee ? 'animate-marquee' : ''}`}
@@ -90,6 +90,7 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
           >
             {name}
           </h3>
+          <p className="text-sm text-muted-foreground">Artysta</p>
         </div>
       </div>
     </div>
