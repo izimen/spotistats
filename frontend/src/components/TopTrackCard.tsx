@@ -63,7 +63,7 @@ const TopTrackCard = React.memo(({ rank, title, artist, image, duration, delay =
         border border-border/50 hover:border-primary/40
         hover:scale-[1.01]
         opacity-0 animate-slide-up
-        h-[76px]
+        h-[64px]
       `}
       style={{
         animationDelay: `${delay}ms`,

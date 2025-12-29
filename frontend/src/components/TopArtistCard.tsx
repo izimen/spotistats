@@ -37,20 +37,20 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
         border border-border/50 hover:border-primary/40
         hover:scale-[1.01]
         opacity-0 animate-slide-up
-        h-[76px]
+        h-[64px]
       `}
       style={{
         animationDelay: `${delay}ms`,
         contain: 'layout style paint'
       }}
     >
-      <div className="relative flex items-center gap-4 min-h-[52px]">
+      <div className="relative flex items-center gap-4">
         {/* Rank number */}
         <div className={`
-          w-8 flex-shrink-0 text-center
+          w-6 flex-shrink-0 text-center
           ${isTop3
-            ? 'text-3xl font-black bg-gradient-to-b from-primary to-primary/60 bg-clip-text text-transparent'
-            : 'text-2xl font-bold text-muted-foreground/40'
+            ? 'text-2xl font-black bg-gradient-to-b from-primary to-primary/60 bg-clip-text text-transparent'
+            : 'text-xl font-bold text-muted-foreground/40'
           }
         `}>
           {rank}
@@ -59,9 +59,9 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
         {/* Artist image */}
         <div className="relative flex-shrink-0">
           <div className={`
-            w-14 h-14 rounded-full overflow-hidden
-            ring-2 group-hover:ring-primary/70
-            ${isTop3 ? 'ring-primary/50' : 'ring-border'}
+            w-12 h-12 rounded-lg overflow-hidden
+            ring-1 group-hover:ring-primary/70
+            ${isTop3 ? 'ring-primary/40' : 'ring-border'}
           `}>
             <img
               src={image}
@@ -72,9 +72,9 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
           </div>
 
           {/* Play button overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-background/70 rounded-full opacity-0 group-hover:opacity-100">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
-              <Play className="w-4 h-4 text-primary-foreground fill-primary-foreground ml-0.5" />
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 rounded-lg opacity-0 group-hover:opacity-100">
+            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-lg">
+              <Play className="w-3.5 h-3.5 text-primary-foreground fill-primary-foreground ml-0.5" />
             </div>
           </div>
         </div>
