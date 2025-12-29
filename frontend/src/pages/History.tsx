@@ -208,27 +208,6 @@ const History = () => {
         listeningMode={listeningMode}
       />
 
-      {/* Insight Banner - ulubieniec dnia */}
-      {mostLooped && mostLooped.count >= 2 && (
-        <section className="mb-8 opacity-0 animate-fade-in" style={{ animationDelay: '350ms' }}>
-          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-card to-card p-5">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-            <div className="relative flex items-center gap-4">
-              <img
-                src={mostLooped.image}
-                alt={mostLooped.title}
-                className="w-16 h-16 rounded-xl object-cover ring-2 ring-primary/30"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-primary font-medium uppercase tracking-wider mb-1">🔁 Ulubieniec dnia</p>
-                <h4 className="text-lg font-bold text-foreground truncate">{mostLooped.title}</h4>
-                <p className="text-sm text-muted-foreground truncate">{mostLooped.artist} · {mostLooped.count}x na repeat</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* 🔮 Prediction + 🎲 Roulette Row */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
         {/* Prediction */}
