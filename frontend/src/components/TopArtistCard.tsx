@@ -43,7 +43,7 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
         contain: 'layout style paint'
       }}
     >
-      <div className="relative flex items-center gap-4">
+      <div className="relative flex items-center gap-4 min-h-[52px]">
         {/* Rank number */}
         <div className={`
           w-8 flex-shrink-0 text-center
