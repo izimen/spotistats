@@ -1,0 +1,40 @@
+{
+  "name": "spotistats-backend",
+  "version": "1.0.0",
+  "description": "MySpotifyStats Backend - Spotify statistics API",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.7.7",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.8.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
+    "rate-limit-redis": "^4.3.1",
+    "spotify-web-api-node": "^5.0.2",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "prisma": "^5.22.0",
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

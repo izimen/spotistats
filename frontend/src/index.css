@@ -1,0 +1,205 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+/* ========================================
+   BALANCED PERFORMANCE FIX
+   Optimizes transitions without breaking animations
+   ======================================== */
+
+/* Optimize transitions - only animate cheap properties */
+* {
+  transition-property: transform, opacity, background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* Reduce blur intensity for performance (not disable completely) */
+.blur-3xl {
+  --tw-blur: blur(32px) !important;
+}
+
+.blur-2xl {
+  --tw-blur: blur(24px) !important;
+}
+
+/* ======================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SpotiStats Design System - Green Theme */
+
+@layer base {
+  :root {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 141 73% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 141 73% 52%;
+
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 141 50% 20%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 18%;
+    --ring: 141 73% 42%;
+
+    --radius: 0.75rem;
+
+    /* Custom SpotiStats tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(141 73% 42%), hsl(141 73% 32%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 12%), hsl(0 0% 8%));
+    --gradient-glow: radial-gradient(circle, hsl(141 73% 42% / 0.3), transparent 70%);
+    --shadow-glow: 0 0 40px hsl(141 73% 42% / 0.25);
+    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 141 73% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 141 73% 42%;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 141 73% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 141 73% 52%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 141 50% 20%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 18%;
+    --ring: 141 73% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-foreground;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px hsl(141 73% 42% / 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 40px hsl(141 73% 42% / 0.5);
+  }
+}
+
+@keyframes pulse-circle {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+/* Bounce marquee animation - scrolls to show full text then bounces back */
+@keyframes marquee-bounce {
+
+  0%,
+  10% {
+    transform: translateX(0);
+  }
+
+  45%,
+  55% {
+    /* Move left so end of text aligns with right edge of container */
+    transform: translateX(var(--marquee-distance, -50%));
+  }
+
+  90%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee {
+  animation: marquee-bounce 6s ease-in-out infinite;
+  animation-play-state: running;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}

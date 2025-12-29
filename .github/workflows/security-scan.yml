@@ -1,0 +1,41 @@
+name: Security Scan
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * *' # Daily midnight scan
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js (Backend)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Audit Backend Dependencies
+        working-directory: ./backend
+        run: |
+          npm audit --audit-level=high
+
+      - name: Setup Node.js (Frontend)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Audit Frontend Dependencies
+        working-directory: ./frontend
+        run: |
+          npm audit --audit-level=high

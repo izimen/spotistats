@@ -1,0 +1,159 @@
+# 🎵 SpotiStats
+
+> Your personal Spotify listening analytics dashboard — track your music habits, discover trends, and explore your taste in music.
+
+![Spotify Stats](https://img.shields.io/badge/Spotify-Statistics-1DB954?style=for-the-badge&logo=spotify&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
+
+## ✨ Features
+
+- 🎤 **Top Artists & Tracks** — See your most played artists and songs across different time ranges
+- 📊 **Listening Statistics** — Detailed analytics with charts and insights
+- 🕐 **Listening History** — Extended history beyond Spotify's 50-track limit
+- 📥 **GDPR Data Import** — Import your full streaming history from Spotify's data export
+- 🔮 **AI Insights** — Mood analysis, listening patterns, and music DNA
+- 👤 **Profile Overview** — Your Spotify profile with personalized stats
+- 🌙 **Dark Mode** — Beautiful Spotify-inspired dark theme
+
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | React 18, TypeScript, Vite, TailwindCSS, Recharts |
+| **Backend** | Node.js, Express, Prisma ORM |
+| **Database** | PostgreSQL (Supabase compatible) |
+| **Auth** | OAuth 2.0 + PKCE, JWT in HttpOnly Cookies |
+| **Security** | Helmet, Rate Limiting, AES-256-GCM token encryption |
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (or [Supabase](https://supabase.com) free tier)
+- [Spotify Developer App](https://developer.spotify.com/dashboard)
+
+### 1. Clone & Setup
+
+```bash
+git clone https://github.com/izimen/spotistats.git
+cd spotistats
+```
+
+### 2. Spotify Developer Setup
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Create a new application
+3. Add Redirect URI: `http://localhost:5000/auth/callback`
+4. Copy your **Client ID** and **Client Secret**
+
+### 3. Backend Configuration
+
+```bash
+cd backend
+
+# Install dependencies
+npm install
+
+# Create environment file
+cp .env.example .env
+```
+
+Edit `.env` with your credentials:
+```env
+DATABASE_URL="postgresql://..."
+SPOTIFY_CLIENT_ID=your_client_id
+SPOTIFY_CLIENT_SECRET=your_client_secret
+JWT_SECRET=your_random_32_char_secret
+```
+
+```bash
+# Setup database
+npx prisma generate
+npx prisma migrate dev
+
+# Start server
+npm run dev
+```
+
+### 4. Frontend Configuration
+
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+
+### 5. Open the App
+
+Visit `http://localhost:5173` and login with Spotify! 🎉
+
+## 📁 Project Structure
+
+```
+my-spotify-stats/
+├── backend/
+│   ├── src/
+│   │   ├── controllers/    # Route handlers
+│   │   ├── services/       # Business logic
+│   │   ├── middleware/     # Auth, rate limiting
+│   │   └── routes/         # API endpoints
+│   └── prisma/             # Database schema
+│
+└── frontend/
+    └── src/
+        ├── pages/          # Main views
+        ├── components/     # Reusable UI
+        └── api/            # API client
+```
+
+## 🔐 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/auth/login` | Initiate Spotify OAuth |
+| `GET` | `/auth/callback` | OAuth callback handler |
+| `GET` | `/auth/me` | Get current user |
+| `POST` | `/auth/logout` | End session |
+| `GET` | `/api/spotify/top/*` | Top artists/tracks |
+| `GET` | `/api/spotify/history` | Listening history |
+| `POST` | `/api/import/upload` | Import GDPR data |
+
+## 🔒 Security
+
+- **Tokens**: Access tokens in JWT cookies, refresh tokens AES-256 encrypted in DB
+- **PKCE**: Stateless OAuth implementation with signed JWT state
+- **Rate Limiting**: 100 req/15min general, 5 req/15min for auth endpoints
+- **Cookies**: HttpOnly, Secure (production), SameSite=Strict
+
+> 🛡️ **See also:**
+> - [Security Policy](./SECURITY.md)
+> - [Secrets Management](./docs/SECRETS_MANAGEMENT.md)
+> - [Incident Response](./docs/INCIDENT_RESPONSE.md)
+
+## 🧪 Testing
+
+```bash
+cd backend
+npm test
+npm run test:watch  # Watch mode
+```
+
+## 🚢 Deployment
+
+See [GCP_DEPLOYMENT.md](./GCP_DEPLOYMENT.md) for Google Cloud Platform deployment guide with:
+- Cloud Run (backend)
+- Cloud Build (CI/CD)
+- Secret Manager
+
+## 📄 License
+
+MIT
+
+---
+
+<p align="center">
+  Built with 💚 using the <a href="https://developer.spotify.com/documentation/web-api">Spotify Web API</a>
+</p>
