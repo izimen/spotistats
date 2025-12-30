@@ -308,7 +308,37 @@ async function logout(req, res, next) {
  * Returns the current authenticated user
  */
 async function me(req, res) {
-    const user = req.user;
+    let user = req.user;
+
+    // Self-healing: Update product/subscription if missing (e.g. already logged in during update)
+    if (!user.product) {
+        try {
+            // Check if we have a valid access token from middleware (attached by protect)
+            const spotifyToken = req.spotifyAccessToken;
+            const expiry = req.spotifyTokenExpiry ? new Date(req.spotifyTokenExpiry).getTime() : 0;
+
+            // Only try if token is valid (don't block response on failure)
+            if (spotifyToken && expiry > Date.now()) {
+                console.log('[Auth] Missing product field, attempting to fetch from Spotify...');
+                const profile = await spotifyService.getUserProfile(spotifyToken);
+
+                if (profile.product) {
+                    // Update DB with fresh info
+                    user = await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            product: profile.product,
+                            country: profile.country
+                        }
+                    });
+                    console.log(`[Auth] Self-healed profile data for user ${user.id}: ${user.product}`);
+                }
+            }
+        } catch (err) {
+            console.warn('[Auth] Failed to auto-update profile (non-critical):', err.message);
+            // Continue with existing user data
+        }
+    }
 
     res.json({
         user: {

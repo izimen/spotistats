@@ -72,12 +72,7 @@ const Profile = () => {
               </p>
 
               <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase ${user?.product === 'premium'
-                  ? 'bg-primary/20 text-primary border border-primary/20'
-                  : 'bg-secondary text-muted-foreground'
-                  }`}>
-                  {user?.product === 'premium' ? 'Premium Plan' : 'Free Plan'}
-                </span>
+
                 <span className="px-3 py-1 rounded-full bg-background/50 border border-border text-xs text-muted-foreground flex items-center gap-2">
                   <Fingerprint className="w-3 h-3" />
                   ID: {user?.spotifyId || 'N/A'}
