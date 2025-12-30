@@ -146,7 +146,8 @@ async function getUserProfile(accessToken) {
             email: response.body.email,
             displayName: response.body.display_name,
             avatarUrl: response.body.images?.[0]?.url || null,
-            country: response.body.country
+            country: response.body.country,
+            product: response.body.product
         };
     });
 }

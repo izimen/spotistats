@@ -1,4 +1,4 @@
-import { Music, BarChart3, User, Menu, Settings } from "lucide-react";
+import { Music, BarChart3, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -41,11 +41,10 @@ const Header = () => {
                   <Link
                     key={item.label}
                     to={item.href}
-                    className={`relative px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                    }`}
+                    className={`relative px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${isActive
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      }`}
                   >
                     {item.label}
                   </Link>
@@ -60,31 +59,18 @@ const Header = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`hidden md:flex hover:bg-primary/10 hover:text-primary ${
-                  location.pathname === '/statistics' ? 'bg-primary/10 text-primary' : ''
-                }`}
+                className={`hidden md:flex hover:bg-primary/10 hover:text-primary ${location.pathname === '/statistics' ? 'bg-primary/10 text-primary' : ''
+                  }`}
               >
                 <BarChart3 className="w-5 h-5" />
-              </Button>
-            </Link>
-            <Link to="/settings">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`hidden md:flex hover:bg-primary/10 hover:text-primary ${
-                  location.pathname === '/settings' ? 'bg-primary/10 text-primary' : ''
-                }`}
-              >
-                <Settings className="w-5 h-5" />
               </Button>
             </Link>
             <Link to="/profile">
               <Button
                 variant="outline"
                 size="icon"
-                className={`rounded-full border-border/50 hover:border-primary/50 hover:bg-primary/10 ${
-                  location.pathname === '/profile' ? 'border-primary/50 bg-primary/10 text-primary' : ''
-                }`}
+                className={`rounded-full border-border/50 hover:border-primary/50 hover:bg-primary/10 ${location.pathname === '/profile' ? 'border-primary/50 bg-primary/10 text-primary' : ''
+                  }`}
               >
                 <User className="w-5 h-5" />
               </Button>
@@ -113,11 +99,10 @@ const Header = () => {
                     key={item.label}
                     to={item.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                      isActive
-                        ? "bg-primary/10 text-primary border-l-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                    }`}
+                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive
+                      ? "bg-primary/10 text-primary border-l-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      }`}
                   >
                     {item.label}
                   </Link>

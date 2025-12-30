@@ -18,6 +18,7 @@ model User {
   displayName  String?
   avatarUrl    String?
   country      String?
+  product      String?
 
   // Token management with rotation support
   refreshToken String?  @db.Text // Encrypted, nullable for logout

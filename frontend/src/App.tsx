@@ -15,7 +15,7 @@ const TopTracks = lazy(() => import("./pages/TopTracks"));
 const History = lazy(() => import("./pages/History"));
 const Statistics = lazy(() => import("./pages/Statistics"));
 const Profile = lazy(() => import("./pages/Profile"));
-const Settings = lazy(() => import("./pages/Settings"));
+
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Layout
@@ -49,7 +49,7 @@ const App = () => (
               <Route path="/history" element={<History />} />
               <Route path="/statistics" element={<Statistics />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
+
             </Route>
 
             {/* Catch-all */}

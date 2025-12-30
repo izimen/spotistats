@@ -126,6 +126,7 @@ async function callback(req, res) {
                 displayName: profile.displayName,
                 avatarUrl: profile.avatarUrl,
                 country: profile.country,
+                product: profile.product,
                 refreshToken: encryptedRefreshToken,
                 tokenExpiry: tokenExpiry,
                 tokenFamily: tokenFamily,
@@ -137,6 +138,7 @@ async function callback(req, res) {
                 displayName: profile.displayName,
                 avatarUrl: profile.avatarUrl,
                 country: profile.country,
+                product: profile.product,
                 refreshToken: encryptedRefreshToken,
                 tokenExpiry: tokenExpiry,
                 tokenFamily: tokenFamily,
@@ -315,7 +317,8 @@ async function me(req, res) {
             email: user.email,
             displayName: user.displayName,
             avatarUrl: user.avatarUrl,
-            country: user.country
+            country: user.country,
+            product: user.product
         }
     });
 }
