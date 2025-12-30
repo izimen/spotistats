@@ -149,6 +149,45 @@ async function getListeningByDay(userId, days = 7) {
 }
 
 /**
+ * Get listening counts aggregated by hour of day (0-23)
+ * Helps identify "Peak Hours" (Złote Godziny)
+ *
+ * @param {string} userId - User ID
+ * @returns {Promise<Array<{hour: number, count: number, intensity: number}>>}
+ */
+async function getListeningByHour(userId) {
+    // Get all plays (time only)
+    const plays = await prisma.streamingHistory.findMany({
+        where: { userId },
+        select: { playedAt: true }
+    });
+
+    if (plays.length === 0) {
+        return [];
+    }
+
+    // Initialize hours 0-23
+    const hours = {};
+    for (let i = 0; i < 24; i++) hours[i] = 0;
+
+    // Count plays per hour
+    plays.forEach(p => {
+        const h = new Date(p.playedAt).getHours();
+        hours[h]++;
+    });
+
+    // Calculate max for intensity
+    const maxCount = Math.max(...Object.values(hours), 1);
+
+    // Format
+    return Object.entries(hours).map(([h, count]) => ({
+        hour: parseInt(h),
+        count,
+        intensity: parseFloat((count / maxCount).toFixed(2))
+    })).sort((a, b) => a.hour - b.hour);
+}
+
+/**
  * Get collection statistics for a user
  * Useful for showing sync status in UI
  *
@@ -364,6 +403,7 @@ module.exports = {
     collectFromAPI,
     getUserHistory,
     getListeningByDay,
+    getListeningByHour,
     getCollectionStats,
     collectForAllActiveUsers,
 };

@@ -415,6 +415,24 @@ async function getListeningChart(req, res, next) {
 }
 
 // ============================================
+// GET /api/stats/listening-history/heatmap
+// ============================================
+async function getListeningHeatmap(req, res, next) {
+    try {
+        const userId = req.user.id;
+
+        const heatmap = await listeningHistoryService.getListeningByHour(userId);
+
+        res.json({
+            success: true,
+            data: heatmap
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// ============================================
 // POST /api/stats/listening-history/sync
 // ============================================
 async function syncListeningHistory(req, res, next) {
@@ -687,6 +705,7 @@ module.exports = {
     getListeningChart,
     syncListeningHistory,
     getListeningHistory,
+    getListeningHeatmap,
     getAudioFeatures,
     getMusicDNA,
     getPredictionData,

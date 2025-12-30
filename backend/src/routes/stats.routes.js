@@ -45,6 +45,9 @@ router.get('/listening-history', statsController.getListeningHistory);
 // Get aggregated chart data
 router.get('/listening-history/chart', statsController.getListeningChart);
 
+// Get hourly heatmap (Peak Hours)
+router.get('/listening-history/heatmap', statsController.getListeningHeatmap);
+
 // Manually trigger sync
 router.post('/listening-history/sync', statsController.syncListeningHistory);
 

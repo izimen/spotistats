@@ -152,7 +152,7 @@ const History = () => {
     listeningMode,
     prediction: localPrediction,
     musicDNA: localMusicDNA,
-    heatmapData
+    heatmapData: localHeatmapData
   } = useHistoryStats(formattedTracks);
 
   // API-based Music DNA (real Spotify Audio Features)
@@ -170,6 +170,13 @@ const History = () => {
     time: string;
     confidence: number;
   } | null>(null);
+
+  // API-based Heatmap (Full History)
+  const [apiHeatmap, setApiHeatmap] = useState<{
+    hour: number;
+    count: number;
+    intensity: number;
+  }[] | null>(null);
 
   // Fetch Music DNA from API
   useEffect(() => {
@@ -203,9 +210,26 @@ const History = () => {
     fetchPrediction();
   }, []);
 
+  // Fetch Heatmap (Peak Hours) from API
+  useEffect(() => {
+    const fetchHeatmap = async () => {
+      try {
+        const response = await fetch('/api/stats/listening-history/heatmap', { credentials: 'include' });
+        const data = await response.json();
+        if (data.success && data.data && data.data.length > 0) {
+          setApiHeatmap(data.data);
+        }
+      } catch (error) {
+        console.error('[History] Failed to fetch Heatmap:', error);
+      }
+    };
+    fetchHeatmap();
+  }, []);
+
   // Use API data if available, fallback to local calculation
   const musicDNA = apiMusicDNA || localMusicDNA;
   const prediction = apiPrediction || localPrediction;
+  const heatmapData = apiHeatmap || localHeatmapData;
 
   // 🎲 Discovery Roulette - get new music recommendation from API
   const [isSpinning, setIsSpinning] = useState(false);
