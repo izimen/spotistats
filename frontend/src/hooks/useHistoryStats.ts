@@ -22,8 +22,14 @@ export function useHistoryStats(formattedTracks: HistoryTrack[]) {
         todayTracks.reduce((acc, track) => acc + track.durationMs, 0) / 60000
     ), [todayTracks]);
 
-    // Simulate previous period data (for comparison)
-    const previousMinutes = useMemo(() => Math.round(totalMinutes * (0.7 + Math.random() * 0.6)), [totalMinutes]); // ±30%
+    // Calculate previous period estimate based on track patterns (deterministic)
+    // Uses track count ratio to estimate - more tracks = likely more time
+    const previousMinutes = useMemo(() => {
+        // Base estimate: assume similar listening pattern
+        // Use track count as a stable proxy (no randomness)
+        const trackCountFactor = Math.min(1.2, Math.max(0.8, formattedTracks.length / 50));
+        return Math.round(totalMinutes * trackCountFactor);
+    }, [totalMinutes, formattedTracks.length]);
     const minutesDiff = totalMinutes - previousMinutes;
     const minutesDiffPercent = previousMinutes > 0 ? Math.round((minutesDiff / previousMinutes) * 100) : 0;
 
@@ -253,19 +259,46 @@ export function useHistoryStats(formattedTracks: HistoryTrack[]) {
 
     // 🧬 Music DNA
     const musicDNA = useMemo(() => {
+        if (formattedTracks.length === 0) {
+            return { energy: 50, danceability: 50, acoustic: 50, nostalgia: 50, loudness: 50 };
+        }
+
+        const total = formattedTracks.length;
+
+        // Night ratio (higher = more acoustic, calmer)
         const nightRatio = formattedTracks.filter(t => {
             const h = t.playedAtDate.getHours();
             return h >= 22 || h < 6;
-        }).length / Math.max(formattedTracks.length, 1);
+        }).length / total;
 
-        const repeatRatio = mostLooped ? mostLooped.count / Math.max(formattedTracks.length, 1) : 0;
+        // Repeat ratio (higher = more nostalgic)
+        const repeatRatio = mostLooped ? mostLooped.count / total : 0;
+
+        // Unique artists ratio (higher = more exploratory = more energy)
+        const uniqueArtists = new Set(formattedTracks.map(t => t.artist)).size;
+        const artistVariety = uniqueArtists / total;
+
+        // Short tracks ratio (higher = more energetic/danceable)
+        const shortTrackRatio = formattedTracks.filter(t => t.durationMs < 200000).length / total;
+
+        // Weekend ratio (higher = more party = more danceable)
+        const weekendRatio = formattedTracks.filter(t => {
+            const d = t.playedAtDate.getDay();
+            return d === 0 || d === 6;
+        }).length / total;
+
+        // Evening ratio (party time indicator)
+        const eveningRatio = formattedTracks.filter(t => {
+            const h = t.playedAtDate.getHours();
+            return h >= 18 && h < 24;
+        }).length / total;
 
         return {
-            energy: Math.min(100, Math.round(60 + (1 - nightRatio) * 40)),
-            danceability: Math.min(100, Math.round(50 + Math.random() * 30)),
-            acoustic: Math.min(100, Math.round(20 + nightRatio * 40)),
-            nostalgia: Math.min(100, Math.round(repeatRatio * 200 + 30)),
-            loudness: Math.min(100, Math.round(70 + (1 - nightRatio) * 20)),
+            energy: Math.min(100, Math.round(40 + artistVariety * 30 + shortTrackRatio * 20 + (1 - nightRatio) * 10)),
+            danceability: Math.min(100, Math.round(35 + weekendRatio * 25 + eveningRatio * 20 + shortTrackRatio * 20)),
+            acoustic: Math.min(100, Math.round(20 + nightRatio * 50 + (1 - shortTrackRatio) * 20)),
+            nostalgia: Math.min(100, Math.round(30 + repeatRatio * 60 + (1 - artistVariety) * 10)),
+            loudness: Math.min(100, Math.round(50 + (1 - nightRatio) * 30 + shortTrackRatio * 15)),
         };
     }, [formattedTracks, mostLooped]);
 
@@ -287,7 +320,7 @@ export function useHistoryStats(formattedTracks: HistoryTrack[]) {
                 count,
                 intensity: count / maxCount
             }))
-            .filter(h => h.hour >= 6 && h.hour <= 23);
+            .sort((a, b) => a.hour - b.hour);
     }, [formattedTracks]);
 
     return {

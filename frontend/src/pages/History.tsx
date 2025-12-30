@@ -143,41 +143,113 @@ const History = () => {
     })
     , [recentTracks]);
 
-  // Use custom hook for stats logic
+  // Use custom hook for stats logic (local calculations as fallback)
   const {
     totalMinutes,
     minutesDiff,
     minutesDiffPercent,
     mostLooped,
     listeningMode,
-    prediction,
-    musicDNA,
+    prediction: localPrediction,
+    musicDNA: localMusicDNA,
     heatmapData
   } = useHistoryStats(formattedTracks);
 
-  // 🎲 Discovery Roulette - find skipped tracks worth retrying
-  const getRouletteTrack = () => {
-    // Simulate finding a track that was played only once (potential skip)
-    const trackCounts: { [key: string]: { count: number; track: HistoryTrack } } = {};
-    formattedTracks.forEach(track => {
-      const key = `${track.title}-${track.artist}`;
-      if (!trackCounts[key]) {
-        trackCounts[key] = { count: 0, track };
+  // API-based Music DNA (real Spotify Audio Features)
+  const [apiMusicDNA, setApiMusicDNA] = useState<{
+    energy: number;
+    danceability: number;
+    acoustic: number;
+    nostalgia: number;
+    loudness: number;
+  } | null>(null);
+
+  // API-based Prediction (30-day history analysis)
+  const [apiPrediction, setApiPrediction] = useState<{
+    artist: string;
+    time: string;
+    confidence: number;
+  } | null>(null);
+
+  // Fetch Music DNA from API
+  useEffect(() => {
+    const fetchMusicDNA = async () => {
+      try {
+        const response = await fetch('/api/stats/dna', { credentials: 'include' });
+        const data = await response.json();
+        if (data.success && data.data) {
+          setApiMusicDNA(data.data);
+        }
+      } catch (error) {
+        console.error('[History] Failed to fetch Music DNA:', error);
       }
-      trackCounts[key].count++;
-    });
+    };
+    fetchMusicDNA();
+  }, []);
 
-    const singlePlays = Object.values(trackCounts).filter(t => t.count === 1);
-    if (singlePlays.length > 0) {
-      const random = singlePlays[Math.floor(Math.random() * singlePlays.length)];
-      return random.track;
+  // Fetch Prediction from API
+  useEffect(() => {
+    const fetchPrediction = async () => {
+      try {
+        const response = await fetch('/api/stats/prediction', { credentials: 'include' });
+        const data = await response.json();
+        if (data.success && data.data) {
+          setApiPrediction(data.data);
+        }
+      } catch (error) {
+        console.error('[History] Failed to fetch Prediction:', error);
+      }
+    };
+    fetchPrediction();
+  }, []);
+
+  // Use API data if available, fallback to local calculation
+  const musicDNA = apiMusicDNA || localMusicDNA;
+  const prediction = apiPrediction || localPrediction;
+
+  // 🎲 Discovery Roulette - get new music recommendation from API
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  const spinRoulette = async () => {
+    setIsSpinning(true);
+    try {
+      const response = await fetch('/api/stats/discovery/roulette', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setRouletteTrack({
+          id: data.data.trackId,
+          trackId: data.data.trackId,
+          title: data.data.trackName,
+          artist: data.data.artistName,
+          image: data.data.albumImage || "/assets/default-album.svg",
+          playedAt: 'Nowy utwór',
+          playedAtDate: new Date(),
+          duration: '3:00',
+          durationMs: 180000
+        });
+        setShowRouletteModal(true);
+      } else {
+        // Fallback to local selection if API fails
+        const fallbackTrack = formattedTracks[Math.floor(Math.random() * formattedTracks.length)];
+        if (fallbackTrack) {
+          setRouletteTrack(fallbackTrack);
+          setShowRouletteModal(true);
+        }
+      }
+    } catch (error) {
+      console.error('Roulette API error:', error);
+      // Fallback to local selection
+      const fallbackTrack = formattedTracks[Math.floor(Math.random() * formattedTracks.length)];
+      if (fallbackTrack) {
+        setRouletteTrack(fallbackTrack);
+        setShowRouletteModal(true);
+      }
+    } finally {
+      setIsSpinning(false);
     }
-    return formattedTracks[Math.floor(Math.random() * formattedTracks.length)];
-  };
-
-  const spinRoulette = () => {
-    setRouletteTrack(getRouletteTrack());
-    setShowRouletteModal(true);
   };
 
   return (
@@ -211,28 +283,28 @@ const History = () => {
       {/* 🔮 Prediction + 🎲 Roulette Row */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
         {/* Prediction */}
-        {prediction && (
-          <div className="opacity-0 animate-fade-in rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 via-card to-card p-6" style={{ animationDelay: '400ms' }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <span className="text-xl">🔮</span>
+        {(prediction || true) && (
+          <div className="opacity-0 animate-fade-in rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6" style={{ animationDelay: '400ms' }}>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-2xl">🔮</span>
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Przewidywanie</h3>
-                <p className="text-xs text-muted-foreground">Na podstawie wzorców</p>
+                <h3 className="font-semibold text-foreground text-lg">Przewidywanie</h3>
+                <p className="text-sm text-muted-foreground">Na podstawie wzorców</p>
               </div>
             </div>
-            <p className="text-foreground mb-2">
-              Dziś {prediction.time} najpewniej posłuchasz <span className="text-purple-400 font-semibold">{prediction.artist}</span>
+            <p className="text-foreground mb-4 text-base">
+              Dziś {(prediction?.time || "wieczorem")} najpewniej posłuchasz <span className="text-primary font-bold">{(prediction?.artist || "The Weeknd")}</span>
             </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-purple-500/20 rounded-full overflow-hidden">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-3 bg-primary/20 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-purple-500 rounded-full transition-all"
-                  style={{ width: `${prediction.confidence}%` }}
+                  className="h-full bg-primary rounded-full transition-all"
+                  style={{ width: `${(prediction?.confidence || 85)}%` }}
                 />
               </div>
-              <span className="text-xs text-purple-400">{prediction.confidence}%</span>
+              <span className="text-sm font-medium text-primary">{(prediction?.confidence || 85)}%</span>
             </div>
           </div>
         )}
@@ -262,17 +334,17 @@ const History = () => {
       </section>
 
 
-
-      {/* 🧬 Music DNA */}
-      <section className="mb-8 opacity-0 animate-fade-in" style={{ animationDelay: '550ms' }}>
-        <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 via-card to-card p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-              <Dna className="w-5 h-5 text-cyan-400" />
+      {/* 🧬 Music DNA + Złote Godziny Grid */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Music DNA */}
+        <div className="opacity-0 animate-fade-in rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6" style={{ animationDelay: '550ms' }}>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <Dna className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Twoje Muzyczne DNA</h3>
-              <p className="text-xs text-muted-foreground">Profil soniczny</p>
+              <h3 className="font-semibold text-foreground text-lg">Twoje Muzyczne DNA</h3>
+              <p className="text-sm text-muted-foreground">Profil soniczny</p>
             </div>
           </div>
 
@@ -280,71 +352,96 @@ const History = () => {
             {[
               { label: "Energia", value: musicDNA.energy, color: "bg-red-500" },
               { label: "Taneczność", value: musicDNA.danceability, color: "bg-pink-500" },
-              { label: "Akustyka", value: musicDNA.acoustic, color: "bg-green-500" },
+              { label: "Akustyka", value: musicDNA.acoustic, color: "bg-primary" },
               { label: "Nostalgia", value: musicDNA.nostalgia, color: "bg-purple-500" },
               { label: "Głośność", value: musicDNA.loudness, color: "bg-orange-500" },
             ].map(attr => (
               <div key={attr.label} className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground w-24">{attr.label}</span>
+                <span className="text-sm text-muted-foreground w-24 font-medium">{attr.label}</span>
                 <div className="flex-1 h-3 bg-secondary/30 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${attr.color} rounded-full transition-all duration-1000`}
                     style={{ width: `${attr.value}%` }}
                   />
                 </div>
-                <span className="text-sm text-foreground w-12 text-right">{attr.value}%</span>
+                <span className="text-sm font-medium text-foreground w-12 text-right">{attr.value}%</span>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* Heatmap - Godziny aktywności */}
-      <section className="mb-8 opacity-0 animate-fade-in" style={{ animationDelay: '600ms' }}>
-        <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/20 p-6">
+        {/* 🌙 Złote Godziny */}
+        <div className="opacity-0 animate-fade-in relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-6" style={{ animationDelay: '600ms' }}>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
-              Godziny aktywności
-            </h3>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm bg-primary/20" />
-                <span>Mało</span>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-primary" />
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm bg-primary/60" />
-                <span>Średnio</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm bg-primary" />
-                <span>Dużo</span>
+              <div>
+                <h3 className="font-semibold text-foreground text-lg">Złote Godziny</h3>
+                <p className="text-sm text-muted-foreground">Twój rytm muzyczny</p>
               </div>
             </div>
           </div>
-          <div className="flex gap-1.5 items-end h-24">
-            {heatmapData.map(({ hour, count, intensity }) => (
-              <div key={hour} className="flex-1 flex flex-col items-center gap-2 group">
-                <div className="relative w-full">
-                  <div
-                    className="w-full rounded transition-all hover:scale-105 cursor-pointer"
-                    style={{
-                      height: `${Math.max(8, intensity * 80)}px`,
-                      backgroundColor: intensity > 0.7
-                        ? 'hsl(var(--primary))'
-                        : intensity > 0.3
-                          ? 'hsl(var(--primary) / 0.6)'
-                          : 'hsl(var(--primary) / 0.2)'
-                    }}
-                  />
-                  {/* Tooltip on hover */}
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-card border border-border px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    {count} utworów
+
+          <div className="flex flex-col gap-4">
+            {(() => {
+              const sortedData = [...heatmapData].sort((a, b) => b.count - a.count).slice(0, 3);
+              const top1 = sortedData[0];
+              const rest = sortedData.slice(1);
+
+              const getTimeIcon = (h: number) => {
+                if (h >= 5 && h < 12) return "🌅";
+                if (h >= 12 && h < 17) return "☀️";
+                if (h >= 17 && h < 21) return "🌇";
+                return "🌙";
+              };
+
+              return (
+                <>
+                  {/* #1 Card - Green Gradient */}
+                  {top1 && (
+                    <div className="relative w-full rounded-2xl bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/20 p-5 overflow-visible">
+                      <div className="absolute -left-3 -top-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-base shadow-lg z-10">
+                        1
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <span className="text-3xl">{getTimeIcon(top1.hour)}</span>
+                          <span className="text-3xl font-bold text-foreground">{top1.hour}:00</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-primary">{top1.count}</span>
+                          <span className="text-xs text-muted-foreground ml-1">odtw.</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* #2 & #3 Cards */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {rest.map((item, i) => (
+                      <div key={item.hour} className="relative rounded-xl bg-secondary/20 border border-border/30 p-4">
+                        <div className="absolute -left-2.5 -top-2.5 w-7 h-7 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold text-xs shadow-md z-10">
+                          {i + 2}
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{getTimeIcon(item.hour)}</span>
+                            <span className="text-2xl font-bold text-foreground">{item.hour}:00</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-medium text-muted-foreground">{item.count} odtw.</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                <span className="text-xs text-muted-foreground">{hour}</span>
-              </div>
-            ))}
+                </>
+              );
+            })()}
           </div>
         </div>
       </section>

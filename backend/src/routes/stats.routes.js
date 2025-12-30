@@ -48,4 +48,17 @@ router.get('/listening-history/chart', statsController.getListeningChart);
 // Manually trigger sync
 router.post('/listening-history/sync', statsController.syncListeningHistory);
 
+// ============================================
+// Algorithm Endpoints (V3)
+// ============================================
+
+// Music DNA - Real audio features analysis
+router.get('/dna', statsController.getMusicDNA);
+
+// Prediction - Time-contextual listening prediction
+router.get('/prediction', statsController.getPredictionData);
+
+// Discovery Roulette - New music recommendations
+router.get('/discovery/roulette', statsController.getDiscoveryRoulette);
+
 module.exports = router;

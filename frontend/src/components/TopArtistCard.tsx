@@ -37,7 +37,6 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0 }: TopArtistCar
         border border-border/50 hover:border-primary/40
         hover:scale-[1.01]
         opacity-0 animate-slide-up
-        h-[64px]
       `}
       style={{
         animationDelay: `${delay}ms`,

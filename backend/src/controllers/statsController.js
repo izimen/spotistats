@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Stats Controller
  * Handles top artists, tracks, albums and listening statistics with caching
  */
@@ -6,6 +6,9 @@ const prisma = require('../utils/prismaClient');
 const spotifyService = require('../services/spotifyService');
 const encryptionService = require('../services/encryptionService');
 const listeningHistoryService = require('../services/listeningHistoryService');
+const musicDNAService = require('../services/musicDNAService');
+const predictionService = require('../services/predictionService');
+const discoveryService = require('../services/discoveryService');
 
 // Valid time ranges
 const VALID_TIME_RANGES = ['short_term', 'medium_term', 'long_term'];
@@ -431,8 +434,8 @@ async function syncListeningHistory(req, res, next) {
             collected: result.collected,
             skipped: result.skipped,
             message: result.collected > 0
-                ? `Zsynchronizowano ${result.collected} nowych utworów`
-                : 'Brak nowych utworów do synchronizacji'
+                ? `Zsynchronizowano ${result.collected} nowych utworĂłw`
+                : 'Brak nowych utworĂłw do synchronizacji'
         });
     } catch (error) {
         next(error);
@@ -537,20 +540,20 @@ async function getAudioFeatures(req, res, next) {
         }
 
         // Determine mood based on averages
-        let mood = '🎵 Zrównoważony';
+        let mood = 'đźŽµ ZrĂłwnowaĹĽony';
         if (averages) {
             if (averages.valence > 0.7 && averages.energy > 0.7) {
-                mood = '🎉 Imprezowy';
+                mood = 'đźŽ‰ Imprezowy';
             } else if (averages.valence < 0.3) {
-                mood = '💔 Melancholijny';
+                mood = 'đź’” Melancholijny';
             } else if (averages.energy > 0.8) {
-                mood = '💪 Energiczny';
+                mood = 'đź’Ş Energiczny';
             } else if (averages.acousticness > 0.7) {
-                mood = '😌 Spokojny';
+                mood = 'đźŚ Spokojny';
             } else if (averages.danceability > 0.7) {
-                mood = '💃 Taneczny';
+                mood = 'đź’ Taneczny';
             } else if (averages.valence > 0.6) {
-                mood = '💕 Romantyczny';
+                mood = 'đź’• Romantyczny';
             }
         }
 
@@ -596,6 +599,84 @@ async function getAudioFeatures(req, res, next) {
     }
 }
 
+// ============================================
+// GET /api/stats/dna - Music DNA Profile
+// ============================================
+async function getMusicDNA(req, res, next) {
+    try {
+        const userId = req.user.id;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        const accessToken = await getAccessToken(req, user);
+
+        const dna = await musicDNAService.calculateMusicDNA(userId, accessToken);
+
+        if (!dna) {
+            return res.json({
+                success: true,
+                data: null,
+                message: 'NiewystarczajÄ…ca iloĹ›Ä‡ danych do analizy DNA'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: dna
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// ============================================
+// GET /api/stats/prediction - Listening Prediction
+// ============================================
+async function getPredictionData(req, res, next) {
+    try {
+        const userId = req.user.id;
+
+        const prediction = await predictionService.getPrediction(userId);
+
+        res.json({
+            success: true,
+            data: prediction
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+// ============================================
+// GET /api/stats/discovery/roulette - Discovery Roulette
+// ============================================
+async function getDiscoveryRoulette(req, res, next) {
+    try {
+        const userId = req.user.id;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        const accessToken = await getAccessToken(req, user);
+
+        const track = await discoveryService.getDiscoveryTrack(userId, accessToken);
+
+        res.json({
+            success: true,
+            data: track
+        });
+    } catch (error) {
+        console.error('[Discovery] Roulette error:', error.message);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Nie udaĹ‚o siÄ™ wygenerowaÄ‡ rekomendacji'
+        });
+    }
+}
+
 module.exports = {
     getTopArtists,
     getTopTracks,
@@ -607,4 +688,7 @@ module.exports = {
     syncListeningHistory,
     getListeningHistory,
     getAudioFeatures,
+    getMusicDNA,
+    getPredictionData,
+    getDiscoveryRoulette,
 };
