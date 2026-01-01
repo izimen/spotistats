@@ -77,6 +77,28 @@ app.use(cors({
 app.use(generalLimiter);
 
 // ===================
+// CSRF Protection
+// ===================
+
+// Require X-Requested-With header for state-changing methods
+// This simple check prevents CSRF because browsers don't let cross-site requests set custom headers
+const csrfProtection = (req, res, next) => {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+        // Skip for specific paths if needed (e.g., webhooks)
+        const xRequestedWith = req.get('X-Requested-With');
+        if (xRequestedWith !== 'XMLHttpRequest') {
+            return res.status(403).json({
+                error: 'CSRF validation failed',
+                message: 'Missing or invalid X-Requested-With header'
+            });
+        }
+    }
+    next();
+};
+
+app.use(csrfProtection);
+
+// ===================
 // Body Parsing
 // ===================
 

@@ -523,6 +523,14 @@ async function getAudioFeatures(req, res, next) {
             });
         }
 
+        // Validate that ids is a string to prevent type confusion attacks
+        if (typeof ids !== 'string') {
+            return res.status(400).json({
+                success: false,
+                error: 'Track IDs must be a comma-separated string'
+            });
+        }
+
         const trackIds = ids.split(',').map(id => id.trim()).filter(Boolean);
 
         if (trackIds.length === 0) {

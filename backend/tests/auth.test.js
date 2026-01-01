@@ -208,7 +208,8 @@ describe('Auth Endpoints', () => {
 
             const res = await request(app)
                 .post('/auth/logout')
-                .set('Cookie', [`jwt=${token}`]);
+                .set('Cookie', [`jwt=${token}`])
+                .set('X-Requested-With', 'XMLHttpRequest');
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('message', 'Logged out successfully');
@@ -221,7 +222,9 @@ describe('Auth Endpoints', () => {
 
         it('should succeed without JWT (idempotent)', async () => {
             // Logout is idempotent - it should succeed even without a token
-            const res = await request(app).post('/auth/logout');
+            const res = await request(app)
+                .post('/auth/logout')
+                .set('X-Requested-With', 'XMLHttpRequest');
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('message', 'Logged out successfully');
@@ -296,8 +299,8 @@ describe('PKCE Service', () => {
         it('should create verifiable state JWT', () => {
             const { state } = pkceService.createPKCEState();
 
-            // State should be a valid JWT
-            const decoded = jwt.decode(state);
+            // State should be a valid JWT - use verify() to validate signature
+            const decoded = jwt.verify(state, process.env.JWT_SECRET);
             expect(decoded).toHaveProperty('verifier');
         });
     });
