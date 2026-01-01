@@ -1,4 +1,4 @@
-import { Music, BarChart3, User, Menu } from "lucide-react";
+import { Music, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -55,16 +55,6 @@ const Header = () => {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
-            <Link to="/statistics">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`hidden md:flex hover:bg-primary/10 hover:text-primary ${location.pathname === '/statistics' ? 'bg-primary/10 text-primary' : ''
-                  }`}
-              >
-                <BarChart3 className="w-5 h-5" />
-              </Button>
-            </Link>
             <Link to="/profile">
               <Button
                 variant="outline"
