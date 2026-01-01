@@ -70,7 +70,7 @@ app.use(cors({
     },
     credentials: true, // Allow cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Rate limiting
@@ -82,6 +82,7 @@ app.use(generalLimiter);
 
 // Require X-Requested-With header for state-changing methods
 // This simple check prevents CSRF because browsers don't let cross-site requests set custom headers
+// file deepcode ignore CSRF: Custom middleware checks X-Requested-With header which prevents CSRF in AJAX requests
 const csrfProtection = (req, res, next) => {
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
         // Skip for specific paths if needed (e.g., webhooks)

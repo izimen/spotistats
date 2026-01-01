@@ -6,6 +6,7 @@ import { useUser, useListeningHistory } from "@/hooks/useSpotifyData";
 import { useHistoryStats } from "@/hooks/useHistoryStats";
 import HistoryList from "@/components/HistoryList";
 import StatisticsGrid from "@/components/StatisticsGrid";
+import { isValidImageUrl } from "@/lib/utils";
 import { AxiosError } from "axios";
 
 interface HistoryItem {
@@ -491,7 +492,7 @@ const History = () => {
 
               <div className="flex items-center gap-4 bg-secondary/30 rounded-xl p-4 mb-6">
                 <img
-                  src={rouletteTrack.image}
+                  src={isValidImageUrl(rouletteTrack.image) ? rouletteTrack.image : "/assets/default-album.svg"}
                   alt={rouletteTrack.title}
                   className="w-16 h-16 rounded-lg object-cover"
                 />
