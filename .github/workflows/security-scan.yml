@@ -11,7 +11,7 @@ jobs:
   security-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -20,24 +20,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js (Backend)
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: ./backend
 
       - name: Audit Backend Dependencies
         working-directory: ./backend
         continue-on-error: true
-        run: |
-          npm audit --audit-level=high
+        run: npm audit --audit-level=high
 
-      - name: Setup Node.js (Frontend)
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./frontend
 
       - name: Audit Frontend Dependencies
         working-directory: ./frontend
         continue-on-error: true
-        run: |
-          npm audit --audit-level=high
+        run: npm audit --audit-level=high

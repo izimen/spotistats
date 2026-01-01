@@ -31,14 +31,20 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
       - name: Build and Push Backend Image
         working-directory: ./backend
         run: |
-          docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/spotistats/${{ env.BACKEND_SERVICE }}:${{ github.sha }} .
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/spotistats/${{ env.BACKEND_SERVICE }}:${{ github.sha }}
+          docker buildx build \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            --tag ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/spotistats/${{ env.BACKEND_SERVICE }}:${{ github.sha }} .
 
       - name: Deploy Backend to Cloud Run
         run: |
@@ -84,15 +90,21 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
-
 
       - name: Build and Push Frontend Image
         working-directory: ./frontend
         run: |
-          docker build --build-arg VITE_API_URL=${{ needs.deploy-backend.outputs.backend_url }} -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/spotistats/${{ env.FRONTEND_SERVICE }}:${{ github.sha }} .
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/spotistats/${{ env.FRONTEND_SERVICE }}:${{ github.sha }}
+          docker buildx build \
+            --build-arg VITE_API_URL=${{ needs.deploy-backend.outputs.backend_url }} \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            --tag ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/spotistats/${{ env.FRONTEND_SERVICE }}:${{ github.sha }} .
 
       - name: Deploy Frontend to Cloud Run
         run: |
