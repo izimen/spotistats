@@ -179,8 +179,13 @@ const History = () => {
     intensity: number;
   }[] | null>(null);
 
-  // Fetch Music DNA from API
+  // Fetch Music DNA from API (Only for 'all' time range)
   useEffect(() => {
+    if (timeRange !== 'all') {
+      setApiMusicDNA(null);
+      return;
+    }
+
     const fetchMusicDNA = async () => {
       try {
         const response = await fetch('/api/stats/dna', { credentials: 'include' });
@@ -193,10 +198,15 @@ const History = () => {
       }
     };
     fetchMusicDNA();
-  }, []);
+  }, [timeRange]);
 
-  // Fetch Prediction from API
+  // Fetch Prediction from API (Only for 'all' time range)
   useEffect(() => {
+    if (timeRange !== 'all') {
+      setApiPrediction(null);
+      return;
+    }
+
     const fetchPrediction = async () => {
       try {
         const response = await fetch('/api/stats/prediction', { credentials: 'include' });
@@ -209,10 +219,15 @@ const History = () => {
       }
     };
     fetchPrediction();
-  }, []);
+  }, [timeRange]);
 
-  // Fetch Heatmap (Peak Hours) from API
+  // Fetch Heatmap (Peak Hours) from API (Only for 'all' time range)
   useEffect(() => {
+    if (timeRange !== 'all') {
+      setApiHeatmap(null);
+      return;
+    }
+
     const fetchHeatmap = async () => {
       try {
         const response = await fetch('/api/stats/listening-history/heatmap', { credentials: 'include' });
@@ -225,7 +240,7 @@ const History = () => {
       }
     };
     fetchHeatmap();
-  }, []);
+  }, [timeRange]);
 
   // Use API data if available, fallback to local calculation
   const musicDNA = apiMusicDNA || localMusicDNA;

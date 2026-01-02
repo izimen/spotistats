@@ -13,14 +13,10 @@ interface HistoryTrack {
 }
 
 export function useHistoryStats(formattedTracks: HistoryTrack[]) {
-    // Basic calculations
-    const todayTracks = useMemo(() => formattedTracks.filter(t =>
-        t.playedAt.includes('min') || t.playedAt.includes('godz') || t.playedAt === 'Teraz'
-    ), [formattedTracks]);
-
+    // Calculate total minutes from ALL tracks in the current selection
     const totalMinutes = useMemo(() => Math.round(
-        todayTracks.reduce((acc, track) => acc + track.durationMs, 0) / 60000
-    ), [todayTracks]);
+        formattedTracks.reduce((acc, track) => acc + track.durationMs, 0) / 60000
+    ), [formattedTracks]);
 
     // Calculate previous period estimate based on track patterns (deterministic)
     // Uses track count ratio to estimate - more tracks = likely more time
