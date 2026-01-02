@@ -113,9 +113,8 @@ const RecentlyPlayed = () => {
     };
   }
 
-
-  // DEBUG: Log raw data to console for diagnosis
-  if (recentTracks?.length > 0) {
+  // Log raw data in development only
+  if (import.meta.env.DEV && recentTracks?.length > 0) {
     console.log('[RecentlyPlayed] Raw data sample:', JSON.stringify(recentTracks.slice(0, 2).map((item: RecentTrackItem) => ({
       name: item.track?.name,
       albumImage: item.track?.album?.image,

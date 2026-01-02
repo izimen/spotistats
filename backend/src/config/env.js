@@ -52,5 +52,13 @@ module.exports = {
   frontendUrl: process.env.FRONTEND_URL,
 
   // Cron / Cloud Scheduler
-  cronSecretKey: process.env.CRON_SECRET_KEY || null
+  cronSecretKey: process.env.CRON_SECRET_KEY || null,
+
+  // Rate Limiting (configurable for dev/prod)
+  rateLimits: {
+    auth: parseInt(process.env.RATE_LIMIT_AUTH, 10) || 5,
+    general: parseInt(process.env.RATE_LIMIT_GENERAL, 10) || 500,
+    api: parseInt(process.env.RATE_LIMIT_API, 10) || 200,
+    import: parseInt(process.env.RATE_LIMIT_IMPORT, 10) || 10
+  }
 };

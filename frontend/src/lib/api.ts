@@ -201,7 +201,7 @@ export const statsAPI = {
 
     getOverview: () => api.get('/api/stats/overview'),
 
-    clearCache: () => api.delete('/api/stats/cache'),
+    clearCache: () => api.post('/api/stats/clear-cache'),
 
     // Listening History (persistent collection)
     getListeningChart: (days = 7) =>

@@ -34,9 +34,9 @@ const TopTracks = () => {
   // Fetch real audio features from Spotify
   const { data: audioFeatures } = useAudioFeatures(trackIds);
 
-  // DEBUG: Log audio features to console
+  // Log audio features in development only
   useEffect(() => {
-    if (audioFeatures) {
+    if (import.meta.env.DEV && audioFeatures) {
       console.log('[TopTracks] Audio Features:', {
         mood: audioFeatures.mood,
         averages: audioFeatures.averages,

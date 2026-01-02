@@ -125,7 +125,7 @@ my-spotify-stats/
 
 - **Tokens**: Access tokens in JWT cookies, refresh tokens AES-256 encrypted in DB
 - **PKCE**: Stateless OAuth implementation with signed JWT state
-- **Rate Limiting**: 100 req/15min general, 5 req/15min for auth endpoints
+- **Rate Limiting**: Configurable limits (defaults: 500 req/15min general, 5 req/15min auth)
 - **Cookies**: HttpOnly, Secure (production), SameSite=Strict
 
 > 🛡️ **See also:**

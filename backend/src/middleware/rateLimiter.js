@@ -3,6 +3,7 @@
  * Supports in-memory (dev) and Redis (prod) stores
  */
 const rateLimit = require('express-rate-limit');
+const env = require('../config/env');
 
 // Conditionally import Redis store
 let RedisStore;
@@ -60,11 +61,11 @@ function createKeyGenerator(includeUser = false) {
 }
 
 /**
- * General rate limiter - 500 requests per 15 minutes per IP
+ * General rate limiter - configurable via RATE_LIMIT_GENERAL
  */
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 500, // Increased for development
+    max: env.rateLimits.general,
     message: {
         error: 'TooManyRequests',
         message: 'Too many requests, please try again later'
@@ -76,12 +77,12 @@ const generalLimiter = rateLimit({
 });
 
 /**
- * Auth rate limiter - 5 requests per 15 minutes per IP
+ * Auth rate limiter - configurable via RATE_LIMIT_AUTH
  * Stricter limits for authentication endpoints
  */
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000, // Increased for development debugging
+    max: env.rateLimits.auth,
     message: {
         error: 'TooManyAuthAttempts',
         message: 'Too many authentication attempts, please try again in 15 minutes'
@@ -93,12 +94,12 @@ const authLimiter = rateLimit({
 });
 
 /**
- * API rate limiter - 200 requests per 15 minutes per user+IP
+ * API rate limiter - configurable via RATE_LIMIT_API
  * For protected API endpoints, includes user ID in key
  */
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    max: env.rateLimits.api,
     message: {
         error: 'TooManyRequests',
         message: 'API rate limit exceeded, please try again later'
@@ -110,12 +111,12 @@ const apiLimiter = rateLimit({
 });
 
 /**
- * Import rate limiter - 10 imports per hour per user
+ * Import rate limiter - configurable via RATE_LIMIT_IMPORT
  * Stricter limit for resource-intensive operations
  */
 const importLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10,
+    max: env.rateLimits.import,
     message: {
         error: 'TooManyImports',
         message: 'Too many import attempts, please try again in an hour'

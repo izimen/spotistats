@@ -320,7 +320,7 @@ async function me(req, res) {
             // Only try if token is valid (don't block response on failure)
             if (spotifyToken && expiry > Date.now()) {
                 console.log('[Auth] Missing product field, attempting to fetch from Spotify...');
-                const profile = await spotifyService.getUserProfile(spotifyToken);
+                const profile = await getUserProfile(spotifyToken);
 
                 if (profile.product) {
                     // Update DB with fresh info

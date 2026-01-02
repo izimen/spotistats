@@ -39,3 +39,19 @@ If a secret is leaked:
 2.  **Check logs** for unauthorized usage.
 3.  **Rotate** to a new key.
 4.  **Clean history** if committed to git (see `check_history.sh`).
+
+## 5. Rate Limiting Configuration (Optional)
+
+Rate limits can be configured via environment variables (useful for development):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATE_LIMIT_AUTH` | 5 | Auth endpoints (per 15 min) |
+| `RATE_LIMIT_GENERAL` | 500 | General requests (per 15 min) |
+| `RATE_LIMIT_API` | 200 | API endpoints (per 15 min) |
+| `RATE_LIMIT_IMPORT` | 10 | Import operations (per hour) |
+
+> **Tip**: For local development, add to `.env`:
+> ```env
+> RATE_LIMIT_AUTH=1000
+> ```
