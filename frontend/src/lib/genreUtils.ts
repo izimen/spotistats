@@ -1,4 +1,3 @@
-
 /**
  * Genre Normalization Map
  * Maps specific Spotify genres to broader categories
@@ -8,16 +7,30 @@ export const GENRE_MAP: Record<string, string> = {
     "art pop": "Pop",
     "dance pop": "Pop",
     "electropop": "Pop",
-    "indie pop": "Pop",
-    "french indie pop": "Pop",
     "french pop": "Pop",
     "polish pop": "Pop",
     "synth-pop": "Pop",
-    "k-pop": "Pop",
     "europop": "Pop",
     "pop rock": "Pop",
     "power pop": "Pop",
     "teen pop": "Pop",
+
+    // K-pop (separate category)
+    "k-pop": "K-pop",
+    "k-pop boy group": "K-pop",
+    "k-pop girl group": "K-pop",
+    "korean pop": "K-pop",
+
+    // Indie / Alternative (separate category)
+    "indie": "Indie",
+    "indie pop": "Indie",
+    "indie rock": "Indie",
+    "indie folk": "Indie",
+    "alternative": "Indie",
+    "alt-pop": "Indie",
+    "dream pop": "Indie",
+    "shoegaze": "Indie",
+    "french indie pop": "Indie",
 
     // Hip Hop / Rap
     "polish hip hop": "Hip Hop",
@@ -28,13 +41,13 @@ export const GENRE_MAP: Record<string, string> = {
     "drill": "Hip Hop",
     "gangster rap": "Hip Hop",
     "conscious hip hop": "Hip Hop",
+    "polish rap": "Hip Hop",
 
     // Rock
     "rock": "Rock",
     "classic rock": "Rock",
     "hard rock": "Rock",
     "alternative rock": "Rock",
-    "indie rock": "Rock",
     "polish rock": "Rock",
     "punk rock": "Rock",
     "soft rock": "Rock",
@@ -49,6 +62,7 @@ export const GENRE_MAP: Record<string, string> = {
     "grunge": "Rock",
     "post-rock": "Rock",
     "britpop": "Rock",
+    "punk": "Rock",
 
     // Electronic / Dance
     "edm": "Electronic",
@@ -59,8 +73,11 @@ export const GENRE_MAP: Record<string, string> = {
     "drum and bass": "Electronic",
     "electro": "Electronic",
     "synthwave": "Electronic",
+    "deep house": "Electronic",
+    "progressive house": "Electronic",
+    "future bass": "Electronic",
 
-    // Disco Polo (keep separate - it's distinct)
+    // Disco Polo (Polish - keep separate)
     "disco polo": "Disco Polo",
 
     // R&B / Soul
@@ -76,6 +93,7 @@ export const GENRE_MAP: Record<string, string> = {
     "black metal": "Metal",
     "thrash metal": "Metal",
     "nu metal": "Metal",
+    "metalcore": "Metal",
 
     // Jazz
     "jazz": "Jazz",
@@ -92,11 +110,13 @@ export const GENRE_MAP: Record<string, string> = {
     "reggaeton": "Latin",
     "salsa": "Latin",
     "bachata": "Latin",
+    "latin pop": "Latin",
 
-    // Country / Folk
+    // Country
     "country": "Country",
+
+    // Folk
     "folk": "Folk",
-    "indie folk": "Folk",
 };
 
 /**
@@ -137,10 +157,11 @@ export interface Artist {
  * Calculate top genres from a list of artists using V2 algorithm
  * - sqrt(rank) weighing
  * - divide by genre count per artist
- * - normalization
+ * - normalization with fallback to raw genres
  */
 export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenres: GenreStat[], topGenreName: string } {
     const genreScore: Record<string, number> = {};
+    const rawGenreScore: Record<string, number> = {};
     const artistCount = artists.length;
 
     if (artistCount === 0) {
@@ -152,35 +173,57 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
         const artistGenres = artist.genres || [];
         if (artistGenres.length === 0) return;
 
-        // Change 1: sqrt() for smoother weight distribution
+        // sqrt() for smoother weight distribution
         const rankWeight = Math.sqrt(artistCount - index);
 
-        // Change 2: Divide weight by number of genres
+        // Divide weight by number of genres
         const perGenreWeight = rankWeight / artistGenres.length;
 
         artistGenres.forEach((genre: string) => {
-            // Use raw genre names (just capitalize) for more variety
+            // Normalize genre names to broad categories
+            const normalizedGenre = normalizeGenre(genre);
+            genreScore[normalizedGenre] = (genreScore[normalizedGenre] || 0) + perGenreWeight;
+
+            // Also track raw genres for fallback
             const capitalizedGenre = genre.split(' ').map(word =>
                 word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
-            genreScore[capitalizedGenre] = (genreScore[capitalizedGenre] || 0) + perGenreWeight;
+            rawGenreScore[capitalizedGenre] = (rawGenreScore[capitalizedGenre] || 0) + perGenreWeight;
         });
     });
 
-    // Sort by score
+    // Sort normalized genres by score
     const sortedGenres = Object.entries(genreScore)
+        .sort(([, a], [, b]) => b - a);
+
+    // Sort raw genres by score (for fallback)
+    const sortedRawGenres = Object.entries(rawGenreScore)
         .sort(([, a], [, b]) => b - a);
 
     const totalScore = sortedGenres.reduce((sum, [, score]) => sum + score, 0) || 1;
 
-    // Calculate percentages and take top N
-    const topGenres = sortedGenres
+    // Take normalized categories first
+    let topGenres = sortedGenres
         .slice(0, limit)
         .map(([name, score]) => ({
             name,
             percentage: Math.round((score / totalScore) * 100),
             rawScore: score
         }));
+
+    // If we have less than limit, fill with raw genres not already included
+    if (topGenres.length < limit) {
+        const existingNames = new Set(topGenres.map(g => g.name.toLowerCase()));
+        const additionalGenres = sortedRawGenres
+            .filter(([name]) => !existingNames.has(name.toLowerCase()))
+            .slice(0, limit - topGenres.length)
+            .map(([name, score]) => ({
+                name,
+                percentage: Math.round((score / totalScore) * 100),
+                rawScore: score
+            }));
+        topGenres = [...topGenres, ...additionalGenres];
+    }
 
     return {
         topGenres,
