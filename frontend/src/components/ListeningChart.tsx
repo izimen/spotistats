@@ -1,5 +1,5 @@
-import { BarChart3, Loader2, RefreshCw } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, TooltipProps } from "recharts";
+import { BarChart3, Loader2, RefreshCw, TrendingUp } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, TooltipProps } from "recharts";
 import { useState } from "react";
 import { useListeningChart, useSyncListeningHistory } from "@/hooks/useSpotifyData";
 import {
@@ -14,11 +14,31 @@ type CustomTooltipProps = TooltipProps<number, string>;
 const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card border border-border/50 rounded-xl px-4 py-3 shadow-xl shadow-black/20">
-        <p className="text-sm font-semibold text-foreground mb-1">{label}</p>
-        <p className="text-primary font-bold">
-          Utworów: <span className="text-lg">{payload[0].value}</span>
-        </p>
+      <div className="relative overflow-hidden rounded-xl px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl border border-white/10">
+        {/* Glassmorphism background */}
+        <div className="absolute inset-0 bg-card/90" />
+
+        {/* Gradient border effect */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        <div className="absolute top-0 left-0 bottom-0 w-px bg-gradient-to-b from-white/15 to-transparent" />
+
+        {/* Noise texture */}
+        <div
+          className="absolute inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative">
+          <p className="text-sm font-semibold text-foreground mb-1.5">{label}</p>
+          <p className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary shadow-lg shadow-primary/50" />
+            <span className="text-muted-foreground text-sm">Utworów:</span>
+            <span className="text-lg font-bold text-primary">{payload[0].value}</span>
+          </p>
+        </div>
       </div>
     );
   }
@@ -28,29 +48,26 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 const ListeningChart = () => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  // Fetch data from database instead of props
   const { data: chartData, isLoading } = useListeningChart(7);
   const syncMutation = useSyncListeningHistory();
 
-  // Transform data for the chart
   const data = chartData?.days?.map(d => ({
     day: d.day,
     hours: d.count,
   })) || [
-      { day: 'Poniedziałek', hours: 0 },
-      { day: 'Wtorek', hours: 0 },
-      { day: 'Środa', hours: 0 },
-      { day: 'Czwartek', hours: 0 },
-      { day: 'Piątek', hours: 0 },
-      { day: 'Sobota', hours: 0 },
-      { day: 'Niedziela', hours: 0 },
+      { day: 'Pon', hours: 0 },
+      { day: 'Wt', hours: 0 },
+      { day: 'Śr', hours: 0 },
+      { day: 'Czw', hours: 0 },
+      { day: 'Pt', hours: 0 },
+      { day: 'Sob', hours: 0 },
+      { day: 'Ndz', hours: 0 },
     ];
 
   const totalTracks = data.reduce((sum, d) => sum + d.hours, 0);
   const maxDay = data.reduce((max, d) => d.hours > max.hours ? d : max, data[0]);
   const avgTracks = Math.round(totalTracks / 7);
 
-  // Format relative time for last sync
   const getRelativeTime = (dateStr: string | null) => {
     if (!dateStr) return null;
     const date = new Date(dateStr);
@@ -71,33 +88,31 @@ const ListeningChart = () => {
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/20 p-6 h-full flex flex-col opacity-0 animate-fade-in"
+      className="relative overflow-hidden rounded-2xl border border-border/40 bg-card p-6 h-full flex flex-col opacity-0 animate-fade-in"
       style={{ animationDelay: "400ms" }}
     >
-      {/* Background glow */}
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-transparent" />
+      <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
 
       {/* Header */}
       <div className="relative flex items-center gap-4 mb-6">
-        <div className="relative">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/30">
-            <BarChart3 className="w-6 h-6 text-primary" />
-          </div>
-          <div className="absolute inset-0 rounded-xl bg-primary/20 blur-lg -z-10" />
+        <div className="icon-container">
+          <BarChart3 className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h2 className="text-xl font-bold text-foreground">Aktywność</h2>
+          <h2 className="text-lg font-bold text-foreground">Aktywność</h2>
           <p className="text-sm text-muted-foreground">Utwory w ostatnich 7 dniach</p>
         </div>
 
-        {/* Sync button with tooltip */}
+        {/* Sync button */}
         <TooltipProvider delayDuration={0}>
           <UITooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
-                className="p-2 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+                className="w-9 h-9 rounded-xl bg-muted/50 hover:bg-primary/10 flex items-center justify-center transition-all text-muted-foreground hover:text-primary disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
               </button>
@@ -116,32 +131,27 @@ const ListeningChart = () => {
         </TooltipProvider>
       </div>
 
-      {/* Chart */}
-      <div className="flex-1 min-h-[200px]">
+      {/* Chart - switched to AreaChart for smoother look */}
+      <div className="flex-1 min-h-[180px]">
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+            <AreaChart
               data={data}
-              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-              onMouseMove={(state) => {
-                if (state.activeTooltipIndex !== undefined) {
-                  setActiveIndex(state.activeTooltipIndex);
-                }
-              }}
-              onMouseLeave={() => setActiveIndex(null)}
+              margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
             >
               <defs>
-                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(141, 73%, 52%)" />
-                  <stop offset="100%" stopColor="hsl(141, 73%, 35%)" />
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(141, 76%, 48%)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="hsl(141, 76%, 48%)" stopOpacity={0.05} />
                 </linearGradient>
-                <linearGradient id="barGradientActive" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(141, 73%, 60%)" />
-                  <stop offset="100%" stopColor="hsl(141, 73%, 42%)" />
+                <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="hsl(141, 76%, 45%)" />
+                  <stop offset="50%" stopColor="hsl(141, 76%, 55%)" />
+                  <stop offset="100%" stopColor="hsl(141, 76%, 45%)" />
                 </linearGradient>
               </defs>
               <XAxis
@@ -149,62 +159,66 @@ const ListeningChart = () => {
                 axisLine={false}
                 tickLine={false}
                 tick={{
-                  fill: 'hsl(0, 0%, 60%)',
-                  fontSize: 13,
+                  fill: 'hsl(0, 0%, 50%)',
+                  fontSize: 12,
                   fontWeight: 500
                 }}
-                dy={10}
+                dy={8}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
                 tick={{
-                  fill: 'hsl(0, 0%, 50%)',
-                  fontSize: 12
+                  fill: 'hsl(0, 0%, 45%)',
+                  fontSize: 11
                 }}
-                width={40}
+                width={35}
               />
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: 'hsl(141, 73%, 42%, 0.1)', radius: 8 }}
+                cursor={{ stroke: 'hsl(141, 76%, 48%)', strokeWidth: 1, strokeDasharray: '4 4' }}
               />
-              <Bar
+              <Area
+                type="monotone"
                 dataKey="hours"
-                radius={[8, 8, 0, 0]}
-                maxBarSize={50}
-              >
-                {data.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={activeIndex === index ? "url(#barGradientActive)" : "url(#barGradient)"}
-                    style={{
-                      transition: 'fill 0.2s ease'
-                    }}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
+                stroke="url(#lineGradient)"
+                strokeWidth={2.5}
+                fill="url(#areaFill)"
+                dot={{
+                  fill: 'hsl(141, 76%, 48%)',
+                  stroke: 'hsl(var(--card))',
+                  strokeWidth: 2,
+                  r: 4,
+                }}
+                activeDot={{
+                  fill: 'hsl(141, 76%, 55%)',
+                  stroke: 'hsl(var(--card))',
+                  strokeWidth: 3,
+                  r: 6,
+                }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* Stats summary */}
-      <div className="relative mt-4 pt-4 border-t border-border/30 grid grid-cols-3 gap-4">
-        <div className="text-center">
+      {/* Stats summary - redesigned */}
+      <div className="relative mt-4 pt-4 border-t border-border/30 grid grid-cols-3 gap-3">
+        <div className="text-center p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
           <p className="text-xl font-bold text-foreground">{totalTracks}</p>
-          <p className="text-xs text-muted-foreground">Łącznie utworów</p>
+          <p className="text-xs text-muted-foreground">Łącznie</p>
         </div>
-        <div className="text-center border-x border-border/30">
+        <div className="text-center p-2.5 rounded-xl bg-primary/10 border border-primary/20">
           <p className="text-xl font-bold text-primary">{maxDay.hours}</p>
           <p className="text-xs text-muted-foreground">{maxDay.day}</p>
         </div>
-        <div className="text-center">
+        <div className="text-center p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
           <p className="text-xl font-bold text-foreground">{avgTracks}</p>
-          <p className="text-xs text-muted-foreground">Średnia/dzień</p>
+          <p className="text-xs text-muted-foreground">Średnia</p>
         </div>
       </div>
 
-      {/* Collection status indicator */}
+      {/* Collection status */}
       {!collectionActive && totalTracks === 0 && (
         <div className="mt-3 text-center">
           <p className="text-xs text-muted-foreground">

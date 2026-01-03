@@ -1,8 +1,19 @@
 /**
  * useSpotifyData hook - fetches real data from backend API
+ * With PREVIEW MODE support for standalone UI testing
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { statsAPI, authAPI } from '@/lib/api';
+import {
+    isPreviewMode,
+    MOCK_USER,
+    MOCK_TOP_ARTISTS,
+    MOCK_TOP_TRACKS,
+    MOCK_RECENTLY_PLAYED,
+    MOCK_LISTENING_CHART,
+    MOCK_LISTENING_HISTORY,
+    MOCK_AUDIO_FEATURES,
+} from '@/lib/mockData';
 
 export type TimeRange = 'short_term' | 'medium_term' | 'long_term';
 
@@ -22,8 +33,26 @@ export const mapTimeRange = (uiRange: string): TimeRange => {
     }
 };
 
+// Helper to create mock query result
+const mockQueryResult = <T>(data: T) => ({
+    queryKey: ['mock'],
+    queryFn: async () => {
+        // Simulate network delay for realistic feel
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return data;
+    },
+    staleTime: Infinity,
+});
+
 // Fetch current user
 export function useUser() {
+    if (isPreviewMode()) {
+        return useQuery({
+            ...mockQueryResult(MOCK_USER),
+            queryKey: ['user'],
+        });
+    }
+
     return useQuery({
         queryKey: ['user'],
         queryFn: async () => {
@@ -37,6 +66,13 @@ export function useUser() {
 
 // Fetch top artists
 export function useTopArtists(timeRange: TimeRange = 'medium_term', limit = 20) {
+    if (isPreviewMode()) {
+        return useQuery({
+            ...mockQueryResult(MOCK_TOP_ARTISTS.slice(0, limit)),
+            queryKey: ['topArtists', timeRange, limit],
+        });
+    }
+
     return useQuery({
         queryKey: ['topArtists', timeRange, limit],
         queryFn: async () => {
@@ -49,6 +85,13 @@ export function useTopArtists(timeRange: TimeRange = 'medium_term', limit = 20) 
 
 // Fetch top tracks
 export function useTopTracks(timeRange: TimeRange = 'medium_term', limit = 20) {
+    if (isPreviewMode()) {
+        return useQuery({
+            ...mockQueryResult(MOCK_TOP_TRACKS.slice(0, limit)),
+            queryKey: ['topTracks', timeRange, limit],
+        });
+    }
+
     return useQuery({
         queryKey: ['topTracks', timeRange, limit],
         queryFn: async () => {
@@ -61,6 +104,13 @@ export function useTopTracks(timeRange: TimeRange = 'medium_term', limit = 20) {
 
 // Fetch top albums
 export function useTopAlbums(timeRange: TimeRange = 'medium_term', limit = 20) {
+    if (isPreviewMode()) {
+        return useQuery({
+            ...mockQueryResult([]),
+            queryKey: ['topAlbums', timeRange, limit],
+        });
+    }
+
     return useQuery({
         queryKey: ['topAlbums', timeRange, limit],
         queryFn: async () => {
@@ -73,6 +123,13 @@ export function useTopAlbums(timeRange: TimeRange = 'medium_term', limit = 20) {
 
 // Fetch recently played
 export function useRecentlyPlayed(limit = 50) {
+    if (isPreviewMode()) {
+        return useQuery({
+            ...mockQueryResult(MOCK_RECENTLY_PLAYED),
+            queryKey: ['recentlyPlayed', limit],
+        });
+    }
+
     return useQuery({
         queryKey: ['recentlyPlayed', limit],
         queryFn: async () => {
@@ -93,6 +150,24 @@ export function useListeningHistory(options: {
     offset?: number;
 } = {}) {
     const queryKey = ['listeningHistory', options.from?.toISOString(), options.to?.toISOString(), options.limit, options.offset];
+
+    if (isPreviewMode()) {
+        return useQuery<{
+            plays: any[];
+            total: number;
+            totalTimeMs?: number;
+            hasMore: boolean;
+            stats?: {
+                mostLooped: { trackName: string; artistName: string; albumImage?: string; count: number } | null;
+                topHours: { hour: number; count: number }[];
+                uniqueTracks: number;
+                repeatRatio: number;
+            };
+        }>({
+            ...mockQueryResult(MOCK_LISTENING_HISTORY),
+            queryKey,
+        });
+    }
 
     return useQuery<{
         plays: any[];
@@ -122,6 +197,17 @@ export function useListeningHistory(options: {
 
 // Fetch overview stats
 export function useOverview() {
+    if (isPreviewMode()) {
+        return useQuery({
+            ...mockQueryResult({
+                totalTracks: 237,
+                totalArtists: 89,
+                totalMinutes: 830,
+            }),
+            queryKey: ['overview'],
+        });
+    }
+
     return useQuery({
         queryKey: ['overview'],
         queryFn: async () => {
@@ -148,6 +234,13 @@ export interface ListeningChartData {
 
 // Fetch listening chart data from database
 export function useListeningChart(days = 7) {
+    if (isPreviewMode()) {
+        return useQuery<ListeningChartData>({
+            ...mockQueryResult(MOCK_LISTENING_CHART),
+            queryKey: ['listeningChart', days],
+        });
+    }
+
     return useQuery<ListeningChartData>({
         queryKey: ['listeningChart', days],
         queryFn: async () => {
@@ -161,6 +254,15 @@ export function useListeningChart(days = 7) {
 // Manually sync listening history
 export function useSyncListeningHistory() {
     const queryClient = useQueryClient();
+
+    if (isPreviewMode()) {
+        return useMutation({
+            mutationFn: async () => {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                return { synced: 5, total: 237 };
+            },
+        });
+    }
 
     return useMutation({
         mutationFn: async () => {
@@ -204,6 +306,14 @@ interface AudioFeaturesResponse {
 
 // Get audio features for tracks (energy, danceability, valence, etc.)
 export function useAudioFeatures(trackIds: string[]) {
+    if (isPreviewMode()) {
+        return useQuery<AudioFeaturesResponse>({
+            ...mockQueryResult(MOCK_AUDIO_FEATURES),
+            queryKey: ['audioFeatures', trackIds],
+            enabled: trackIds.length > 0,
+        });
+    }
+
     return useQuery<AudioFeaturesResponse>({
         queryKey: ['audioFeatures', trackIds],
         queryFn: async () => {

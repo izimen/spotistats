@@ -312,19 +312,17 @@ const History = () => {
   };
 
   return (
-    <>
+    <div className="space-y-8">
       {/* Hero Section */}
-      <section className="mb-12 opacity-0 animate-fade-in">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">
-                <span className="text-primary">Historia</span> słuchania
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Wszystkie Twoje ostatnio słuchane utwory
-              </p>
-            </div>
+      <section className="opacity-0 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-1">
+              <span className="text-gradient">Historia</span> słuchania
+            </h1>
+            <p className="text-muted-foreground">
+              Wszystkie Twoje ostatnio słuchane utwory
+            </p>
           </div>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
@@ -591,7 +589,7 @@ const History = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
