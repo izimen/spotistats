@@ -30,6 +30,7 @@ export const GENRE_MAP: Record<string, string> = {
     "conscious hip hop": "Hip Hop",
 
     // Rock
+    "rock": "Rock",
     "classic rock": "Rock",
     "hard rock": "Rock",
     "alternative rock": "Rock",
@@ -39,6 +40,15 @@ export const GENRE_MAP: Record<string, string> = {
     "soft rock": "Rock",
     "glam rock": "Rock",
     "progressive rock": "Rock",
+    "psychedelic rock": "Rock",
+    "garage rock": "Rock",
+    "art rock": "Rock",
+    "blues rock": "Rock",
+    "southern rock": "Rock",
+    "stoner rock": "Rock",
+    "grunge": "Rock",
+    "post-rock": "Rock",
+    "britpop": "Rock",
 
     // Electronic / Dance
     "edm": "Electronic",
