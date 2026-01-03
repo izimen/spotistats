@@ -159,9 +159,11 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
         const perGenreWeight = rankWeight / artistGenres.length;
 
         artistGenres.forEach((genre: string) => {
-            // Change 3: Normalize genre names
-            const normalizedGenre = normalizeGenre(genre);
-            genreScore[normalizedGenre] = (genreScore[normalizedGenre] || 0) + perGenreWeight;
+            // Use raw genre names (just capitalize) for more variety
+            const capitalizedGenre = genre.split(' ').map(word =>
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+            genreScore[capitalizedGenre] = (genreScore[capitalizedGenre] || 0) + perGenreWeight;
         });
     });
 
