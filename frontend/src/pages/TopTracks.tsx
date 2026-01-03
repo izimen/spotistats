@@ -170,6 +170,7 @@ const TopTracks = () => {
             icon={Music}
             delay={100}
             variant="primary"
+            tooltip="Utwór #1 na Twojej liście w wybranym okresie. Dane z API Spotify (top 50 utworów)."
           />
           <StatsCard
             title="Energia"
@@ -177,6 +178,7 @@ const TopTracks = () => {
             subtitle="Średnia energia"
             icon={Zap}
             delay={200}
+            tooltip="Średnia energia Twoich top utworów. Obliczana z Audio Features Spotify (0-100%)."
           />
           <StatsCard
             title="Mood"
@@ -184,6 +186,7 @@ const TopTracks = () => {
             subtitle="Na podstawie Spotify"
             icon={Headphones}
             delay={300}
+            tooltip="Dominujący nastrój Twoich top utworów. Obliczany z kombinacji energii, taneczności i walencji."
           />
         </>
       }

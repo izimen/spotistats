@@ -60,6 +60,7 @@ const TopArtists = () => {
             icon={Star}
             delay={100}
             variant="primary"
+            tooltip="Artysta #1 na Twojej liście w wybranym okresie. Dane z API Spotify (top 50 artystów)."
           />
           <StatsCard
             title="Gatunki muzyczne"
@@ -67,6 +68,7 @@ const TopArtists = () => {
             subtitle="Różnorodność"
             icon={TrendingUp}
             delay={200}
+            tooltip="Liczba unikalnych gatunków muzycznych wśród Twoich top artystów. Im więcej, tym bardziej zróżnicowany gust."
           />
           <StatsCard
             title="Top Gatunek"
@@ -74,6 +76,7 @@ const TopArtists = () => {
             subtitle="Najczęściej słuchany"
             icon={Music2}
             delay={300}
+            tooltip="Główny gatunek Twojego #1 artysty. Gatunki pobierane z profili artystów na Spotify."
           />
         </>
       }
