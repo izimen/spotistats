@@ -1,17 +1,25 @@
 import { Music, Headphones, Clock, TrendingUp, Cake, Mic2, Loader2, Sparkles } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import StatsCard from "@/components/StatsCard";
 import TopArtistCard from "@/components/TopArtistCard";
 import TopTrackCard from "@/components/TopTrackCard";
-import ListeningChart from "@/components/ListeningChart";
-import GenreChart from "@/components/GenreChart";
+// Lazy load heavy chart components (Recharts ~50KB)
+const ListeningChart = lazy(() => import("@/components/ListeningChart"));
+const GenreChart = lazy(() => import("@/components/GenreChart"));
 import RecentlyPlayed from "@/components/RecentlyPlayed";
 import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
 import { useUser, useTopArtists, useTopTracks, useRecentlyPlayed, mapTimeRange } from "@/hooks/useSpotifyData";
 import { calculateTopGenres } from "@/lib/genreUtils";
 import { calculateListeningAge, getAgeDescription } from "@/lib/listeningAge";
 import { AxiosError } from "axios";
+
+// Chart loading fallback
+const ChartSkeleton = () => (
+  <div className="h-[300px] rounded-2xl border border-border/40 bg-card animate-pulse flex items-center justify-center">
+    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+  </div>
+);
 
 interface SpotifyArtist {
   name: string;
@@ -147,10 +155,14 @@ const Index = () => {
       {/* Charts Row */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <ListeningChart />
+          <Suspense fallback={<ChartSkeleton />}>
+            <ListeningChart />
+          </Suspense>
         </div>
         <div className="lg:col-span-1">
-          <GenreChart artists={allArtists} timeRange={timeRange} />
+          <Suspense fallback={<ChartSkeleton />}>
+            <GenreChart artists={allArtists} timeRange={timeRange} />
+          </Suspense>
         </div>
       </section>
 

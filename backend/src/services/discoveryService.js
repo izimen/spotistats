@@ -13,7 +13,7 @@ function formatTrack(track) {
         trackId: track.id,
         trackName: track.name,
         artistName: track.artists?.[0]?.name || 'Unknown',
-        albumImage: track.album?.images?.[0]?.url || null,
+        albumImage: track.album?.images?.[2]?.url || track.album?.images?.[1]?.url || track.album?.images?.[0]?.url || null,
         spotifyUrl: track.external_urls?.spotify || null,
         previewUrl: track.preview_url || null,
         popularity: track.popularity || 0

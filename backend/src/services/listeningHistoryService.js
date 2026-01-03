@@ -32,7 +32,7 @@ async function collectFromAPI(userId, accessToken) {
             trackName: item.track?.name || 'Unknown',
             artistName: item.track?.artists?.[0]?.name || 'Unknown',
             albumName: item.track?.album?.name || null,
-            albumImage: item.track?.album?.images?.[0]?.url || null,
+            albumImage: item.track?.album?.images?.[2]?.url || item.track?.album?.images?.[1]?.url || item.track?.album?.images?.[0]?.url || null,
             spotifyUri: item.track?.uri || null,
             msPlayed: item.track?.duration_ms || 0, // Full track duration as approximation
             playedAt: new Date(item.played_at),

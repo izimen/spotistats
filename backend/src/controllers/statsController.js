@@ -13,6 +13,16 @@ const discoveryService = require('../services/discoveryService');
 // Valid time ranges
 const VALID_TIME_RANGES = ['short_term', 'medium_term', 'long_term'];
 
+/**
+ * Get smallest available image URL (64px preferred for thumbnails)
+ * Spotify returns: [0]=640px, [1]=300px, [2]=64px
+ */
+function getSmallestImage(images) {
+    if (!images || images.length === 0) return null;
+    // Prefer smallest (64px), fallback to medium (300px), then large (640px)
+    return images[2]?.url || images[1]?.url || images[0]?.url || null;
+}
+
 // Time range labels for frontend
 const TIME_RANGE_LABELS = {
     short_term: 'Last 4 Weeks',
@@ -124,7 +134,7 @@ async function getTopArtists(req, res, next) {
             genres: artist.genres || [],
             popularity: artist.popularity,
             followers: artist.followers?.total || 0,
-            image: artist.images?.[0]?.url || null,
+            image: getSmallestImage(artist.images),
             spotifyUrl: artist.external_urls?.spotify
         }));
 
@@ -168,7 +178,7 @@ async function getTopTracks(req, res, next) {
             album: {
                 id: track.album?.id,
                 name: track.album?.name,
-                image: track.album?.images?.[0]?.url || null,
+                image: getSmallestImage(track.album?.images),
                 releaseDate: track.album?.release_date || null
             },
             duration: track.duration_ms,
@@ -214,7 +224,7 @@ async function getTopAlbums(req, res, next) {
             id: album.id,
             name: album.name,
             artists: album.artists?.map(a => ({ id: a.id, name: a.name })) || [],
-            image: album.images?.[0]?.url || null,
+            image: getSmallestImage(album.images),
             releaseDate: album.release_date,
             totalTracks: album.total_tracks,
             trackCount: album.trackCount // How many of user's top tracks are from this album
@@ -266,7 +276,7 @@ async function getRecentlyPlayed(req, res, next) {
                 album: {
                     id: item.track?.album?.id,
                     name: item.track?.album?.name,
-                    image: item.track?.album?.images?.[0]?.url || null
+                    image: getSmallestImage(item.track?.album?.images)
                 },
                 duration: item.track?.duration_ms,
                 spotifyUrl: item.track?.external_urls?.spotify
