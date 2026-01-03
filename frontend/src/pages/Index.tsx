@@ -120,7 +120,7 @@ const Index = () => {
             icon={Mic2}
             delay={100}
             variant="primary"
-            tooltip="Artysta, którego słuchałeś najczęściej w wybranym okresie."
+            tooltip="Pobieramy top 50 artystów z API Spotify dla wybranego okresu (Tydzień/Miesiąc/Rok). Ten kafelek pokazuje #1 z tej listy."
           />
           <StatsCard
             title="Top Utwór"
@@ -129,7 +129,7 @@ const Index = () => {
             icon={Music}
             delay={150}
             variant="default"
-            tooltip="Utwór, którego słuchałeś najczęściej w wybranym okresie."
+            tooltip="Pobieramy top 50 utworów z API Spotify dla wybranego okresu. Ten kafelek pokazuje #1 z tej listy."
           />
           <StatsCard
             title="Wiek słuchania"
@@ -138,7 +138,7 @@ const Index = () => {
             icon={Cake}
             delay={200}
             variant="accent"
-            tooltip="Obliczany na podstawie średniego roku wydania Twoich ulubionych utworów."
+            tooltip="Średni rok wydania Twoich top 50 utworów z wybranego okresu. Im nowsze utwory słuchasz, tym 'młodszy' wiek."
           />
           <StatsCard
             title="Top Gatunek"
@@ -147,7 +147,7 @@ const Index = () => {
             icon={TrendingUp}
             delay={250}
             variant="default"
-            tooltip="Dominujący gatunek muzyczny Twoich top artystów."
+            tooltip="Zliczamy gatunki wszystkich top 50 artystów z wybranego okresu i wybieramy najczęściej występujący."
           />
         </div>
       </section>

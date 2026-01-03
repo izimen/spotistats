@@ -355,7 +355,7 @@ const History = () => {
                         <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs text-xs">
-                        Szuka artystów słuchanych o podobnej porze (±2h od teraz). Bazuje na 100 ostatnich utworach. Pewność rośnie z ilością danych.
+                        Analizujemy całą historię słuchania z bazy danych (nie tylko top 50!). Szukamy artystów których słuchasz o podobnej porze (±2h od teraz). Pewność rośnie z ilością zebranych danych.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -420,7 +420,7 @@ const History = () => {
                       <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs text-xs">
-                      5 cech audio: energia, taneczność, akustyka, nostalgia, głośność. Obliczane z proporcji godzin nocnych, powtórzeń i długości utworów (100 ostatnich).
+                      Dla trybu 'Wszystko': pobieramy Audio Features z Spotify API dla Twoich top utworów. Dla innych: obliczamy z proporcji no cnych odtworzeń, powtórzeń i długości utworów w historii.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -467,7 +467,7 @@ const History = () => {
                         <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs text-xs">
-                        Top 3 godziny (0-23) z największą liczbą odtworzeń w wybranym okresie. Obliczane z całej historii na serwerze.
+                        Analizujemy CAŁĄ historię słuchania z bazy danych. Grupujemy odtworzenia wg godziny (0-23) i pokazujemy top 3. Dane zbierane automatycznie co ~1h.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
