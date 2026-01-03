@@ -99,6 +99,12 @@ export function useListeningHistory(options: {
         total: number;
         totalTimeMs?: number;
         hasMore: boolean;
+        stats?: {
+            mostLooped: { trackName: string; artistName: string; albumImage?: string; count: number } | null;
+            topHours: { hour: number; count: number }[];
+            uniqueTracks: number;
+            repeatRatio: number;
+        };
     }>({
         queryKey,
         queryFn: async () => {

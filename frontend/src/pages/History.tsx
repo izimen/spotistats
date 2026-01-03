@@ -1,4 +1,10 @@
-import { Calendar, Dna, Shuffle, Target, Flame, Star, Moon, Zap, Repeat, Play, X } from "lucide-react";
+import { Calendar, Dna, Shuffle, Target, Flame, Star, Moon, Zap, Repeat, Play, X, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
@@ -144,21 +150,30 @@ const History = () => {
     })
     , [recentTracks]);
 
-  // Calculate statistics - use server-side total time if available
+  // Calculate statistics - use server-side stats if available
   const serverTotalMinutes = historyData?.totalTimeMs
     ? Math.round(historyData.totalTimeMs / 60000)
     : undefined;
+
+  // Use backend stats for mostLooped and topHours
+  const serverMostLooped = historyData?.stats?.mostLooped;
+  const serverTopHours = historyData?.stats?.topHours;
 
   const {
     totalMinutes,
     minutesDiff,
     minutesDiffPercent,
-    mostLooped,
+    mostLooped: localMostLooped,
     listeningMode,
     musicDNA: localMusicDNA,
     prediction: localPrediction,
     heatmapData: localHeatmapData
   } = useHistoryStats(formattedTracks, serverTotalMinutes);
+
+  // Prefer server stats, fallback to local
+  const mostLooped = serverMostLooped
+    ? { title: serverMostLooped.trackName, artist: serverMostLooped.artistName, image: serverMostLooped.albumImage, count: serverMostLooped.count }
+    : localMostLooped;
 
   // API-based Music DNA (real Spotify Audio Features)
   const [apiMusicDNA, setApiMusicDNA] = useState<{
@@ -334,7 +349,19 @@ const History = () => {
                 <span className="text-2xl">🔮</span>
               </div>
               <div>
-                <h3 className="font-semibold text-foreground text-lg">Przewidywanie</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground text-lg">Przewidywanie</h3>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Szuka artystów słuchanych o podobnej porze (±2h od teraz). Bazuje na 100 ostatnich utworach. Pewność rośnie z ilością danych.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <p className="text-sm text-muted-foreground">Na podstawie wzorców</p>
               </div>
             </div>
@@ -387,7 +414,19 @@ const History = () => {
               <Dna className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-lg">Twoje Muzyczne DNA</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground text-lg">Twoje Muzyczne DNA</h3>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      5 cech audio: energia, taneczność, akustyka, nostalgia, głośność. Obliczane z proporcji godzin nocnych, powtórzeń i długości utworów (100 ostatnich).
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <p className="text-sm text-muted-foreground">Profil soniczny</p>
             </div>
           </div>
@@ -422,7 +461,19 @@ const History = () => {
                 <Calendar className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground text-lg">Złote Godziny</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground text-lg">Złote Godziny</h3>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Top 3 godziny (0-23) z największą liczbą odtworzeń w wybranym okresie. Obliczane z całej historii na serwerze.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <p className="text-sm text-muted-foreground">Twój rytm muzyczny</p>
               </div>
             </div>
@@ -430,7 +481,10 @@ const History = () => {
 
           <div className="flex flex-col gap-4">
             {(() => {
-              const sortedData = [...heatmapData].sort((a, b) => b.count - a.count).slice(0, 3);
+              // Prefer server-side topHours if available, fallback to local heatmapData
+              const sortedData = serverTopHours && serverTopHours.length > 0
+                ? serverTopHours
+                : [...heatmapData].sort((a, b) => b.count - a.count).slice(0, 3);
               const top1 = sortedData[0];
               const rest = sortedData.slice(1);
 

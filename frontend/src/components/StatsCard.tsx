@@ -1,5 +1,11 @@
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Info } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface StatsCardProps {
   title: string;
@@ -8,9 +14,10 @@ interface StatsCardProps {
   icon: LucideIcon;
   delay?: number;
   variant?: "default" | "primary" | "accent";
+  tooltip?: string;
 }
 
-const StatsCard = ({ title, value, subtitle, icon: Icon, delay = 0, variant = "default" }: StatsCardProps) => {
+const StatsCard = ({ title, value, subtitle, icon: Icon, delay = 0, variant = "default", tooltip }: StatsCardProps) => {
   const textRef = useRef<HTMLParagraphElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [needsMarquee, setNeedsMarquee] = useState(false);
@@ -63,9 +70,23 @@ const StatsCard = ({ title, value, subtitle, icon: Icon, delay = 0, variant = "d
 
       <div className="relative flex items-start justify-between gap-3 h-full">
         <div className="space-y-2 flex-1 min-w-0 overflow-hidden">
-          <p className="text-sm text-muted-foreground font-medium tracking-wide uppercase">
-            {title}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm text-muted-foreground font-medium tracking-wide uppercase">
+              {title}
+            </p>
+            {tooltip && (
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-xs">
+                    {tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
 
           {/* Value with marquee for long text */}
           <div ref={containerRef} className="overflow-hidden max-w-full">

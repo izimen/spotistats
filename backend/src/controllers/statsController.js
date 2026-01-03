@@ -483,6 +483,7 @@ async function getListeningHistory(req, res, next) {
             plays: result.plays,
             total: result.total,
             totalTimeMs: result.totalTimeMs,
+            stats: result.stats,
             hasMore: result.hasMore,
         });
     } catch (error) {

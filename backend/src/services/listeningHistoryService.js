@@ -79,6 +79,7 @@ async function collectFromAPI(userId, accessToken) {
  */
 async function getUserHistory(userId, options = {}) {
     const { from, to, limit = 50, offset = 0 } = options;
+    const startTime = Date.now();
 
     const where = { userId };
 
@@ -88,26 +89,93 @@ async function getUserHistory(userId, options = {}) {
         if (to) where.playedAt.lte = to;
     }
 
-    const [plays, total, aggregate] = await Promise.all([
-        prisma.streamingHistory.findMany({
-            where,
-            orderBy: { playedAt: 'desc' },
-            take: limit,
-            skip: offset,
-        }),
-        prisma.streamingHistory.count({ where }),
-        prisma.streamingHistory.aggregate({
-            where,
-            _sum: { msPlayed: true }
-        })
-    ]);
+    try {
+        // Run all queries in parallel for performance
+        const [plays, total, aggregate, mostLoopedResult, allPlaysForHours, uniqueTracksResult] = await Promise.all([
+            // Paginated plays for display
+            prisma.streamingHistory.findMany({
+                where,
+                orderBy: { playedAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            // Total count
+            prisma.streamingHistory.count({ where }),
+            // Total time aggregation
+            prisma.streamingHistory.aggregate({
+                where,
+                _sum: { msPlayed: true }
+            }),
+            // Most looped track (groupBy)
+            prisma.streamingHistory.groupBy({
+                by: ['trackName', 'artistName', 'albumImage'],
+                where,
+                _count: { id: true },
+                orderBy: { _count: { id: 'desc' } },
+                take: 1
+            }),
+            // All playedAt for hour aggregation (Prisma doesn't support groupBy on date functions)
+            prisma.streamingHistory.findMany({
+                where,
+                select: { playedAt: true }
+            }),
+            // Unique tracks count for listening mode
+            prisma.streamingHistory.groupBy({
+                by: ['trackName', 'artistName'],
+                where,
+            })
+        ]);
 
-    return {
-        plays,
-        total,
-        totalTimeMs: Number(aggregate._sum.msPlayed || 0),
-        hasMore: offset + plays.length < total,
-    };
+        // Calculate top hours from playedAt data
+        const hourCounts = {};
+        for (let i = 0; i < 24; i++) hourCounts[i] = 0;
+
+        allPlaysForHours.forEach(play => {
+            const hour = new Date(play.playedAt).getHours();
+            hourCounts[hour]++;
+        });
+
+        // Get top 3 hours sorted by count
+        const topHours = Object.entries(hourCounts)
+            .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+
+        // Log slow queries
+        const duration = Date.now() - startTime;
+        if (duration > 1000) {
+            console.warn(`[ListeningHistory] Slow query: getUserHistory took ${duration}ms`, { userId, from, to, total });
+        }
+
+        return {
+            plays,
+            total,
+            totalTimeMs: Number(aggregate._sum.msPlayed || 0),
+            hasMore: offset + plays.length < total,
+            stats: {
+                mostLooped: mostLoopedResult[0] ? {
+                    trackName: mostLoopedResult[0].trackName,
+                    artistName: mostLoopedResult[0].artistName,
+                    albumImage: mostLoopedResult[0].albumImage,
+                    count: mostLoopedResult[0]._count.id
+                } : null,
+                topHours,
+                uniqueTracks: uniqueTracksResult.length,
+                repeatRatio: total > 0 ? 1 - (uniqueTracksResult.length / total) : 0
+            }
+        };
+    } catch (error) {
+        console.error('[ListeningHistory] Failed to fetch user history:', error.message);
+
+        // Return minimal response on error - frontend will use fallback
+        return {
+            plays: [],
+            total: 0,
+            totalTimeMs: 0,
+            hasMore: false,
+            stats: null
+        };
+    }
 }
 
 /**

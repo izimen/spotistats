@@ -24,6 +24,7 @@ const StatisticsGrid = ({ totalMinutes, minutesDiff, minutesDiffPercent, mostLoo
                 icon={Clock}
                 delay={100}
                 variant="primary"
+                tooltip="Suma czasu wszystkich odtworzeń w wybranym okresie. Obliczana z całej historii (nie tylko widocznych utworów). Dane zbierane automatycznie co ~1h."
             />
             <StatsCard
                 title="Zapętlany utwór"
@@ -31,6 +32,7 @@ const StatisticsGrid = ({ totalMinutes, minutesDiff, minutesDiffPercent, mostLoo
                 subtitle={mostLooped ? `${mostLooped.count}x powtórzeń` : "Brak powtórzeń"}
                 icon={Repeat}
                 delay={200}
+                tooltip="Utwór z największą liczbą odtworzeń w wybranym okresie. Analiza całej historii, nie tylko 100 ostatnich utworów."
             />
             <StatsCard
                 title="Tryb słuchania"
@@ -38,6 +40,7 @@ const StatisticsGrid = ({ totalMinutes, minutesDiff, minutesDiffPercent, mostLoo
                 subtitle={`${listeningMode.percent}% aktywności`}
                 icon={Headphones}
                 delay={300}
+                tooltip="Algorytm punktowy analizujący godziny odtworzeń, powtórzenia i długość utworów. Bazuje na 100 ostatnich utworach z wybranego okresu."
             />
         </section>
     );
