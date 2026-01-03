@@ -1,5 +1,5 @@
 import React from "react";
-import { Music2, TrendingUp, Info, Sparkles } from "lucide-react";
+import { Music2, Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +23,7 @@ const genreColors = [
 ];
 
 const GenreChart = React.memo(({ artists, timeRange = "month" }: GenreChartProps) => {
-  const { topGenres: genres, topGenreName } = calculateTopGenres(artists || []);
+  const { topGenres: genres } = calculateTopGenres(artists || [], 5);
   const artistCount = (artists || []).length;
 
   // Handle empty state
@@ -44,7 +44,6 @@ const GenreChart = React.memo(({ artists, timeRange = "month" }: GenreChartProps
     );
   }
 
-  const topGenre = topGenreName;
   const maxPercentage = genres[0]?.percentage || 100;
 
   const timeLabel = timeRange === "week" ? "Ten tydzień"
@@ -133,19 +132,6 @@ const GenreChart = React.memo(({ artists, timeRange = "month" }: GenreChartProps
             </div>
           );
         })}
-      </div>
-
-      {/* Footer - top genre highlight */}
-      <div className="relative mt-5 pt-4 border-t border-border/30 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">{topGenre}</p>
-            <p className="text-xs text-muted-foreground">Twój dominujący gatunek</p>
-          </div>
-        </div>
       </div>
     </div>
   );
