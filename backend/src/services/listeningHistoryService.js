@@ -88,7 +88,7 @@ async function getUserHistory(userId, options = {}) {
         if (to) where.playedAt.lte = to;
     }
 
-    const [plays, total] = await Promise.all([
+    const [plays, total, aggregate] = await Promise.all([
         prisma.streamingHistory.findMany({
             where,
             orderBy: { playedAt: 'desc' },
@@ -96,11 +96,16 @@ async function getUserHistory(userId, options = {}) {
             skip: offset,
         }),
         prisma.streamingHistory.count({ where }),
+        prisma.streamingHistory.aggregate({
+            where,
+            _sum: { msPlayed: true }
+        })
     ]);
 
     return {
         plays,
         total,
+        totalTimeMs: Number(aggregate._sum.msPlayed || 0),
         hasMore: offset + plays.length < total,
     };
 }

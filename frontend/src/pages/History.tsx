@@ -144,17 +144,21 @@ const History = () => {
     })
     , [recentTracks]);
 
-  // Use custom hook for stats logic (local calculations as fallback)
+  // Calculate statistics - use server-side total time if available
+  const serverTotalMinutes = historyData?.totalTimeMs
+    ? Math.round(historyData.totalTimeMs / 60000)
+    : undefined;
+
   const {
     totalMinutes,
     minutesDiff,
     minutesDiffPercent,
     mostLooped,
     listeningMode,
-    prediction: localPrediction,
     musicDNA: localMusicDNA,
+    prediction: localPrediction,
     heatmapData: localHeatmapData
-  } = useHistoryStats(formattedTracks);
+  } = useHistoryStats(formattedTracks, serverTotalMinutes);
 
   // API-based Music DNA (real Spotify Audio Features)
   const [apiMusicDNA, setApiMusicDNA] = useState<{

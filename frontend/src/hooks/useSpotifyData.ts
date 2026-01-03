@@ -94,7 +94,12 @@ export function useListeningHistory(options: {
 } = {}) {
     const queryKey = ['listeningHistory', options.from?.toISOString(), options.to?.toISOString(), options.limit, options.offset];
 
-    return useQuery({
+    return useQuery<{
+        plays: any[];
+        total: number;
+        totalTimeMs?: number;
+        hasMore: boolean;
+    }>({
         queryKey,
         queryFn: async () => {
             const response = await statsAPI.getListeningHistory({

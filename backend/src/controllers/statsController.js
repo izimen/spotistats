@@ -482,6 +482,7 @@ async function getListeningHistory(req, res, next) {
             success: true,
             plays: result.plays,
             total: result.total,
+            totalTimeMs: result.totalTimeMs,
             hasMore: result.hasMore,
         });
     } catch (error) {

@@ -95,7 +95,7 @@ const Index = () => {
               Witaj <span className="text-primary">{user?.displayName || 'Użytkowniku'}</span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Sprawdź swoje statystyki słuchania muzyki test
+              Sprawdź swoje statystyki słuchania muzyki
             </p>
           </div>
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
