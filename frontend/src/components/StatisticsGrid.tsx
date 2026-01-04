@@ -32,7 +32,7 @@ const StatisticsGrid = ({ totalMinutes, minutesDiff, minutesDiffPercent, mostLoo
                 subtitle={mostLooped ? `${mostLooped.count}x powtórzeń` : "Brak powtórzeń"}
                 icon={Repeat}
                 delay={200}
-                tooltip="Utwór z największą liczbą odtworzeń w wybranym okresie. Analiza całej historii, nie tylko 100 ostatnich utworów."
+                tooltip="Utwór z największą liczbą odtworzeń w wybranym okresie. Dla trybu 'Wszystko': analiza całej historii z bazy. Dla innych: bazuje na 100 ostatnich utworach."
             />
             <StatsCard
                 title="Tryb słuchania"

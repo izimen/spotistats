@@ -355,7 +355,7 @@ const History = () => {
                         <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs text-xs">
-                        Analizujemy całą historię słuchania z bazy danych (nie tylko top 50!). Szukamy artystów których słuchasz o podobnej porze (±2h od teraz). Pewność rośnie z ilością zebranych danych.
+                        Dla trybu 'Wszystko': analizujemy historię z ostatnich 30 dni i szukamy artystów słuchanych o podobnej porze (±2h). Dla innych trybów: bazujemy na 100 ostatnich utworach.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -420,7 +420,7 @@ const History = () => {
                       <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs text-xs">
-                      Dla trybu 'Wszystko': pobieramy Audio Features z Spotify API dla Twoich top utworów. Dla innych: obliczamy z proporcji no cnych odtworzeń, powtórzeń i długości utworów w historii.
+                      Dla trybu 'Wszystko': pobieramy Audio Features z Spotify API dla Twoich top utworów. Dla innych trybów: obliczamy na podstawie godzin słuchania, powtórzeń utworów, różnorodności artystów i długości tracków.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
