@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Play, Heart } from "lucide-react";
+import { Play, Pause, ExternalLink } from "lucide-react";
 
 interface TopTrackCardProps {
   rank: number;
@@ -8,13 +8,27 @@ interface TopTrackCardProps {
   image: string;
   duration: string;
   delay?: number;
+  previewUrl?: string | null;
+  spotifyUrl?: string | null;
 }
 
-const TopTrackCard = React.memo(({ rank, title, artist, image, duration, delay = 0 }: TopTrackCardProps) => {
+const TopTrackCard = React.memo(({
+  rank,
+  title,
+  artist,
+  image,
+  duration,
+  delay = 0,
+  previewUrl,
+  spotifyUrl
+}: TopTrackCardProps) => {
   const isTop3 = rank <= 3;
-  const [isLiked, setIsLiked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [showCTA, setShowCTA] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [tiltStyle, setTiltStyle] = useState({});
 
   // Marquee state for title
@@ -51,6 +65,44 @@ const TopTrackCard = React.memo(({ rank, title, artist, image, duration, delay =
     }
   }, [title, artist]);
 
+  // Audio playback progress
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+      setShowCTA(true);
+    };
+
+    const handlePlay = () => {
+      setIsPlaying(true);
+      // Show CTA after 5 seconds of playing
+      setTimeout(() => {
+        if (audioRef.current && !audioRef.current.paused) {
+          setShowCTA(true);
+        }
+      }, 5000);
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('play', handlePlay);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('play', handlePlay);
+    };
+  }, []);
+
   // 3D Tilt effect for top 3 cards
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current || !isTop3) return;
@@ -76,9 +128,40 @@ const TopTrackCard = React.memo(({ rank, title, artist, image, duration, delay =
     setIsHovered(false);
   }, []);
 
-  const handleLikeClick = (e: React.MouseEvent) => {
+  const handleCardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsLiked(!isLiked);
+
+    // If no preview available, go directly to Spotify
+    if (!previewUrl) {
+      if (spotifyUrl) {
+        window.open(spotifyUrl, '_blank');
+      }
+      return;
+    }
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      // Stop any other playing audio elements
+      document.querySelectorAll('audio').forEach(a => {
+        if (a !== audio) {
+          a.pause();
+          a.currentTime = 0;
+        }
+      });
+      audio.play().catch(console.error);
+    }
+  };
+
+  const handleSpotifyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (spotifyUrl) {
+      window.open(spotifyUrl, '_blank');
+    }
   };
 
   // Rank badge colors
@@ -89,137 +172,188 @@ const TopTrackCard = React.memo(({ rank, title, artist, image, duration, delay =
   };
 
   return (
-    <div
-      ref={cardRef}
-      className={`
-        group relative overflow-hidden rounded-xl p-3 cursor-pointer
-        bg-card/50 backdrop-blur-sm
-        border border-border/30
-        hover:bg-card hover:border-primary/30
-        hover:shadow-lg hover:shadow-primary/5
-        opacity-0 animate-slide-up
-        transition-all duration-300
-      `}
-      style={{
-        animationDelay: `${delay}ms`,
-        transformStyle: 'preserve-3d',
-        ...tiltStyle,
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-    >
-      {/* Glass edge effect for top 3 */}
-      {isTop3 && (
-        <div className="absolute inset-0 rounded-xl pointer-events-none">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-        </div>
-      )}
+    <div className="relative">
+      <div
+        ref={cardRef}
+        className={`
+          group relative overflow-hidden rounded-xl p-3 cursor-pointer
+          bg-card/50 backdrop-blur-sm
+          border border-border/30
+          hover:bg-card hover:border-primary/30
+          hover:shadow-lg hover:shadow-primary/5
+          opacity-0 animate-slide-up
+          transition-all duration-300
+          ${isPlaying ? 'ring-2 ring-primary/50' : ''}
+        `}
+        style={{
+          animationDelay: `${delay}ms`,
+          transformStyle: 'preserve-3d',
+          ...tiltStyle,
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleCardClick}
+      >
+        {/* Hidden audio element */}
+        {previewUrl && (
+          <audio ref={audioRef} src={previewUrl} preload="none" />
+        )}
 
-      {/* Hover gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/[0.03] group-hover:to-transparent transition-all duration-300" />
+        {/* Glass edge effect for top 3 */}
+        {isTop3 && (
+          <div className="absolute inset-0 rounded-xl pointer-events-none">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          </div>
+        )}
 
-      <div className="relative flex items-center gap-3">
-        {/* Rank badge */}
-        <div className={`
-          w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
-          font-bold text-sm
-          ${isTop3
-            ? `bg-gradient-to-br ${rankColors[rank as 1 | 2 | 3]} border shadow-lg`
-            : 'bg-muted/50 text-muted-foreground/60 border border-border/30'
-          }
-          group-hover:scale-105 transition-transform duration-200
-        `} style={{ transform: 'translateZ(15px)' }}>
-          {rank}
-        </div>
+        {/* Hover gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/[0.03] group-hover:to-transparent transition-all duration-300" />
 
-        {/* Album art with enhanced styling */}
-        <div className="relative flex-shrink-0" style={{ transform: 'translateZ(10px)' }}>
+        <div className="relative flex items-center gap-3">
+          {/* Rank badge */}
           <div className={`
-            w-12 h-12 rounded-lg overflow-hidden
-            ring-1 ring-border/50 group-hover:ring-primary/40
-            shadow-md group-hover:shadow-lg group-hover:shadow-primary/10
-            transition-all duration-300
-          `}>
-            <img
-              src={image}
-              alt={title}
-              className={`
-                w-full h-full object-cover
-                transition-transform duration-500
-                ${isHovered ? 'scale-110' : 'scale-100'}
-              `}
-              loading="lazy"
-            />
+            w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
+            font-bold text-sm
+            ${isTop3
+              ? `bg-gradient-to-br ${rankColors[rank as 1 | 2 | 3]} border shadow-lg`
+              : 'bg-muted/50 text-muted-foreground/60 border border-border/30'
+            }
+            group-hover:scale-105 transition-transform duration-200
+          `} style={{ transform: 'translateZ(15px)' }}>
+            {rank}
           </div>
 
-          {/* Play overlay */}
-          <div className={`
-            absolute inset-0 flex items-center justify-center
-            bg-black/60 backdrop-blur-sm rounded-lg
-            transition-all duration-200
-            ${isHovered ? 'opacity-100' : 'opacity-0'}
-          `}>
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/40 scale-90 group-hover:scale-100 transition-transform">
-              <Play className="w-4 h-4 text-primary-foreground fill-primary-foreground ml-0.5" />
+          {/* Album art with enhanced styling */}
+          <div className="relative flex-shrink-0" style={{ transform: 'translateZ(10px)' }}>
+            <div className={`
+              w-12 h-12 rounded-lg overflow-hidden
+              ring-1 ring-border/50 group-hover:ring-primary/40
+              shadow-md group-hover:shadow-lg group-hover:shadow-primary/10
+              transition-all duration-300
+            `}>
+              <img
+                src={image}
+                alt={title}
+                className={`
+                  w-full h-full object-cover
+                  transition-transform duration-500
+                  ${isHovered ? 'scale-110' : 'scale-100'}
+                `}
+                loading="lazy"
+              />
+            </div>
+
+            {/* Play/Pause overlay */}
+            <div className={`
+              absolute inset-0 flex items-center justify-center
+              bg-black/60 backdrop-blur-sm rounded-lg
+              transition-all duration-200
+              ${isHovered || isPlaying ? 'opacity-100' : 'opacity-0'}
+            `}>
+              <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all
+                ${isPlaying
+                  ? 'bg-primary shadow-primary/40'
+                  : 'bg-primary shadow-primary/40 scale-90 group-hover:scale-100'
+                }
+              `}>
+                {isPlaying ? (
+                  <Pause className="w-4 h-4 text-primary-foreground fill-primary-foreground" />
+                ) : (
+                  <Play className="w-4 h-4 text-primary-foreground fill-primary-foreground ml-0.5" />
+                )}
+              </div>
+            </div>
+
+            {/* Glow for top 3 */}
+            {isTop3 && (
+              <div className="absolute inset-0 rounded-lg bg-primary/20 blur-lg -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </div>
+
+          {/* Track info */}
+          <div className="flex-1 min-w-0 space-y-0.5" style={{ transform: 'translateZ(5px)' }}>
+            <div ref={titleContainerRef} className="overflow-hidden max-w-full">
+              <h3
+                ref={titleRef}
+                className={`font-semibold text-foreground whitespace-nowrap group-hover:text-primary transition-colors ${titleNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
+                style={titleNeedsMarquee ? {
+                  animationDuration: `${Math.max(4, title.length * 0.2)}s`,
+                  '--marquee-distance': `-${titleScrollDistance}px`
+                } as React.CSSProperties : {}}
+              >
+                {title}
+              </h3>
+            </div>
+
+            <div ref={artistContainerRef} className="overflow-hidden max-w-full">
+              <p
+                ref={artistRef}
+                className={`text-sm text-muted-foreground whitespace-nowrap ${artistNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
+                style={artistNeedsMarquee ? {
+                  animationDuration: `${Math.max(4, artist.length * 0.2)}s`,
+                  '--marquee-distance': `-${artistScrollDistance}px`
+                } as React.CSSProperties : {}}
+              >
+                {artist}
+              </p>
             </div>
           </div>
 
-          {/* Glow for top 3 */}
-          {isTop3 && (
-            <div className="absolute inset-0 rounded-lg bg-primary/20 blur-lg -z-10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
-        </div>
-
-        {/* Track info */}
-        <div className="flex-1 min-w-0 space-y-0.5" style={{ transform: 'translateZ(5px)' }}>
-          <div ref={titleContainerRef} className="overflow-hidden max-w-full">
-            <h3
-              ref={titleRef}
-              className={`font-semibold text-foreground whitespace-nowrap group-hover:text-primary transition-colors ${titleNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
-              style={titleNeedsMarquee ? {
-                animationDuration: `${Math.max(4, title.length * 0.2)}s`,
-                '--marquee-distance': `-${titleScrollDistance}px`
-              } as React.CSSProperties : {}}
-            >
-              {title}
-            </h3>
-          </div>
-
-          <div ref={artistContainerRef} className="overflow-hidden max-w-full">
-            <p
-              ref={artistRef}
-              className={`text-sm text-muted-foreground whitespace-nowrap ${artistNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
-              style={artistNeedsMarquee ? {
-                animationDuration: `${Math.max(4, artist.length * 0.2)}s`,
-                '--marquee-distance': `-${artistScrollDistance}px`
-              } as React.CSSProperties : {}}
-            >
-              {artist}
-            </p>
+          {/* Duration & Spotify button */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs text-muted-foreground tabular-nums font-medium opacity-70 group-hover:opacity-100 transition-opacity">
+              {duration}
+            </span>
+            {spotifyUrl && (
+              <button
+                onClick={handleSpotifyClick}
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center
+                  transition-all duration-200 active:scale-90
+                  text-muted-foreground/50 hover:text-[#1DB954] hover:bg-[#1DB954]/10
+                  opacity-0 group-hover:opacity-100
+                `}
+                title="Otwórz w Spotify"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Duration & Like button */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-xs text-muted-foreground tabular-nums font-medium opacity-70 group-hover:opacity-100 transition-opacity">
-            {duration}
-          </span>
-          <button
-            onClick={handleLikeClick}
-            className={`
-              w-8 h-8 rounded-full flex items-center justify-center
-              transition-all duration-200 active:scale-90
-              ${isLiked
-                ? 'text-primary bg-primary/15'
-                : 'text-muted-foreground/50 hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100'
-              }
-            `}
-          >
-            <Heart className={`w-4 h-4 transition-all ${isLiked ? 'fill-primary scale-110' : ''}`} />
-          </button>
-        </div>
+        {/* Progress bar during playback */}
+        {isPlaying && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30 overflow-hidden rounded-b-xl">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-100"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Spotify CTA - appears below card */}
+      {showCTA && spotifyUrl && (
+        <button
+          onClick={handleSpotifyClick}
+          className="
+            mt-2 w-full py-2 px-4 rounded-lg
+            bg-[#1DB954]/10 hover:bg-[#1DB954]/20
+            border border-[#1DB954]/30 hover:border-[#1DB954]/50
+            text-[#1DB954] text-sm font-medium
+            flex items-center justify-center gap-2
+            transition-all duration-200
+            animate-fade-in
+          "
+        >
+          <span>Podoba się? Słuchaj dalej</span>
+          <ExternalLink className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 });

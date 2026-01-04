@@ -15,6 +15,8 @@ interface SpotifyTrack {
   artist?: string;
   album?: { image?: string };
   duration?: number;
+  previewUrl?: string | null;
+  spotifyUrl?: string | null;
 }
 
 const TopTracks = () => {
@@ -59,7 +61,9 @@ const TopTracks = () => {
     artist: track.artists?.[0]?.name || track.artist || "",
     image: track.album?.image || "/assets/default-album.svg",
     duration: track.duration ? `${Math.floor(track.duration / 60000)}:${String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}` : "3:00",
-    durationMs: track.duration || 180000
+    durationMs: track.duration || 180000,
+    previewUrl: track.previewUrl,
+    spotifyUrl: track.spotifyUrl
   }));
 
   // Calculate total listening time in minutes

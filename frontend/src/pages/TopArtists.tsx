@@ -13,6 +13,7 @@ interface SpotifyArtist {
   image?: string;
   popularity?: number;
   genres?: string[];
+  spotifyUrl?: string | null;
 }
 
 const TopArtists = () => {
@@ -34,7 +35,8 @@ const TopArtists = () => {
     rank: index + 1,
     name: artist.name,
     image: artist.image || "/assets/default-album.svg",
-    streams: artist.popularity?.toString() || "0"
+    streams: artist.popularity?.toString() || "0",
+    spotifyUrl: artist.spotifyUrl
   }));
 
   // Get unique genres count

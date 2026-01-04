@@ -26,6 +26,7 @@ interface SpotifyArtist {
   image?: string;
   popularity?: number;
   genres?: string[];
+  spotifyUrl?: string | null;
 }
 
 interface SpotifyTrack {
@@ -34,6 +35,8 @@ interface SpotifyTrack {
   artist?: string;
   album?: { image?: string };
   duration?: number;
+  previewUrl?: string | null;
+  spotifyUrl?: string | null;
 }
 
 const Index = () => {
@@ -56,7 +59,8 @@ const Index = () => {
     rank: index + 1,
     name: artist.name,
     image: artist.image || "/assets/default-album.svg",
-    streams: artist.popularity?.toString() || "0"
+    streams: artist.popularity?.toString() || "0",
+    spotifyUrl: artist.spotifyUrl
   }));
 
   const formattedTracks = (allTracks?.slice(0, 5) || []).map((track: SpotifyTrack, index: number) => ({
@@ -64,7 +68,9 @@ const Index = () => {
     title: track.name,
     artist: track.artists?.[0]?.name || track.artist,
     image: track.album?.image || "/assets/default-album.svg",
-    duration: track.duration ? `${Math.floor(track.duration / 60000)}:${String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}` : "3:00"
+    duration: track.duration ? `${Math.floor(track.duration / 60000)}:${String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}` : "3:00",
+    previewUrl: track.previewUrl,
+    spotifyUrl: track.spotifyUrl
   }));
 
   const listeningAge = calculateListeningAge(allTracks || []);
