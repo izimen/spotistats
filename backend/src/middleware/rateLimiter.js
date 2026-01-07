@@ -141,5 +141,7 @@ module.exports = {
     authLimiter,
     apiLimiter,
     importLimiter,
-    closeRedis
+    closeRedis,
+    createStore,
+    createKeyGenerator
 };
