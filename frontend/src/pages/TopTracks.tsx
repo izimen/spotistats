@@ -5,7 +5,7 @@ import TopTrackCard from "@/components/TopTrackCard";
 import StatsCard from "@/components/StatsCard";
 import TopItemsLayout from "@/components/TopItemsLayout";
 import { type TimeRange } from "@/components/TimeRangeFilter";
-import { useUser, useTopTracks, useAudioFeatures, mapTimeRange } from "@/hooks/useSpotifyData";
+import { useUser, useTopTracks, mapTimeRange } from "@/hooks/useSpotifyData";
 import { AxiosError } from "axios";
 
 interface SpotifyTrack {
@@ -26,27 +26,6 @@ const TopTracks = () => {
 
   const { error: userError } = useUser();
   const { data: topTracks, isLoading } = useTopTracks(apiTimeRange, 20);
-
-  // Extract track IDs for audio features
-  const trackIds = useMemo(() =>
-    (topTracks || []).map((track: SpotifyTrack) => track.id).filter(Boolean),
-    [topTracks]
-  );
-
-  // Fetch real audio features from Spotify
-  const { data: audioFeatures } = useAudioFeatures(trackIds);
-
-  // Log audio features in development only
-  useEffect(() => {
-    if (import.meta.env.DEV && audioFeatures) {
-      console.log('[TopTracks] Audio Features:', {
-        mood: audioFeatures.mood,
-        averages: audioFeatures.averages,
-        trackCount: audioFeatures.trackCount,
-        timeRange: apiTimeRange
-      });
-    }
-  }, [audioFeatures, apiTimeRange]);
 
   useEffect(() => {
     if (userError && (userError as AxiosError)?.response?.status === 401) {
@@ -69,13 +48,8 @@ const TopTracks = () => {
   // Calculate total listening time in minutes
   const totalMinutes = Math.round(formattedTracks.reduce((acc, track) => acc + track.durationMs, 0) / 60000);
 
-  // Get mood from real audio features or fallback to scoring-based analysis
+  // Get mood from local scoring-based analysis
   const getMood = () => {
-    // Use real Spotify audio features if available
-    if (audioFeatures?.mood) {
-      return audioFeatures.mood;
-    }
-
     if (formattedTracks.length === 0) return "🎵 Zrównoważony";
 
     // ============ METRICS ============
@@ -144,13 +118,8 @@ const TopTracks = () => {
     return moodEmojis[topMood] || "🎵 Zrównoważony";
   };
 
-  // Get average energy for display - fallback to listening time
+  // Get energy display - show total listening time
   const getEnergy = () => {
-    if (audioFeatures?.averages?.energy) {
-      const energy = Math.round(audioFeatures.averages.energy * 100);
-      return `${energy}%`;
-    }
-    // Fallback: show total time instead
     return `${totalMinutes} min`;
   };
 
@@ -182,15 +151,15 @@ const TopTracks = () => {
             subtitle="Średnia energia"
             icon={Zap}
             delay={200}
-            tooltip="Pobieramy Audio Features dla top 50 utworów z Spotify API, liczymy średnią wartość 'energy' (0-100%). Jeśli API nie zwróci danych, pokazujemy łączny czas."
+            tooltip="Łączny czas trwania top 20 utworów z wybranego okresu."
           />
           <StatsCard
             title="Mood"
             value={getMood()}
-            subtitle="Na podstawie Spotify"
+            subtitle="Analiza lokalna"
             icon={Headphones}
             delay={300}
-            tooltip="Analiza Audio Features (energy, valence, danceability) top 50 utworów. Jeśli valence>0.7 i energy>0.7 = Imprezowy, valence<0.3 = Melancholijny, itd."
+            tooltip="Analiza słów kluczowych w tytułach i nazwach artystów. Np. słowa 'party', 'dance' = Imprezowy, 'sad', 'cry' = Melancholijny, itd."
           />
         </>
       }
