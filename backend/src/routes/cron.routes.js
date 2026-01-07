@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const { cronAuth } = require('../middleware/cronAuth');
 const { protect } = require('../middleware/protect');
 const cronController = require('../controllers/cronController');
+const { createStore, createKeyGenerator } = require('../middleware/rateLimiter');
 
 // Rate limiter for cron endpoint: max 1 request per minute
 const cronLimiter = rateLimit({
@@ -19,6 +20,8 @@ const cronLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
+    store: createStore('cron'), // Use Redis with 'cron' prefix
+    keyGenerator: createKeyGenerator(false), // Use IP (now correct thanks to trust proxy)
     // Skip rate limiting in development for easier testing
     skip: (req) => process.env.NODE_ENV !== 'production'
 });

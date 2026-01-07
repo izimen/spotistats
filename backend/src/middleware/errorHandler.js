@@ -49,7 +49,7 @@ function errorHandler(err, req, res, next) {
         });
     } else {
         // Log only essential info in production
-        console.error(`[${errorCode}] ${message}`);
+        console.error(`[${errorCode}] ${message} | Method: ${req.method} | URL: ${req.originalUrl} | IP: ${req.ip}`);
     }
 
     // Handle specific error types

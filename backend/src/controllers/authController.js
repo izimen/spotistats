@@ -280,7 +280,7 @@ async function logout(req, res, next) {
         res.clearCookie('jwt', {
             httpOnly: true,
             secure: env.isProduction,
-            sameSite: env.isProduction ? 'strict' : 'lax'
+            sameSite: 'Lax'
         });
 
         // If user is authenticated, invalidate their refresh token
@@ -381,7 +381,7 @@ async function deleteAccount(req, res, next) {
         res.clearCookie('jwt', {
             httpOnly: true,
             secure: env.isProduction,
-            sameSite: env.isProduction ? 'strict' : 'lax'
+            sameSite: 'Lax'
         });
 
         res.json({

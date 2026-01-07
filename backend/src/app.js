@@ -20,6 +20,11 @@ const cronRoutes = require('./routes/cron.routes');
 // Create Express app
 const app = express();
 
+// Trust proxy - Required for Cloud Run / load balancers
+// This makes req.ip read the real client IP from X-Forwarded-For header
+// Without this, rate limiting would use the proxy's internal IP for ALL users
+app.set('trust proxy', true);
+
 // ===================
 // Security Middleware
 // ===================
