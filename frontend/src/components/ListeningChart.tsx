@@ -51,17 +51,31 @@ const ListeningChart = () => {
   const { data: chartData, isLoading } = useListeningChart(7);
   const syncMutation = useSyncListeningHistory();
 
+  // Shorten day names for chart display
+  const shortenDayName = (day: string): string => {
+    const shortNames: Record<string, string> = {
+      'Poniedziałek': 'Pn',
+      'Wtorek': 'Wt',
+      'Środa': 'Śr',
+      'Czwartek': 'Cz',
+      'Piątek': 'Pt',
+      'Sobota': 'Sb',
+      'Niedziela': 'Nd',
+    };
+    return shortNames[day] || day;
+  };
+
   const data = chartData?.days?.map(d => ({
-    day: d.day,
+    day: shortenDayName(d.day),
     hours: d.count,
   })) || [
-      { day: 'Pon', hours: 0 },
+      { day: 'Pn', hours: 0 },
       { day: 'Wt', hours: 0 },
       { day: 'Śr', hours: 0 },
-      { day: 'Czw', hours: 0 },
+      { day: 'Cz', hours: 0 },
       { day: 'Pt', hours: 0 },
-      { day: 'Sob', hours: 0 },
-      { day: 'Ndz', hours: 0 },
+      { day: 'Sb', hours: 0 },
+      { day: 'Nd', hours: 0 },
     ];
 
   const totalTracks = data.reduce((sum, d) => sum + d.hours, 0);

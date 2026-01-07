@@ -501,15 +501,15 @@ const History = () => {
                 <>
                   {/* #1 Card - Green Gradient */}
                   {top1 && (
-                    <div className="relative w-full rounded-2xl bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/20 p-5 overflow-visible">
-                      <div className="absolute -left-3 -top-3 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-base shadow-lg z-10">
+                    <div className="relative w-full rounded-2xl bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/20 p-5 pl-10">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-lg">
                         1
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <span className="text-3xl">{getTimeIcon(top1.hour)}</span>
-                          <span className="text-3xl font-bold text-foreground">{top1.hour}:00</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{getTimeIcon(top1.hour)}</span>
+                          <span className="text-2xl font-bold text-foreground">{top1.hour}:00</span>
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-medium text-primary">{top1.count}</span>
@@ -520,20 +520,20 @@ const History = () => {
                   )}
 
                   {/* #2 & #3 Cards */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {rest.map((item, i) => (
-                      <div key={item.hour} className="relative rounded-xl bg-secondary/20 border border-border/30 p-4">
-                        <div className="absolute -left-2.5 -top-2.5 w-7 h-7 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold text-xs shadow-md z-10">
+                      <div key={item.hour} className="relative rounded-xl bg-secondary/20 border border-border/30 p-3 pl-8">
+                        <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold text-xs shadow-md">
                           {i + 2}
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{getTimeIcon(item.hour)}</span>
-                            <span className="text-2xl font-bold text-foreground">{item.hour}:00</span>
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-lg">{getTimeIcon(item.hour)}</span>
+                            <span className="text-lg font-bold text-foreground">{item.hour}:00</span>
                           </div>
-                          <div className="text-right">
-                            <span className="text-xs font-medium text-muted-foreground">{item.count} odtw.</span>
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-medium text-muted-foreground">{item.count}</span>
                           </div>
                         </div>
                       </div>
