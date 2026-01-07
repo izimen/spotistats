@@ -23,6 +23,7 @@ interface HistoryItem {
   artistName?: string;
   albumImage?: string;  // Album cover URL from StreamingHistory
   msPlayed?: number;
+  spotifyUrl?: string | null;
   track?: {
     id?: string;
     name?: string;
@@ -30,6 +31,7 @@ interface HistoryItem {
     album?: { image?: string; images?: { url: string }[] };
     duration_ms?: number;
     duration?: number;
+    spotifyUrl?: string | null;
   };
 }
 
@@ -43,6 +45,7 @@ interface HistoryTrack {
   playedAtDate: Date;
   duration: string;
   durationMs: number;
+  spotifyUrl?: string | null;
 }
 
 interface Badge {
@@ -145,7 +148,8 @@ const History = () => {
         playedAt: formatTimeAgo(item.playedAt || new Date().toISOString()),
         playedAtDate: new Date(item.playedAt || new Date().toISOString()),
         duration: typeof durationMs === 'number' ? formatDuration(durationMs) : '3:00',
-        durationMs: typeof durationMs === 'number' ? durationMs : 180000
+        durationMs: typeof durationMs === 'number' ? durationMs : 180000,
+        spotifyUrl: isStreamingHistory ? item.spotifyUrl : item.track?.spotifyUrl
       };
     })
     , [recentTracks]);

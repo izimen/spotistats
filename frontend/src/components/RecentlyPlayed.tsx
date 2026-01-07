@@ -8,6 +8,7 @@ interface Track {
   artist: string;
   image: string;
   playedAt: string;
+  spotifyUrl?: string | null;
 }
 
 // Single track row component with premium styling
@@ -18,6 +19,23 @@ const TrackRow = ({ track, index, hoveredId, setHoveredId }: {
   setHoveredId: (id: string | null) => void;
 }) => {
   const isHovered = hoveredId === track.id;
+
+  const handleTrackClick = () => {
+    if (track.spotifyUrl) {
+      window.open(track.spotifyUrl, '_blank');
+    } else {
+      // Fallback: open Spotify search for track + artist
+      const query = encodeURIComponent(`${track.title} ${track.artist}`);
+      window.open(`https://open.spotify.com/search/${query}`, '_blank');
+    }
+  };
+
+  const handleArtistClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent track click
+    // Open Spotify search for artist
+    const query = encodeURIComponent(track.artist);
+    window.open(`https://open.spotify.com/search/${query}`, '_blank');
+  };
 
   return (
     <div
@@ -32,6 +50,7 @@ const TrackRow = ({ track, index, hoveredId, setHoveredId }: {
       style={{ animationDelay: `${700 + index * 60}ms` }}
       onMouseEnter={() => setHoveredId(track.id)}
       onMouseLeave={() => setHoveredId(null)}
+      onClick={handleTrackClick}
     >
       {/* Album art */}
       <div className="relative flex-shrink-0">
@@ -70,7 +89,12 @@ const TrackRow = ({ track, index, hoveredId, setHoveredId }: {
         <h3 className="font-medium text-sm text-foreground truncate group-hover:text-primary transition-colors">
           {track.title}
         </h3>
-        <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+        <p
+          className="text-xs text-muted-foreground truncate hover:text-primary hover:underline cursor-pointer transition-colors"
+          onClick={handleArtistClick}
+        >
+          {track.artist}
+        </p>
       </div>
 
       {/* Time badge */}
@@ -118,6 +142,7 @@ const RecentlyPlayed = () => {
       name?: string;
       artists?: { name: string }[];
       album?: { image?: string; images?: { url: string }[] };
+      spotifyUrl?: string | null;
     };
   }
 
@@ -126,8 +151,10 @@ const RecentlyPlayed = () => {
     title: item.track?.name || item.name || 'Unknown',
     artist: item.track?.artists?.[0]?.name || item.artist || 'Unknown',
     image: item.track?.album?.image || item.track?.album?.images?.[0]?.url || item.albumImage || "/assets/default-album.svg",
-    playedAt: formatTimeAgo(item.playedAt || new Date().toISOString())
+    playedAt: formatTimeAgo(item.playedAt || new Date().toISOString()),
+    spotifyUrl: item.track?.spotifyUrl || null
   }));
+
 
   const halfLength = Math.ceil(formattedTracks.length / 2);
   const leftColumn = formattedTracks.slice(0, halfLength);

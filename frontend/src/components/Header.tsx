@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
-  { label: "Dashboard", href: "/" },
+  { label: "Panel", href: "/" },
   { label: "Top Artyści", href: "/top-artists" },
   { label: "Top Utwory", href: "/top-tracks" },
   { label: "Historia", href: "/history" },

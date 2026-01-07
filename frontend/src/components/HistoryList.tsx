@@ -11,6 +11,7 @@ interface HistoryTrack {
     playedAtDate: Date;
     duration: string;
     durationMs: number;
+    spotifyUrl?: string | null;
 }
 
 interface HistoryListProps {
@@ -20,6 +21,24 @@ interface HistoryListProps {
 
 const HistoryList = ({ tracks, isLoading }: HistoryListProps) => {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+    const handleTrackClick = (track: HistoryTrack) => {
+        // Try spotifyUrl first, fallback to search URL
+        if (track.spotifyUrl) {
+            window.open(track.spotifyUrl, '_blank');
+        } else {
+            // Fallback: open Spotify search for track + artist
+            const query = encodeURIComponent(`${track.title} ${track.artist}`);
+            window.open(`https://open.spotify.com/search/${query}`, '_blank');
+        }
+    };
+
+    const handleArtistClick = (e: React.MouseEvent, track: HistoryTrack) => {
+        e.stopPropagation(); // Prevent track click
+        // Open Spotify search for artist
+        const query = encodeURIComponent(track.artist);
+        window.open(`https://open.spotify.com/search/${query}`, '_blank');
+    };
 
     return (
         <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/20 p-6">
@@ -59,6 +78,7 @@ const HistoryList = ({ tracks, isLoading }: HistoryListProps) => {
                             style={{ animationDelay: `${700 + index * 40}ms` }}
                             onMouseEnter={() => setHoveredId(track.id)}
                             onMouseLeave={() => setHoveredId(null)}
+                            onClick={() => handleTrackClick(track)}
                         >
                             {/* Track number */}
                             <div className="w-8 flex-shrink-0 text-center">
@@ -98,7 +118,12 @@ const HistoryList = ({ tracks, isLoading }: HistoryListProps) => {
                                 <h3 className="font-medium text-foreground truncate group-hover:text-primary transition-colors duration-300">
                                     {track.title}
                                 </h3>
-                                <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+                                <p
+                                    className="text-sm text-muted-foreground truncate hover:text-primary hover:underline cursor-pointer transition-colors"
+                                    onClick={(e) => handleArtistClick(e, track)}
+                                >
+                                    {track.artist}
+                                </p>
                             </div>
 
                             {/* Duration - fixed width for alignment */}
