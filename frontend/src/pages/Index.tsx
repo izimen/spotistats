@@ -118,7 +118,7 @@ const Index = () => {
         {/* Subtle ambient glow */}
         <div className="absolute -top-20 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none" />
 
-        <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
             title="Top Artysta"
             value={formattedArtists[0]?.name || "-"}
