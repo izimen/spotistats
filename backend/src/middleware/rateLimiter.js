@@ -77,15 +77,15 @@ const generalLimiter = rateLimit({
 });
 
 /**
- * Auth rate limiter - configurable via RATE_LIMIT_AUTH
- * Stricter limits for authentication endpoints
+ * Auth rate limiter - 3 attempts per 3 minutes
+ * Stricter limits for authentication endpoints, but shorter lockout
  */
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: env.rateLimits.auth,
+    windowMs: 3 * 60 * 1000, // 3 minutes
+    max: 3, // 3 attempts per window
     message: {
         error: 'TooManyAuthAttempts',
-        message: 'Too many authentication attempts, please try again in 15 minutes'
+        message: 'Too many authentication attempts, please try again in 3 minutes'
     },
     standardHeaders: true,
     legacyHeaders: false,
