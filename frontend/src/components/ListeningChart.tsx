@@ -67,15 +67,16 @@ const ListeningChart = () => {
 
   const data = chartData?.days?.map(d => ({
     day: shortenDayName(d.day),
+    fullDay: d.day,
     hours: d.count,
   })) || [
-      { day: 'Pn', hours: 0 },
-      { day: 'Wt', hours: 0 },
-      { day: 'Śr', hours: 0 },
-      { day: 'Cz', hours: 0 },
-      { day: 'Pt', hours: 0 },
-      { day: 'Sb', hours: 0 },
-      { day: 'Nd', hours: 0 },
+      { day: 'Pn', fullDay: 'Poniedziałek', hours: 0 },
+      { day: 'Wt', fullDay: 'Wtorek', hours: 0 },
+      { day: 'Śr', fullDay: 'Środa', hours: 0 },
+      { day: 'Cz', fullDay: 'Czwartek', hours: 0 },
+      { day: 'Pt', fullDay: 'Piątek', hours: 0 },
+      { day: 'Sb', fullDay: 'Sobota', hours: 0 },
+      { day: 'Nd', fullDay: 'Niedziela', hours: 0 },
     ];
 
   const totalTracks = data.reduce((sum, d) => sum + d.hours, 0);
@@ -224,7 +225,7 @@ const ListeningChart = () => {
         </div>
         <div className="text-center p-2.5 rounded-xl bg-primary/10 border border-primary/20">
           <p className="text-xl font-bold text-primary">{maxDay.hours}</p>
-          <p className="text-xs text-muted-foreground">{maxDay.day}</p>
+          <p className="text-xs text-muted-foreground">{maxDay.fullDay}</p>
         </div>
         <div className="text-center p-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
           <p className="text-xl font-bold text-foreground">{avgTracks}</p>
