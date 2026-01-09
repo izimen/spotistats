@@ -9,6 +9,7 @@ const { protect } = require('../middleware/protect');
 const { importLimiter, apiLimiter } = require('../middleware/rateLimiter');
 const { jsonSizeLimit } = require('../utils/validation');
 const importController = require('../controllers/importController');
+const { auditMiddleware, AUDIT_EVENTS } = require('../services/auditService');
 
 // Configure multer for file uploads
 const upload = multer({
@@ -32,6 +33,10 @@ router.use(protect);
 router.post('/upload',
     jsonSizeLimit(100 * 1024 * 1024), // 100MB max for body
     importLimiter, // Rate limit: 1 per 15 minutes
+    auditMiddleware(AUDIT_EVENTS.IMPORT_STARTED, (req) => ({
+        source: 'body',
+        contentLength: req.get('Content-Length')
+    })),
     importController.uploadHistory
 );
 
@@ -39,6 +44,11 @@ router.post('/upload',
 router.post('/file',
     importLimiter,
     upload.single('file'),
+    auditMiddleware(AUDIT_EVENTS.IMPORT_STARTED, (req) => ({
+        source: 'file',
+        filename: req.file?.originalname,
+        filesize: req.file?.size
+    })),
     importController.uploadFile
 );
 
@@ -51,7 +61,11 @@ router.get('/:id', apiLimiter, importController.getImportById);
 // Get aggregated statistics from imported data
 router.get('/stats', apiLimiter, importController.getHistoryStats);
 
-// Delete all imported history (GDPR)
-router.delete('/history', apiLimiter, importController.deleteHistory);
+// Delete all imported history (GDPR) - SENSITIVE OPERATION
+router.delete('/history',
+    apiLimiter,
+    auditMiddleware(AUDIT_EVENTS.HISTORY_DELETED),
+    importController.deleteHistory
+);
 
 module.exports = router;

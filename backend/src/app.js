@@ -82,35 +82,26 @@ app.use(cors({
 app.use(generalLimiter);
 
 // ===================
-// CSRF Protection
-// ===================
-
-// Require X-Requested-With header for state-changing methods
-// This simple check prevents CSRF because browsers don't let cross-site requests set custom headers
-// file deepcode ignore CSRF: Custom middleware checks X-Requested-With header which prevents CSRF in AJAX requests
-const csrfProtection = (req, res, next) => {
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-        // Skip for specific paths if needed (e.g., webhooks)
-        const xRequestedWith = req.get('X-Requested-With');
-        if (xRequestedWith !== 'XMLHttpRequest') {
-            return res.status(403).json({
-                error: 'CSRF validation failed',
-                message: 'Missing or invalid X-Requested-With header'
-            });
-        }
-    }
-    next();
-};
-
-app.use(csrfProtection);
-
-// ===================
-// Body Parsing
+// Body Parsing (must be before CSRF)
 // ===================
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// ===================
+// CSRF Protection (Enhanced)
+// ===================
+
+// Import enhanced CSRF middleware with Double Submit Cookie pattern
+const { csrfTokenGenerator, csrfProtection } = require('./middleware/csrf');
+
+// Generate CSRF token for each session (stored in httpOnly cookie)
+app.use(csrfTokenGenerator);
+
+// Validate CSRF token on state-changing requests
+// Supports both new Double Submit Cookie AND legacy X-Requested-With for backwards compatibility
+app.use(csrfProtection);
 
 // ===================
 // Health Check
