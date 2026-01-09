@@ -9,6 +9,7 @@
 - **Local Development**: Use `.env` files (git-ignored).
 - **CI/CD**: Use GitHub Repository Secrets (`Settings > Secrets and variables > Actions`).
 - **Production (GCP)**: Use GCP Secret Manager.
+- **Database (Encryption at Rest)**: Refresh Tokens are encrypted using AES-256-GCM before storage. The key is derived from `JWT_SECRET`.
 
 ## 3. Secret Rotation Procedure
 

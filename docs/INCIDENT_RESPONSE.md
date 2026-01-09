@@ -10,6 +10,7 @@
 
 ### Phase 1: Identification
 - **Confirm**: Verify if the alert is a false positive.
+- **Audit Logs**: Check `SecurityAuditLog` for suspicious `ACCESS_DENIED` or `ROLE_CHANGE` events.
 - **Assess**: Determine scope (What key? What permissions? How long exposed?).
 
 ### Phase 2: Containment
