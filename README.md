@@ -26,6 +26,8 @@
 | **Database** | PostgreSQL (Supabase compatible) |
 | **Auth** | OAuth 2.0 + PKCE, JWT in HttpOnly Cookies |
 | **Security** | Helmet, Rate Limiting, AES-256-GCM token encryption |
+| **Observability** | Prometheus metrics, Sentry error tracking |
+| **Resilience** | Circuit breaker, request timeout, jitter backoff |
 
 ## 🚀 Quick Start
 
@@ -57,6 +59,9 @@ cd backend
 # Install dependencies
 npm install
 
+# Optional: Install monitoring packages
+npm install prom-client @sentry/node
+
 # Create environment file
 cp .env.example .env
 ```
@@ -67,6 +72,7 @@ DATABASE_URL="postgresql://..."
 SPOTIFY_CLIENT_ID=your_client_id
 SPOTIFY_CLIENT_SECRET=your_client_secret
 JWT_SECRET=your_random_32_char_secret
+SENTRY_DSN=your_sentry_dsn  # Optional
 ```
 
 ```bash
@@ -98,7 +104,7 @@ my-spotify-stats/
 │   ├── src/
 │   │   ├── controllers/    # Route handlers
 │   │   ├── services/       # Business logic
-│   │   ├── middleware/     # Auth, rate limiting
+│   │   ├── middleware/     # Auth, rate limiting, metrics
 │   │   └── routes/         # API endpoints
 │   └── prisma/             # Database schema
 │
@@ -111,15 +117,25 @@ my-spotify-stats/
 
 ## 🔐 API Endpoints
 
+All API endpoints support versioning: `/api/v1/*` (backwards compatible with `/api/*`)
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/auth/login` | Initiate Spotify OAuth |
 | `GET` | `/auth/callback` | OAuth callback handler |
 | `GET` | `/auth/me` | Get current user |
 | `POST` | `/auth/logout` | End session |
-| `GET` | `/api/spotify/top/*` | Top artists/tracks |
-| `GET` | `/api/spotify/history` | Listening history |
-| `POST` | `/api/import/upload` | Import GDPR data |
+| `GET` | `/api/v1/stats/top-artists` | Top artists |
+| `GET` | `/api/v1/stats/top-tracks` | Top tracks |
+| `GET` | `/api/v1/stats/listening-history` | Listening history |
+| `GET` | `/api/v1/stats/dna` | Music DNA profile |
+| `GET` | `/api/v1/stats/prediction` | Listening prediction |
+| `GET` | `/api/v1/stats/discovery/roulette` | Music discovery |
+| `POST` | `/api/v1/import/upload` | Import GDPR data |
+| `GET` | `/metrics` | Prometheus metrics |
+| `GET` | `/health` | Health check |
+
+> 📝 **Error Format**: All errors follow [RFC 7807 Problem Details](https://datatracker.ietf.org/doc/html/rfc7807) with `application/problem+json` content-type.
 
 ## 🔒 Security
 
@@ -137,8 +153,12 @@ This project implements enterprise-grade security practices and has passed compr
 - **Protection**:
   - **CSRF**: Double Submit Cookie pattern with cryptographic tokens
   - **XSS**: Strict Content Security Policy (CSP) and input sanitization
-  - **Rate Limiting**: Per-user adaptive limits (Redis-backed)
+  - **Rate Limiting**: Per-user adaptive limits (Redis-backed) with jitter
   - **Audit Logging**: Comprehensive logging of sensitive actions
+- **Resilience**:
+  - **Circuit Breaker**: Fail-fast on Spotify API failures
+  - **Request Timeout**: 5s timeout on external calls
+  - **Backoff with Jitter**: ±50% jitter to prevent thundering herd
 - **Data Protection**:
   - AES-256-GCM encryption for stored refresh tokens
   - GDPR-compliant data export and deletion
