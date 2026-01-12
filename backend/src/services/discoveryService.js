@@ -91,9 +91,19 @@ async function getDiscoveryTrack(userId, accessToken) {
 
         console.log(`[Discovery] ${newTracks.length}/${tracks.length} tracks are new`);
 
+        // 4.5 Filter out tracks from seed artists (avoid same artist)
+        const seedArtistNames = new Set(topArtists.slice(0, 3).map(a => a.artistName.toLowerCase()));
+        const diverseTracks = newTracks.filter(t => {
+            const trackArtist = t.artists?.[0]?.name?.toLowerCase();
+            return !seedArtistNames.has(trackArtist);
+        });
+
+        console.log(`[Discovery] ${diverseTracks.length}/${newTracks.length} tracks from different artists`);
+
         // 5. Score and select best track
         // Prefer mid-popularity tracks (40-70) - "hidden gems"
-        const scored = (newTracks.length > 0 ? newTracks : tracks).map(t => {
+        const tracksToScore = diverseTracks.length > 0 ? diverseTracks : (newTracks.length > 0 ? newTracks : tracks);
+        const scored = tracksToScore.map(t => {
             let score = t.popularity || 0;
             if (t.popularity >= 40 && t.popularity <= 70) {
                 score += 25; // Bonus for sweet spot
