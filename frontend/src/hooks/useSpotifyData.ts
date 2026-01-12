@@ -321,6 +321,6 @@ export function useAudioFeatures(trackIds: string[]) {
             return response.data;
         },
         enabled: trackIds.length > 0,
-        staleTime: 1000 * 60 * 30, // 30 minutes (audio features don't change)
+        staleTime: 1000 * 60 * 60, // 1 hour (audio features don't change)
     });
 }
