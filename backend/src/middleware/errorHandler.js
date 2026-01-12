@@ -94,12 +94,18 @@ function errorHandler(err, req, res, next) {
     }
 
 
-    // Send error response
-    res.status(statusCode).json({
-        error: errorCode,
-        message: env.isProduction && statusCode === 500
+    // Send error response in RFC 7807 Problem Details format
+    // See: https://datatracker.ietf.org/doc/html/rfc7807
+    res.status(statusCode);
+    res.set('Content-Type', 'application/problem+json');
+    res.json({
+        type: `https://spotistats.app/problems/${errorCode.toLowerCase().replace(/_/g, '-')}`,
+        title: errorCode.replace(/([A-Z])/g, ' $1').trim(), // CamelCase -> Title Case
+        status: statusCode,
+        detail: env.isProduction && statusCode === 500
             ? 'An unexpected error occurred'
             : message,
+        instance: req.originalUrl,
         ...(env.isProduction ? {} : { stack: err.stack })
     });
 }

@@ -86,7 +86,76 @@ async function getStatus(req, res, next) {
     }
 }
 
+/**
+ * POST /api/cron/cleanup
+ * Called by GCP Cloud Scheduler weekly to clean old data
+ * - Removes CachedTopItems older than 30 days
+ * - Removes orphaned aggregated_stats
+ */
+async function cleanupOldData(req, res, next) {
+    try {
+        const startTime = Date.now();
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+        console.log(JSON.stringify({
+            severity: 'INFO',
+            message: 'Cron cleanup started',
+            timestamp: new Date().toISOString(),
+            component: 'cron-controller'
+        }));
+
+        // Delete old cached items (> 30 days)
+        const deletedCache = await prisma.cachedTopItems.deleteMany({
+            where: {
+                updatedAt: { lt: thirtyDaysAgo }
+            }
+        });
+
+        // Delete orphaned aggregated stats (users without valid token for 30+ days)
+        // This is optional and conservative
+        const deletedStats = await prisma.aggregatedStats.deleteMany({
+            where: {
+                user: {
+                    refreshToken: null,
+                    updatedAt: { lt: thirtyDaysAgo }
+                }
+            }
+        });
+
+        const duration = Date.now() - startTime;
+
+        console.log(JSON.stringify({
+            severity: 'INFO',
+            message: 'Cron cleanup completed',
+            timestamp: new Date().toISOString(),
+            component: 'cron-controller',
+            deletedCache: deletedCache.count,
+            deletedStats: deletedStats.count,
+            duration
+        }));
+
+        res.json({
+            success: true,
+            deleted: {
+                cachedTopItems: deletedCache.count,
+                aggregatedStats: deletedStats.count
+            },
+            duration: `${duration}ms`
+        });
+    } catch (error) {
+        console.error(JSON.stringify({
+            severity: 'ERROR',
+            message: 'Cron cleanup failed',
+            timestamp: new Date().toISOString(),
+            component: 'cron-controller',
+            error: error.message
+        }));
+        next(error);
+    }
+}
+
 module.exports = {
     syncListeningHistory,
-    getStatus
+    getStatus,
+    cleanupOldData
 };

@@ -9,6 +9,8 @@ const cookieParser = require('cookie-parser');
 const env = require('./config/env');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+const { metricsMiddleware, metricsEndpoint } = require('./middleware/metrics');
+const { sentryRequestHandler, sentryErrorHandler } = require('./middleware/sentry');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -104,7 +106,7 @@ app.use(csrfTokenGenerator);
 app.use(csrfProtection);
 
 // ===================
-// Health Check
+// Health Check & Metrics
 // ===================
 
 app.get('/health', (req, res) => {
@@ -114,6 +116,15 @@ app.get('/health', (req, res) => {
         env: env.nodeEnv
     });
 });
+
+// Prometheus metrics endpoint (no auth for scraping)
+app.get('/metrics', metricsEndpoint);
+
+// Apply metrics middleware to all routes below
+app.use(metricsMiddleware);
+
+// Apply Sentry request handler
+app.use(sentryRequestHandler);
 
 // ===================
 // API Routes (v1)
@@ -140,6 +151,7 @@ app.use('/api/cron', cronRoutes);
 // ===================
 
 app.use(notFoundHandler);
-app.use(errorHandler);
+app.use(sentryErrorHandler); // Capture errors to Sentry
+app.use(errorHandler);       // Format response
 
 module.exports = app;

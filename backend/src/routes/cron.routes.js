@@ -47,6 +47,14 @@ router.post('/sync-listening-history',
     cronController.syncListeningHistory
 );
 
+// Cleanup old data - called by GCP Cloud Scheduler weekly
+// Removes CachedTopItems > 30 days and orphaned stats
+router.post('/cleanup',
+    cronLimiter,
+    cronAuth,
+    cronController.cleanupOldData
+);
+
 // ============================================
 // Authenticated Endpoints (user auth required)
 // ============================================
