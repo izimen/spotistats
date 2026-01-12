@@ -193,6 +193,11 @@ const History = () => {
     artist: string;
     time: string;
     confidence: number;
+    factors?: {
+      totalTracks?: number;
+      uniqueDays?: number;
+      isWeekend?: boolean;
+    };
   } | null>(null);
 
   // API-based Heatmap (Full History)
@@ -364,7 +369,11 @@ const History = () => {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <p className="text-sm text-muted-foreground">Na podstawie wzorców</p>
+                <p className="text-sm text-muted-foreground">
+                  {prediction?.factors?.totalTracks
+                    ? `Na podstawie ${prediction.factors.totalTracks} odtworzeń z ${prediction.factors.uniqueDays || '?'} dni`
+                    : 'Na podstawie wzorców'}
+                </p>
               </div>
             </div>
             <p className="text-foreground mb-4 text-base">

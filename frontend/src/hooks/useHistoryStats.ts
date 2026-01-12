@@ -229,7 +229,7 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
         return { ...result, percent: confidence };
     }, [formattedTracks, mostLooped]);
 
-    // 🔮 Prediction
+    // 🔮 Prediction (local fallback)
     const prediction = useMemo(() => {
         const now = new Date();
         const hour = now.getHours();
@@ -242,10 +242,19 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
         if (relevantTracks.length === 0) return null;
 
         const artistCounts: { [key: string]: number } = {};
+        const artistDays: { [key: string]: Set<string> } = {};
+
         relevantTracks.forEach(t => {
             artistCounts[t.artist] = (artistCounts[t.artist] || 0) + 1;
+            if (!artistDays[t.artist]) artistDays[t.artist] = new Set();
+            artistDays[t.artist].add(t.playedAtDate.toDateString());
         });
-        const topArtist = Object.entries(artistCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+        const sorted = Object.entries(artistCounts).sort((a, b) => b[1] - a[1]);
+        const topArtist = sorted[0]?.[0];
+        const topCount = sorted[0]?.[1] || 0;
+        const totalCount = relevantTracks.length;
+        const uniqueDays = artistDays[topArtist]?.size || 1;
 
         const timeLabels = [
             { range: [6, 10], label: "rano" },
@@ -256,10 +265,19 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
         ];
         const timeLabel = timeLabels.find(t => hour >= t.range[0] && hour < t.range[1])?.label || "później";
 
+        // More nuanced confidence calculation
+        const dominance = topCount / totalCount;
+        const sampleBonus = Math.min(15, totalCount * 0.5);
+        const confidence = Math.min(85, Math.round(35 + dominance * 30 + sampleBonus));
+
         return {
             artist: topArtist,
             time: timeLabel,
-            confidence: Math.min(95, 60 + relevantTracks.length * 5)
+            confidence,
+            factors: {
+                totalTracks: totalCount,
+                uniqueDays
+            }
         };
     }, [formattedTracks]);
 
