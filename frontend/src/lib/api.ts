@@ -8,6 +8,7 @@
  * - Multi-tab logout synchronization
  */
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
 
 // Use env var for API URL (for production) or relative URLs for dev (Vite proxy)
 const BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -106,11 +107,39 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle 401 with auto-refresh
+// Response interceptor - handle 401 with auto-refresh and 429 rate limiting
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        // Handle 429 Rate Limiting - show toast to user
+        if (error.response?.status === 429) {
+            const retryAfter = error.response.headers?.['retry-after'];
+            const minutes = retryAfter ? Math.ceil(parseInt(retryAfter) / 60) : 1;
+
+            toast.error(`Osiągnięto limit API. Spróbuj za ${minutes} min.`, {
+                id: 'rate-limit', // Prevent duplicate toasts
+                duration: 5000,
+            });
+
+            console.warn('[API] Rate limited (429):', {
+                endpoint: error.config?.url,
+                retryAfter,
+            });
+            // The error will propagate to React Query which will handle retry
+            return Promise.reject(error);
+        }
+
+        // Handle ERR_NETWORK (possible 429 with CORS issue)
+        if (error.code === 'ERR_NETWORK' && !error.response) {
+            console.error('[API] Network error (possible CORS/429):', error.message);
+            toast.error('Błąd połączenia. Sprawdź internet.', {
+                id: 'network-error',
+                duration: 3000,
+            });
+            return Promise.reject(error);
+        }
 
         // If 401 and not already retrying
         if (error.response?.status === 401 && !originalRequest._retry) {
