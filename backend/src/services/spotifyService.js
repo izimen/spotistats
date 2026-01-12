@@ -1,6 +1,6 @@
 /**
  * Spotify Service
- * Handles Spotify API interactions with caching and rate limit handling
+ * Handles Spotify API interactions with caching, rate limit handling, and resilience
  */
 const SpotifyWebApi = require('spotify-web-api-node');
 const axios = require('axios');
@@ -12,6 +12,16 @@ let rateLimitReset = null;
 
 // Cache TTL (24 hours in milliseconds)
 const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+// Request timeout (5 seconds)
+const REQUEST_TIMEOUT = 5000;
+
+// Circuit breaker state (simple implementation)
+let circuitState = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+let failureCount = 0;
+let lastFailureTime = null;
+const FAILURE_THRESHOLD = 5;
+const RESET_TIMEOUT = 30000; // 30 seconds
 
 /**
  * Create configured Spotify API instance
@@ -33,6 +43,53 @@ function sleep(ms) {
 }
 
 /**
+ * Calculate backoff with jitter (±50%)
+ * Prevents thundering herd when multiple users retry simultaneously
+ */
+function getBackoffWithJitter(attemptIndex, baseMs = 1000) {
+    const exponentialDelay = Math.pow(2, attemptIndex) * baseMs;
+    const jitter = exponentialDelay * (0.5 + Math.random()); // 50-150% of base
+    return Math.min(jitter, 30000); // Cap at 30 seconds
+}
+
+/**
+ * Check and update circuit breaker state
+ */
+function checkCircuitBreaker() {
+    if (circuitState === 'OPEN') {
+        // Check if reset timeout has passed
+        if (lastFailureTime && Date.now() - lastFailureTime > RESET_TIMEOUT) {
+            console.log('[Spotify] Circuit breaker: OPEN -> HALF_OPEN');
+            circuitState = 'HALF_OPEN';
+            return true; // Allow one request
+        }
+        return false; // Block request
+    }
+    return true; // CLOSED or HALF_OPEN - allow request
+}
+
+/**
+ * Record circuit breaker result
+ */
+function recordCircuitResult(success) {
+    if (success) {
+        if (circuitState === 'HALF_OPEN') {
+            console.log('[Spotify] Circuit breaker: HALF_OPEN -> CLOSED');
+            circuitState = 'CLOSED';
+            failureCount = 0;
+        }
+    } else {
+        failureCount++;
+        lastFailureTime = Date.now();
+
+        if (failureCount >= FAILURE_THRESHOLD) {
+            console.warn(`[Spotify] Circuit breaker: ${circuitState} -> OPEN (${failureCount} failures)`);
+            circuitState = 'OPEN';
+        }
+    }
+}
+
+/**
  * Wait for rate limit to reset if needed
  */
 async function waitForRateLimit() {
@@ -44,13 +101,20 @@ async function waitForRateLimit() {
 }
 
 /**
- * Handle Spotify API response with rate limit detection
+ * Handle Spotify API response with rate limit detection, circuit breaker, and resilience
  */
 async function withRateLimitHandling(apiCall, maxRetries = 3) {
+    // Check circuit breaker first
+    if (!checkCircuitBreaker()) {
+        throw new Error('Circuit breaker OPEN: Spotify API temporarily unavailable');
+    }
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             await waitForRateLimit();
-            return await apiCall();
+            const result = await apiCall();
+            recordCircuitResult(true);
+            return result;
         } catch (error) {
             const status = error.statusCode || error.response?.status;
 
@@ -65,16 +129,23 @@ async function withRateLimitHandling(apiCall, maxRetries = 3) {
                 console.warn(`Spotify 429: Rate limited. Retry-After: ${retryAfter}s`);
 
                 if (attempt < maxRetries) {
-                    await sleep(retryAfter * 1000 + 100);
+                    // Add jitter to retry delay
+                    const delayWithJitter = (retryAfter * 1000) + getBackoffWithJitter(0, 100);
+                    await sleep(delayWithJitter);
                     continue;
                 }
             }
 
             if (status === 503 && attempt < maxRetries) {
-                const backoff = Math.pow(2, attempt) * 1000;
-                console.warn(`Spotify 503: Service unavailable. Retrying in ${backoff}ms...`);
+                const backoff = getBackoffWithJitter(attempt);
+                console.warn(`Spotify 503: Service unavailable. Retrying in ${Math.round(backoff)}ms...`);
                 await sleep(backoff);
                 continue;
+            }
+
+            // Record failure for circuit breaker
+            if (status === 503 || status === 500 || error.code === 'ECONNABORTED') {
+                recordCircuitResult(false);
             }
 
             throw error;
@@ -103,7 +174,8 @@ async function exchangeCodeForTokens(code, codeVerifier) {
             {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
-                }
+                },
+                timeout: REQUEST_TIMEOUT
             }
         );
 
