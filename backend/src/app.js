@@ -116,10 +116,20 @@ app.get('/health', (req, res) => {
 });
 
 // ===================
-// API Routes
+// API Routes (v1)
 // ===================
 
+// Auth routes (bez wersjonowania - publiczne)
 app.use('/auth', authRoutes);
+
+// API v1 routes
+app.use('/api/v1/stats', statsRoutes);
+app.use('/api/v1/import', importRoutes);
+app.use('/api/v1/profile', profileRoutes);
+app.use('/api/v1/cron', cronRoutes);
+
+// Backwards compatibility: /api/* → /api/v1/*
+// TODO: Remove after frontend migration to v1
 app.use('/api/stats', statsRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/profile', profileRoutes);
