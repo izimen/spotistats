@@ -398,19 +398,32 @@ const History = () => {
               <span className="text-xl">🎲</span>
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Muzyczna Ruletka</h3>
-              <p className="text-xs text-muted-foreground">Daj szansę czemuś nowemu</p>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">Muzyczna Ruletka</h3>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      Bazując na Twoich top 3 artystach, Spotify generuje rekomendacje. Filtrujemy utwory już słuchane i preferujemy "hidden gems" (popularność 40-70%).
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <p className="text-xs text-muted-foreground">Odkryj coś nowego</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Odkryj utwór, który mógł Ci umknąć
+            Utwór dopasowany do Twojego gustu, którego jeszcze nie słuchałeś
           </p>
           <button
             onClick={spinRoulette}
-            className="w-full py-3 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition-all flex items-center justify-center gap-2 font-medium"
+            disabled={isSpinning}
+            className="w-full py-3 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50"
           >
-            <Shuffle className="w-4 h-4" />
-            Zakręć ruletką
+            <Shuffle className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />
+            {isSpinning ? 'Szukam...' : 'Zakręć ruletką'}
           </button>
         </div>
       </section>
