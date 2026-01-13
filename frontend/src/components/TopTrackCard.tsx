@@ -210,7 +210,7 @@ const TopTrackCard = React.memo(({
         {/* Hover gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/[0.03] group-hover:to-transparent transition-all duration-300" />
 
-        <div className="relative flex items-center gap-3">
+        <div className="relative flex items-center gap-3 w-full">
           {/* Rank badge */}
           <div className={`
             w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
@@ -273,8 +273,8 @@ const TopTrackCard = React.memo(({
           </div>
 
           {/* Track info */}
-          <div className="flex-1 min-w-0 space-y-0.5" style={{ transform: 'translateZ(5px)' }}>
-            <div ref={titleContainerRef} className="overflow-hidden max-w-full">
+          <div className="flex-1 min-w-0 space-y-0.5 pr-12" style={{ transform: 'translateZ(5px)' }}>
+            <div ref={titleContainerRef} className="overflow-hidden">
               <h3
                 ref={titleRef}
                 className={`font-semibold text-foreground whitespace-nowrap group-hover:text-primary transition-colors ${titleNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
@@ -287,7 +287,7 @@ const TopTrackCard = React.memo(({
               </h3>
             </div>
 
-            <div ref={artistContainerRef} className="overflow-hidden max-w-full">
+            <div ref={artistContainerRef} className="overflow-hidden">
               <p
                 ref={artistRef}
                 className={`text-sm text-muted-foreground whitespace-nowrap ${artistNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
@@ -302,7 +302,7 @@ const TopTrackCard = React.memo(({
           </div>
 
           {/* Duration & Spotify button */}
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <span className="text-xs text-muted-foreground tabular-nums font-medium opacity-70 group-hover:opacity-100 transition-opacity">
               {duration}
             </span>
