@@ -302,7 +302,7 @@ const TopTrackCard = React.memo(({
           </div>
 
           {/* Duration & Spotify button */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
             <span className="text-xs text-muted-foreground tabular-nums font-medium opacity-70 group-hover:opacity-100 transition-opacity">
               {duration}
             </span>
