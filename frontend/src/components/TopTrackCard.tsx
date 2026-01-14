@@ -273,32 +273,19 @@ const TopTrackCard = React.memo(({
           </div>
 
           {/* Track info */}
-          <div className="flex-1 min-w-0 space-y-0.5" style={{ transform: 'translateZ(5px)' }}>
-            <div ref={titleContainerRef} className="overflow-hidden pr-14">
-              <h3
-                ref={titleRef}
-                className={`font-semibold text-foreground whitespace-nowrap group-hover:text-primary transition-colors ${titleNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
-                style={titleNeedsMarquee ? {
-                  animationDuration: `${Math.max(4, title.length * 0.2)}s`,
-                  '--marquee-distance': `-${titleScrollDistance}px`
-                } as React.CSSProperties : {}}
-              >
-                {title}
-              </h3>
-            </div>
-
-            <div ref={artistContainerRef} className="overflow-hidden pr-14">
-              <p
-                ref={artistRef}
-                className={`text-sm text-muted-foreground whitespace-nowrap ${artistNeedsMarquee && isHovered ? 'animate-marquee' : ''}`}
-                style={artistNeedsMarquee ? {
-                  animationDuration: `${Math.max(4, artist.length * 0.2)}s`,
-                  '--marquee-distance': `-${artistScrollDistance}px`
-                } as React.CSSProperties : {}}
-              >
-                {artist}
-              </p>
-            </div>
+          <div className="flex-1 min-w-0 space-y-0.5 pr-16" style={{ transform: 'translateZ(5px)' }}>
+            <h3
+              ref={titleRef}
+              className="font-semibold text-foreground truncate group-hover:text-primary transition-colors"
+            >
+              {title}
+            </h3>
+            <p
+              ref={artistRef}
+              className="text-sm text-muted-foreground truncate"
+            >
+              {artist}
+            </p>
           </div>
         </div>
 
