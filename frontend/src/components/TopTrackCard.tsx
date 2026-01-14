@@ -273,7 +273,7 @@ const TopTrackCard = React.memo(({
           </div>
 
           {/* Track info */}
-          <div className="flex-1 min-w-0 space-y-0.5 pr-12" style={{ transform: 'translateZ(5px)' }}>
+          <div className="flex-1 min-w-0 space-y-0.5 pr-16" style={{ transform: 'translateZ(5px)' }}>
             <h3
               ref={titleRef}
               className="font-semibold text-foreground truncate group-hover:text-primary transition-colors"
