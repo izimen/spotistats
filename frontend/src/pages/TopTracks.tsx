@@ -124,7 +124,7 @@ const TopTracks = () => {
   };
 
   const getTimeLabel = () => {
-    return timeRange === "week" ? "Ten tydzień" : timeRange === "month" ? "Ten miesiąc" : "Cały rok";
+    return timeRange === "week" ? "4 Tygodnie" : timeRange === "month" ? "6 Miesięcy" : "1 Rok";
   };
 
   return (

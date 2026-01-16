@@ -79,7 +79,7 @@ const Index = () => {
   const isLoading = userLoading || artistsLoading || tracksLoading || recentLoading;
 
   const getTimeLabel = () => {
-    return timeRange === "week" ? "Ten tydzień" : timeRange === "month" ? "Ten miesiąc" : timeRange === "year" ? "Ten rok" : "Wszystko";
+    return timeRange === "week" ? "4 Tygodnie" : timeRange === "month" ? "6 Miesięcy" : "1 Rok";
   };
 
   if (userLoading) {
