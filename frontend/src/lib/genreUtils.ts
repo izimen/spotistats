@@ -137,9 +137,11 @@ export interface Artist {
  * - sqrt(rank) weighing
  * - divide by genre count per artist
  * - normalization with keyword priority
+ * - fills with raw subgenres if less than 5 categories
  */
 export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenres: GenreStat[], topGenreName: string } {
     const genreScore: Record<string, number> = {};
+    const rawGenreScore: Record<string, number> = {};
     const artistCount = artists.length;
 
     if (artistCount === 0) {
@@ -161,6 +163,12 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
             // Normalize genre names to broad categories using keyword priority
             const normalizedGenre = normalizeGenre(genre);
             genreScore[normalizedGenre] = (genreScore[normalizedGenre] || 0) + perGenreWeight;
+
+            // Also track raw genres for filling gaps
+            const capitalizedGenre = genre.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            rawGenreScore[capitalizedGenre] = (rawGenreScore[capitalizedGenre] || 0) + perGenreWeight;
         });
     });
 
@@ -168,9 +176,13 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
     const sortedGenres = Object.entries(genreScore)
         .sort(([, a], [, b]) => b - a);
 
+    // Sort raw genres by score
+    const sortedRawGenres = Object.entries(rawGenreScore)
+        .sort(([, a], [, b]) => b - a);
+
     const totalScore = sortedGenres.reduce((sum, [, score]) => sum + score, 0) || 1;
 
-    // Take top genres
+    // Take top normalized genres
     let topGenres = sortedGenres
         .slice(0, limit)
         .map(([name, score]) => ({
@@ -178,6 +190,30 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
             percentage: Math.round((score / totalScore) * 100),
             rawScore: score
         }));
+
+    // If we have less than limit, fill with raw subgenres not already represented
+    if (topGenres.length < limit) {
+        const existingNormalized = new Set(topGenres.map(g => g.name.toLowerCase()));
+
+        // Find raw genres that normalize to categories we already have
+        // but show them as interesting subgenres
+        const additionalGenres = sortedRawGenres
+            .filter(([rawName]) => {
+                const normalized = normalizeGenre(rawName);
+                // Include if it's a subgenre of an existing category (not a new broad category)
+                // and the raw name is different from the normalized name
+                return existingNormalized.has(normalized.toLowerCase()) &&
+                    rawName.toLowerCase() !== normalized.toLowerCase();
+            })
+            .slice(0, limit - topGenres.length)
+            .map(([name, score]) => ({
+                name,
+                percentage: Math.max(1, Math.round((score / totalScore) * 100)), // Minimum 1%
+                rawScore: score
+            }));
+
+        topGenres = [...topGenres, ...additionalGenres];
+    }
 
     // Sort final list by percentage descending
     topGenres.sort((a, b) => b.percentage - a.percentage);
