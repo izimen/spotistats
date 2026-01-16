@@ -18,12 +18,14 @@ import {
 export type TimeRange = 'short_term' | 'medium_term' | 'long_term';
 
 // Map UI time range to API time range
+// Spotify API supports: short_term (~4 weeks), medium_term (~6 months), long_term (~1 year)
 export const mapTimeRange = (uiRange: string): TimeRange => {
     switch (uiRange) {
         case 'week':
         case 'short_term':
             return 'short_term';
         case 'year':
+        case 'all':  // "Wszystko" uses long_term (max available from Spotify)
         case 'long_term':
             return 'long_term';
         case 'month':

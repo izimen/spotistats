@@ -46,10 +46,9 @@ const GenreChart = React.memo(({ artists, timeRange = "month" }: GenreChartProps
 
   const maxPercentage = genres[0]?.percentage || 100;
 
-  const timeLabel = timeRange === "week" ? "Ten tydzień"
-    : timeRange === "month" ? "Ten miesiąc"
-      : timeRange === "year" ? "Ten rok"
-        : "Wszystko";
+  const timeLabel = timeRange === "week" ? "4 Tygodnie"
+    : timeRange === "month" ? "6 Miesięcy"
+      : "1 Rok";
 
   return (
     <div

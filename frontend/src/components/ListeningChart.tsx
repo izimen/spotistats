@@ -11,8 +11,11 @@ import {
 
 type CustomTooltipProps = TooltipProps<number, string>;
 
-const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const dayName = data?.fullDay || payload[0].name || 'Dzień';
+
     return (
       <div className="relative overflow-hidden rounded-xl px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl border border-white/10">
         {/* Glassmorphism background */}
@@ -32,7 +35,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
         {/* Content */}
         <div className="relative">
-          <p className="text-sm font-semibold text-foreground mb-1.5">{label}</p>
+          <p className="text-sm font-semibold text-foreground mb-1.5">{dayName}</p>
           <p className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-primary shadow-lg shadow-primary/50" />
             <span className="text-muted-foreground text-sm">Utworów:</span>
@@ -192,6 +195,8 @@ const ListeningChart = () => {
               <Tooltip
                 content={<CustomTooltip />}
                 cursor={{ stroke: 'hsl(141, 76%, 48%)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                wrapperStyle={{ zIndex: 1000 }}
+                allowEscapeViewBox={{ x: true, y: true }}
               />
               <Area
                 type="monotone"

@@ -1,147 +1,122 @@
-/**
- * Genre Normalization Map
- * Maps specific Spotify genres to broader categories
- */
-export const GENRE_MAP: Record<string, string> = {
-    // Pop variants
-    "art pop": "Pop",
-    "dance pop": "Pop",
-    "electropop": "Pop",
-    "french pop": "Pop",
-    "polish pop": "Pop",
-    "synth-pop": "Pop",
-    "europop": "Pop",
-    "pop rock": "Pop",
-    "power pop": "Pop",
-    "teen pop": "Pop",
+// genreUtils.ts
 
-    // K-pop (separate category)
-    "k-pop": "K-pop",
-    "k-pop boy group": "K-pop",
-    "k-pop girl group": "K-pop",
-    "korean pop": "K-pop",
+interface GenreRule {
+    category: string;
+    keywords: string[];
+}
 
-    // Indie / Alternative (separate category)
-    "indie": "Indie",
-    "indie pop": "Indie",
-    "indie rock": "Indie",
-    "indie folk": "Indie",
-    "alternative": "Indie",
-    "alt-pop": "Indie",
-    "dream pop": "Indie",
-    "shoegaze": "Indie",
-    "french indie pop": "Indie",
+// KOLEJNOŚĆ JEST KLUCZOWA (First Match Wins)
+// Algorytm przechodzi od najbardziej specyficznych/kulturowych do najbardziej ogólnych.
+const GENRE_RULES: GenreRule[] = [
+    // 1. Specyficzne (Kultura/Region) - muszą być pierwsze, by nie wpadły do worków ogólnych
+    {
+        category: "Disco Polo",
+        keywords: ["disco polo", "polski dance", "dance polo"]
+        // Źródło: disco polo (Paste January 16, 2026 - 7:40PM:2123)
+    },
+    {
+        category: "Latin",
+        keywords: ["latin", "reggaeton", "salsa", "bachata", "urbano", "mariachi", "ranchera", "tropical", "cumbia", "pagode", "sertanejo", "mpb", "forro", "brazilian", "flamenco"]
+        // Źródło: urbano latino (Paste January 16, 2026 - 7:40PM:4), pagode (Paste January 16, 2026 - 7:40PM:157)
+    },
+    {
+        category: "K-Pop",
+        keywords: ["k-pop", "korean pop"]
+        // Źródło: k-pop (Paste January 16, 2026 - 7:40PM:19)
+    },
 
-    // Hip Hop / Rap
-    "polish hip hop": "Hip Hop",
-    "hip hop": "Hip Hop",
-    "rap": "Hip Hop",
-    "trap": "Hip Hop",
-    "polish trap": "Hip Hop",
-    "drill": "Hip Hop",
-    "gangster rap": "Hip Hop",
-    "conscious hip hop": "Hip Hop",
-    "polish rap": "Hip Hop",
+    // 2. Silne gatunki instrumentalne/tradycyjne
+    {
+        category: "Metal",
+        keywords: ["metal", "deathcore", "thrash", "djent", "grindcore", "sludge", "doom", "blackened"]
+        // Źródło: metal (Paste January 16, 2026 - 7:40PM:99)
+    },
+    {
+        category: "Jazz",
+        keywords: ["jazz", "bop", "swing", "big band", "fusion"]
+        // Źródło: jazz (Paste January 16, 2026 - 7:40PM:379)
+    },
+    {
+        category: "Classical / Soundtrack",
+        keywords: ["classical", "orchestra", "opera", "soundtrack", "score", "piano", "composer", "movie tunes"]
+        // Źródło: classical (Paste January 16, 2026 - 7:40PM:151), soundtrack (Paste January 16, 2026 - 7:40PM:191)
+    },
+    {
+        category: "Folk / Country",
+        keywords: ["folk", "country", "bluegrass", "americana", "roots"]
+        // Źródło: country (Paste January 16, 2026 - 7:40PM:42)
+    },
 
-    // Rock
-    "rock": "Rock",
-    "classic rock": "Rock",
-    "hard rock": "Rock",
-    "alternative rock": "Rock",
-    "polish rock": "Rock",
-    "punk rock": "Rock",
-    "soft rock": "Rock",
-    "glam rock": "Rock",
-    "progressive rock": "Rock",
-    "psychedelic rock": "Rock",
-    "garage rock": "Rock",
-    "art rock": "Rock",
-    "blues rock": "Rock",
-    "southern rock": "Rock",
-    "stoner rock": "Rock",
-    "grunge": "Rock",
-    "post-rock": "Rock",
-    "britpop": "Rock",
-    "punk": "Rock",
+    // 3. Główne nurty rozrywkowe (kolejność ma znaczenie dla hybryd)
+    {
+        category: "Hip Hop",
+        keywords: ["rap", "hip hop", "trap", "drill", "boom bap", "crunk", "grime", "phonk"]
+        // Źródło: hip hop (Paste January 16, 2026 - 7:40PM:5). "Phonk" (linia 791) tutaj, bo bliżej mu do trapu niż techno.
+    },
+    {
+        category: "Indie / Alternative",
+        keywords: ["indie", "alternative", "shoegaze", "dream pop", "bedroom pop", "post-punk", "art pop"]
+        // Umieszczone PRZED Electronic, aby wyłapać "lo-fi indie" (linia 387) tutaj.
+    },
+    {
+        category: "Rock",
+        keywords: ["rock", "punk", "grunge", "britpop", "emo", "hardcore"]
+        // Źródło: rock (Paste January 16, 2026 - 7:40PM:3)
+    },
+    {
+        category: "Electronic",
+        keywords: [
+            "edm", "house", "techno", "trance", "dubstep", "dnb", "drum and bass",
+            "electro", "hardstyle", "garage", "rave", "synth", "club",
+            "disco", "ambient", "lo-fi"
+        ]
+        // USUNIĘTO: "dance" (by nie kraść dance popu), "chill" (by nie kraść chill r&b).
+        // Dodano: "disco" (linia 169) - bezpieczne, bo Disco Polo jest wyżej.
+    },
+    {
+        category: "R&B / Soul",
+        keywords: ["r&b", "soul", "blues", "funk", "motown"]
+        // Źródło: r&b (Paste January 16, 2026 - 7:40PM:20)
+    },
 
-    // Electronic / Dance
-    "edm": "Electronic",
-    "house": "Electronic",
-    "techno": "Electronic",
-    "trance": "Electronic",
-    "dubstep": "Electronic",
-    "drum and bass": "Electronic",
-    "electro": "Electronic",
-    "synthwave": "Electronic",
-    "deep house": "Electronic",
-    "progressive house": "Electronic",
-    "future bass": "Electronic",
-
-    // Disco Polo (Polish - keep separate)
-    "disco polo": "Disco Polo",
-
-    // R&B / Soul
-    "r&b": "R&B",
-    "soul": "R&B",
-    "neo soul": "R&B",
-    "contemporary r&b": "R&B",
-
-    // Metal
-    "metal": "Metal",
-    "heavy metal": "Metal",
-    "death metal": "Metal",
-    "black metal": "Metal",
-    "thrash metal": "Metal",
-    "nu metal": "Metal",
-    "metalcore": "Metal",
-
-    // Jazz
-    "jazz": "Jazz",
-    "smooth jazz": "Jazz",
-    "jazz fusion": "Jazz",
-
-    // Classical
-    "classical": "Klasyka",
-    "orchestra": "Klasyka",
-    "opera": "Klasyka",
-
-    // Latin
-    "latin": "Latin",
-    "reggaeton": "Latin",
-    "salsa": "Latin",
-    "bachata": "Latin",
-    "latin pop": "Latin",
-
-    // Country
-    "country": "Country",
-
-    // Folk
-    "folk": "Folk",
-};
-
-/**
- * Normalize genre name using the map, or return capitalized original
- */
-export function normalizeGenre(genre: string): string {
-    const lower = genre.toLowerCase().trim();
-
-    // Check exact match
-    if (GENRE_MAP[lower]) {
-        return GENRE_MAP[lower];
+    // 4. Fallback dla Popu (chwytacz ogólny)
+    {
+        category: "Pop",
+        keywords: ["pop", "singer-songwriter"]
+        // Tutaj bezpiecznie trafią "dance pop" (linia 8) i "chill pop" (linia 632)
     }
+];
 
-    // Check partial matches (e.g., "uk hip hop" contains "hip hop")
-    for (const [key, value] of Object.entries(GENRE_MAP)) {
-        if (lower.includes(key) || key.includes(lower)) {
-            return value;
+/**
+ * Normalize genre name using keyword priority algorithm
+ */
+export function normalizeGenre(rawGenre: string): string {
+    if (!rawGenre) return "Nieznany";
+    const lowerGenre = rawGenre.toLowerCase().trim();
+
+    // 1. Sprawdź reguły priorytetowe
+    for (const rule of GENRE_RULES) {
+        if (rule.keywords.some(keyword => lowerGenre.includes(keyword))) {
+            return rule.category;
         }
     }
 
-    // Return original with first letter capitalized
-    return genre.split(' ').map(word =>
-        word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    // 2. Fallback dedykowany: Reggae/Ska
+    // Często nie pasuje do powyższych, a jest dużą grupą.
+    if (lowerGenre.includes("reggae") || lowerGenre.includes("dub") || lowerGenre.includes("ska")) {
+        return "Reggae / Ska";
+    }
+
+    // 3. Fallback ostateczny: Formatowanie oryginalnej nazwy
+    // Zwracamy np. "Modern Bollywood" zamiast "Inne", co pozwala na lepszą analitykę w przyszłości.
+    return rawGenre.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
 }
+
+// ============================================================================
+// Types and interfaces
+// ============================================================================
 
 export interface GenreStat {
     name: string;
@@ -153,15 +128,18 @@ export interface Artist {
     genres?: string[];
 }
 
+// ============================================================================
+// Genre calculation algorithm
+// ============================================================================
+
 /**
  * Calculate top genres from a list of artists using V2 algorithm
  * - sqrt(rank) weighing
  * - divide by genre count per artist
- * - normalization with fallback to raw genres
+ * - normalization with keyword priority
  */
 export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenres: GenreStat[], topGenreName: string } {
     const genreScore: Record<string, number> = {};
-    const rawGenreScore: Record<string, number> = {};
     const artistCount = artists.length;
 
     if (artistCount === 0) {
@@ -180,29 +158,19 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
         const perGenreWeight = rankWeight / artistGenres.length;
 
         artistGenres.forEach((genre: string) => {
-            // Normalize genre names to broad categories
+            // Normalize genre names to broad categories using keyword priority
             const normalizedGenre = normalizeGenre(genre);
             genreScore[normalizedGenre] = (genreScore[normalizedGenre] || 0) + perGenreWeight;
-
-            // Also track raw genres for fallback
-            const capitalizedGenre = genre.split(' ').map(word =>
-                word.charAt(0).toUpperCase() + word.slice(1)
-            ).join(' ');
-            rawGenreScore[capitalizedGenre] = (rawGenreScore[capitalizedGenre] || 0) + perGenreWeight;
         });
     });
 
-    // Sort normalized genres by score
+    // Sort genres by score descending
     const sortedGenres = Object.entries(genreScore)
-        .sort(([, a], [, b]) => b - a);
-
-    // Sort raw genres by score (for fallback)
-    const sortedRawGenres = Object.entries(rawGenreScore)
         .sort(([, a], [, b]) => b - a);
 
     const totalScore = sortedGenres.reduce((sum, [, score]) => sum + score, 0) || 1;
 
-    // Take normalized categories first
+    // Take top genres
     let topGenres = sortedGenres
         .slice(0, limit)
         .map(([name, score]) => ({
@@ -211,19 +179,8 @@ export function calculateTopGenres(artists: Artist[] = [], limit = 5): { topGenr
             rawScore: score
         }));
 
-    // If we have less than limit, fill with raw genres not already included
-    if (topGenres.length < limit) {
-        const existingNames = new Set(topGenres.map(g => g.name.toLowerCase()));
-        const additionalGenres = sortedRawGenres
-            .filter(([name]) => !existingNames.has(name.toLowerCase()))
-            .slice(0, limit - topGenres.length)
-            .map(([name, score]) => ({
-                name,
-                percentage: Math.round((score / totalScore) * 100),
-                rawScore: score
-            }));
-        topGenres = [...topGenres, ...additionalGenres];
-    }
+    // Sort final list by percentage descending
+    topGenres.sort((a, b) => b.percentage - a.percentage);
 
     return {
         topGenres,

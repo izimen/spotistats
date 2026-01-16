@@ -1,15 +1,16 @@
-export type TimeRange = "week" | "month" | "year" | "all";
+export type TimeRange = "week" | "month" | "year";
 
 interface TimeRangeFilterProps {
   value: TimeRange;
   onChange: (value: TimeRange) => void;
 }
 
+// Spotify API time ranges:
+// short_term (~4 weeks), medium_term (~6 months), long_term (~1 year)
 const timeRanges: { value: TimeRange; label: string; shortLabel: string }[] = [
-  { value: "week", label: "Tydzień", shortLabel: "7d" },
-  { value: "month", label: "Miesiąc", shortLabel: "30d" },
-  { value: "year", label: "Rok", shortLabel: "1r" },
-  { value: "all", label: "Wszystko", shortLabel: "∞" },
+  { value: "week", label: "4 Tygodnie", shortLabel: "4T" },
+  { value: "month", label: "6 Miesięcy", shortLabel: "6M" },
+  { value: "year", label: "1 Rok", shortLabel: "1R" },
 ];
 
 const TimeRangeFilter = ({ value, onChange }: TimeRangeFilterProps) => {
