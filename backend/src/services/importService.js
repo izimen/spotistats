@@ -128,39 +128,25 @@ async function processStreamingHistory(data, userId, importId) {
     for (let i = 0; i < aggregatedArray.length; i += BATCH_SIZE) {
         const batch = aggregatedArray.slice(i, i + BATCH_SIZE);
 
-        // Use raw SQL for bulk upsert (Prisma doesn't support bulk upsert with increment)
-        for (const stat of batch) {
-            try {
-                await prisma.aggregatedStats.upsert({
-                    where: {
-                        userId_trackUri: { userId, trackUri: stat.trackUri }
-                    },
-                    update: {
-                        playCount: { increment: stat.playCount },
-                        totalMsPlayed: { increment: BigInt(stat.totalMsPlayed) },
-                        lastPlayed: stat.lastPlayed,
-                        // Only update firstPlayed if new value is earlier
-                        firstPlayed: stat.firstPlayed
-                    },
-                    create: {
-                        userId,
-                        trackUri: stat.trackUri,
-                        artistName: stat.artistName,
-                        trackName: stat.trackName,
-                        albumName: stat.albumName,
-                        playCount: stat.playCount,
-                        totalMsPlayed: BigInt(stat.totalMsPlayed),
-                        firstPlayed: stat.firstPlayed,
-                        lastPlayed: stat.lastPlayed
-                    }
-                });
-                aggregatedUpserted++;
-            } catch (err) {
-                // Ignore duplicate key errors
-                if (!err.code?.includes('P2002')) {
-                    console.error('Aggregated upsert error:', err.message);
-                }
-            }
+        // PERFORMANCE FIX: Bulk upsert via raw SQL instead of N+1 individual upserts
+        try {
+            const values = batch.map(stat =>
+                `('${userId}', '${stat.trackUri.replace(/'/g, "''")}', '${stat.artistName.replace(/'/g, "''")}', '${stat.trackName.replace(/'/g, "''")}', ${stat.albumName ? `'${stat.albumName.replace(/'/g, "''")}'` : 'NULL'}, ${stat.playCount}, ${stat.totalMsPlayed}, '${stat.firstPlayed.toISOString()}'::timestamp, '${stat.lastPlayed.toISOString()}'::timestamp)`
+            ).join(',\n');
+
+            await prisma.$executeRawUnsafe(`
+                INSERT INTO "AggregatedStats" ("userId", "trackUri", "artistName", "trackName", "albumName", "playCount", "totalMsPlayed", "firstPlayed", "lastPlayed")
+                VALUES ${values}
+                ON CONFLICT ("userId", "trackUri") DO UPDATE SET
+                    "playCount" = "AggregatedStats"."playCount" + EXCLUDED."playCount",
+                    "totalMsPlayed" = "AggregatedStats"."totalMsPlayed" + EXCLUDED."totalMsPlayed",
+                    "lastPlayed" = GREATEST("AggregatedStats"."lastPlayed", EXCLUDED."lastPlayed"),
+                    "firstPlayed" = LEAST("AggregatedStats"."firstPlayed", EXCLUDED."firstPlayed")
+            `);
+            aggregatedUpserted += batch.length;
+        } catch (err) {
+            console.error('Bulk aggregated upsert error:', err.message);
+            errors += batch.length;
         }
     }
 

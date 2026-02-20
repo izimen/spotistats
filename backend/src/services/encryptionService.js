@@ -5,17 +5,23 @@
 const crypto = require('crypto');
 const env = require('../config/env');
 
-// Use JWT_SECRET to derive encryption key (32 bytes for AES-256)
+// SECURITY FIX: Use dedicated ENCRYPTION_KEY instead of JWT_SECRET
+// This ensures compromise of one key does not compromise both systems
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
 /**
- * Derive encryption key from JWT secret
+ * Derive encryption key from dedicated secret
+ * Falls back to JWT_SECRET with warning for backward compatibility
  * @returns {Buffer} - 32-byte key
  */
 function getEncryptionKey() {
-    return crypto.createHash('sha256').update(env.jwt.secret).digest();
+    const secret = process.env.ENCRYPTION_KEY || env.jwt.secret;
+    if (!process.env.ENCRYPTION_KEY) {
+        console.warn('[SECURITY] ENCRYPTION_KEY not set — falling back to JWT_SECRET. Set a dedicated ENCRYPTION_KEY in production!');
+    }
+    return crypto.createHash('sha256').update(secret).digest();
 }
 
 /**
