@@ -60,8 +60,11 @@ function subscribeToRefresh(callback: (token: string) => void) {
  * Notify all subscribers with new token
  */
 function onRefreshed(token: string) {
-    refreshSubscribers.forEach(callback => callback(token));
+    // FIX #14: Copy and clear subscribers BEFORE notifying
+    // This prevents race condition where a callback could add new subscribers
+    const subscribers = refreshSubscribers;
     refreshSubscribers = [];
+    subscribers.forEach(callback => callback(token));
 }
 
 /**
@@ -84,7 +87,6 @@ export const api = axios.create({
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
     }
 });
 
@@ -217,27 +219,27 @@ export const authAPI = {
 // ===============================
 export const statsAPI = {
     getTopArtists: (timeRange = 'medium_term', limit = 20) =>
-        api.get(`/api/stats/top-artists?time_range=${timeRange}&limit=${limit}`),
+        api.get(`/api/v1/stats/top-artists?time_range=${timeRange}&limit=${limit}`),
 
     getTopTracks: (timeRange = 'medium_term', limit = 20) =>
-        api.get(`/api/stats/top-tracks?time_range=${timeRange}&limit=${limit}`),
+        api.get(`/api/v1/stats/top-tracks?time_range=${timeRange}&limit=${limit}`),
 
     getTopAlbums: (timeRange = 'medium_term', limit = 20) =>
-        api.get(`/api/stats/top-albums?time_range=${timeRange}&limit=${limit}`),
+        api.get(`/api/v1/stats/top-albums?time_range=${timeRange}&limit=${limit}`),
 
     getRecentlyPlayed: (limit = 50) =>
-        api.get(`/api/stats/recent?limit=${limit}`),
+        api.get(`/api/v1/stats/recent?limit=${limit}`),
 
-    getOverview: () => api.get('/api/stats/overview'),
+    getOverview: () => api.get('/api/v1/stats/overview'),
 
-    clearCache: () => api.post('/api/stats/clear-cache'),
+    clearCache: () => api.post('/api/v1/stats/clear-cache'),
 
     // Listening History (persistent collection)
     getListeningChart: (days = 7) =>
-        api.get(`/api/stats/listening-history/chart?days=${days}`),
+        api.get(`/api/v1/stats/listening-history/chart?days=${days}`),
 
     syncListeningHistory: () =>
-        api.post('/api/stats/listening-history/sync'),
+        api.post('/api/v1/stats/listening-history/sync'),
 
     getListeningHistory: (options: { limit?: number; offset?: number; from?: string; to?: string } = {}) => {
         const params = new URLSearchParams();
@@ -245,12 +247,12 @@ export const statsAPI = {
         if (options.offset) params.set('offset', String(options.offset));
         if (options.from) params.set('from', options.from);
         if (options.to) params.set('to', options.to);
-        return api.get(`/api/stats/listening-history?${params.toString()}`);
+        return api.get(`/api/v1/stats/listening-history?${params.toString()}`);
     },
 
     // Audio Features (real music analytics from Spotify)
     getAudioFeatures: (trackIds: string[]) =>
-        api.get(`/api/stats/audio-features?ids=${trackIds.join(',')}`),
+        api.get(`/api/v1/stats/audio-features?ids=${trackIds.join(',')}`),
 };
 
 export default api;

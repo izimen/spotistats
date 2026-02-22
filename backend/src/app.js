@@ -23,9 +23,9 @@ const cronRoutes = require('./routes/cron.routes');
 const app = express();
 
 // Trust proxy - Required for Cloud Run / load balancers
-// This makes req.ip read the real client IP from X-Forwarded-For header
-// Without this, rate limiting would use the proxy's internal IP for ALL users
-app.set('trust proxy', true);
+// SECURITY FIX: Use 1 instead of true to only trust the first proxy hop
+// 'true' trusts ALL X-Forwarded-For entries, allowing IP spoofing via nested proxies
+app.set('trust proxy', 1);
 
 // ===================
 // Security Middleware
@@ -46,38 +46,36 @@ app.use(helmet({
 }));
 
 // CORS - Only allow frontend origin
-// CORS - Allow frontend origin (support both localhost and 127.0.0.1)
+// SECURITY FIX: localhost origins only in development, production uses env.frontendUrl
 app.use(cors({
     origin: (origin, callback) => {
         const allowedOrigins = [
             env.frontendUrl,
-            'http://localhost:5173',
-            'http://127.0.0.1:5173',
-            'http://localhost:8080',
-            'http://127.0.0.1:8080',
-            'https://spotistats-frontend-ox6p5to4qa-lm.a.run.app' // Cloud Run production
+            'https://spotistats-frontend-589662369162.europe-central2.run.app' // Cloud Run production
         ];
+
+        // In development, also allow localhost variants
+        if (!env.isProduction) {
+            allowedOrigins.push(
+                'http://localhost:5173',
+                'http://127.0.0.1:5173',
+                'http://localhost:8080',
+                'http://127.0.0.1:8080'
+            );
+        }
+
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // For dev ease, we could allow all, but let's be specific for now
-            // If specific regex needed for dynamic ports:
-            // if (/^http:\/\/localhost:\d+$/.test(origin)) ...
-
-            // Fallback: If strictly needed, check against env.frontendUrl only
-            if (origin === env.frontendUrl) {
-                callback(null, true);
-            } else {
-                callback(new Error('Not allowed by CORS'));
-            }
+            callback(new Error('Not allowed by CORS'));
         }
     },
     credentials: true, // Allow cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
 // Rate limiting
@@ -139,12 +137,7 @@ app.use('/api/v1/import', importRoutes);
 app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/cron', cronRoutes);
 
-// Backwards compatibility: /api/* → /api/v1/*
-// TODO: Remove after frontend migration to v1
-app.use('/api/stats', statsRoutes);
-app.use('/api/import', importRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/cron', cronRoutes);
+// NOTE: Legacy /api/* routes removed — frontend should use /api/v1/* only
 
 // ===================
 // Error Handling

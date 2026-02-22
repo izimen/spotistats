@@ -102,7 +102,8 @@ function errorHandler(err, req, res, next) {
         type: `https://spotistats.app/problems/${errorCode.toLowerCase().replace(/_/g, '-')}`,
         title: errorCode.replace(/([A-Z])/g, ' $1').trim(), // CamelCase -> Title Case
         status: statusCode,
-        detail: env.isProduction && statusCode === 500
+        // SECURITY FIX: In production, hide internal error details for non-operational errors
+        detail: env.isProduction && !err.isOperational
             ? 'An unexpected error occurred'
             : message,
         instance: req.originalUrl,

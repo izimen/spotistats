@@ -23,21 +23,11 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
         return Math.round(formattedTracks.reduce((acc, track) => acc + track.durationMs, 0) / 60000);
     }, [formattedTracks, serverTotalMinutes]);
 
-    // Calculate previous period estimate based on track patterns (deterministic)
-    // Uses track count ratio to estimate - more tracks = likely more time
-    const previousMinutes = useMemo(() => {
-        // Base estimate: assume similar listening pattern
-        // Use track count as a stable proxy (no randomness)
-        // If we have server stats, use them as base
-        const base = totalMinutes;
-
-        // Simple heuristic: compare with "average" week/month if we had history
-        // For now, just generate a reasonable number for "vs yesterday"
-        // Return 80-90% of current to show positive growth typically
-        return Math.round(base * 0.85);
-    }, [totalMinutes]);
-    const minutesDiff = totalMinutes - previousMinutes;
-    const minutesDiffPercent = previousMinutes > 0 ? Math.round((minutesDiff / previousMinutes) * 100) : 0;
+    // FIX #12: Removed fake "vs yesterday" comparison
+    // Previous implementation used hardcoded 0.85 multiplier — always showing +18% growth
+    // Without real previous-period data from the DB, we set diff to 0 (honest)
+    const minutesDiff = 0;
+    const minutesDiffPercent = 0;
 
     // Find most looped track (most repeated)
     const mostLooped = useMemo(() => {
