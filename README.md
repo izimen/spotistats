@@ -72,6 +72,9 @@ DATABASE_URL="postgresql://..."
 SPOTIFY_CLIENT_ID=your_client_id
 SPOTIFY_CLIENT_SECRET=your_client_secret
 JWT_SECRET=your_random_32_char_secret
+ENCRYPTION_KEY=your_separate_encryption_key
+CRON_SECRET_KEY=your_random_cron_secret
+FRONTEND_URL=http://localhost:8080
 SENTRY_DSN=your_sentry_dsn  # Optional
 ```
 
@@ -94,7 +97,7 @@ npm run dev
 
 ### 5. Open the App
 
-Visit `http://localhost:5173` and login with Spotify! 🎉
+Visit `http://localhost:8080` and login with Spotify! 🎉
 
 ## 📁 Project Structure
 
@@ -117,7 +120,9 @@ my-spotify-stats/
 
 ## 🔐 API Endpoints
 
-All API endpoints support versioning: `/api/v1/*` (backwards compatible with `/api/*`)
+All API endpoints use versioned paths: `/api/v1/*`
+
+> ⚠️ Legacy unversioned `/api/*` routes have been removed. Use `/api/v1/*` only.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -139,34 +144,24 @@ All API endpoints support versioning: `/api/v1/*` (backwards compatible with `/a
 
 ## 🔒 Security
 
-This project implements enterprise-grade security practices and has passed comprehensive security audits.
-
-- **Security Rating**: **A+** (Mozilla Observatory, SecurityHeaders.com, SSL Labs)
-- **Vulnerability Scanning**: Passed **Nuclei** and **OWASP ZAP** scans (0 critical/high issues)
 - **Authentication**:
   - OAuth 2.0 with PKCE flow
   - Stateless JWT implementation with automatic rotation
   - HttpOnly, Secure, SameSite=Strict cookies
-- **Access Control (RBAC)**:
-  - Role-based separation (Admin/User) enforced at middleware and database level (RLS)
-  - Row Level Security (RLS) on all database tables
 - **Protection**:
   - **CSRF**: Double Submit Cookie pattern with cryptographic tokens
   - **XSS**: Strict Content Security Policy (CSP) and input sanitization
   - **Rate Limiting**: Per-user adaptive limits (Redis-backed) with jitter
-  - **Audit Logging**: Comprehensive logging of sensitive actions
+  - **Audit Logging**: Logging of sensitive actions to stdout (Cloud Logging compatible)
 - **Resilience**:
   - **Circuit Breaker**: Fail-fast on Spotify API failures
   - **Request Timeout**: 5s timeout on external calls
   - **Backoff with Jitter**: ±50% jitter to prevent thundering herd
 - **Data Protection**:
-  - AES-256-GCM encryption for stored refresh tokens
+  - AES-256-GCM encryption for stored refresh tokens (separate ENCRYPTION_KEY)
   - GDPR-compliant data export and deletion
 
-> 🛡️ **See also:**
-> - [Full Security Policy & Audit Results](./SECURITY.md)
-> - [Secrets Management](./docs/SECRETS_MANAGEMENT.md)
-> - [Incident Response](./docs/INCIDENT_RESPONSE.md)
+> 🛡️ **See also:** [Full Security Policy](./SECURITY.md)
 
 ## 🧪 Testing
 

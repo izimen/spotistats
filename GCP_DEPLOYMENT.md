@@ -63,6 +63,9 @@ echo -n "https://YOUR_BACKEND_URL/auth/callback" | gcloud secrets create SPOTIFY
 # JWT
 echo -n "your-super-secret-jwt-key-min-32-chars" | gcloud secrets create JWT_SECRET --data-file=-
 
+# Encryption key (separate from JWT_SECRET)
+echo -n "your-separate-encryption-key-min-32-chars" | gcloud secrets create ENCRYPTION_KEY --data-file=-
+
 # Frontend URL
 echo -n "https://YOUR_FRONTEND_URL" | gcloud secrets create FRONTEND_URL --data-file=-
 
@@ -161,14 +164,16 @@ export BACKEND_URL="https://spotistats-backend-xxxxx-xx.a.run.app"
 gcloud scheduler jobs create http spotify-history-sync \
   --location=europe-central2 \
   --schedule="0 */6 * * *" \
-  --uri="$BACKEND_URL/api/cron/sync-listening-history" \
+  --uri="$BACKEND_URL/api/v1/cron/sync-listening-history" \
   --http-method=POST \
-  --headers="X-Cloudscheduler=true" \
+  --headers="Authorization=Bearer YOUR_CRON_SECRET_KEY" \
   --time-zone="Europe/Warsaw" \
   --max-retry-attempts=3 \
   --min-backoff-duration=5m \
   --attempt-deadline=540s
 ```
+
+> ⚠️ **Note**: The `X-Cloudscheduler` header is no longer accepted by the backend. Use `Authorization: Bearer <CRON_SECRET_KEY>` for authentication.
 
 ### 6.3 Test Scheduler
 ```bash
