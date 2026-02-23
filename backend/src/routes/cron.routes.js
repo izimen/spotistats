@@ -40,7 +40,7 @@ router.get('/health', (req, res) => {
 });
 
 // Sync listening history - called by GCP Cloud Scheduler
-// Protected by cronAuth middleware (X-Cloudscheduler header or secret key)
+// Protected by cronAuth middleware (Bearer secret key only, no spoofable headers)
 router.post('/sync-listening-history',
     cronLimiter,
     cronAuth,

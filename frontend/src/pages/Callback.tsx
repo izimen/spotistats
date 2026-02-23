@@ -17,7 +17,6 @@ const Callback = () => {
     useEffect(() => {
         const checkAuth = async () => {
             const error = searchParams.get('error');
-            const token = searchParams.get('token');
 
             if (error) {
                 console.error('Auth error from URL:', error);
@@ -27,19 +26,12 @@ const Callback = () => {
                 return;
             }
 
-            // Store token from URL if present (cross-origin dev workaround)
-            if (token) {
-                console.log('Token received from URL, storing in localStorage');
-                localStorage.setItem('spotify_jwt', token);
-                // Clear token from URL for security (prevent token leaking via referrer/history)
-                window.history.replaceState({}, '', '/callback');
-            }
-
-            // Wait a bit for processing, then verify auth
+            // SECURITY FIX: Token is now in HttpOnly cookie (set by backend)
+            // No token in URL — just verify auth via /auth/me which reads the cookie
             await new Promise(resolve => setTimeout(resolve, 500));
 
             try {
-                // Try to fetch user to verify token is working
+                // Verify token is working via cookie-authenticated request
                 const response = await authAPI.getUser();
                 if (response.data.user) {
                     setStatus('success');
@@ -50,7 +42,6 @@ const Callback = () => {
                 }
             } catch (err) {
                 console.error('Auth verification failed:', err);
-                // Clear any stored token on failure
                 localStorage.removeItem('spotify_jwt');
                 setStatus('error');
                 setMessage('Nie udało się zweryfikować logowania');

@@ -79,16 +79,9 @@ function csrfProtection(req, res, next) {
     const cookieToken = req.cookies[CSRF_COOKIE_NAME];
     const headerToken = req.get(CSRF_HEADER_NAME);
 
-    // Fallback: Also accept X-Requested-With for backwards compatibility
-    const xRequestedWith = req.get('X-Requested-With');
-
-    // Validate: must have either matching CSRF token OR legacy X-Requested-With
+    // SECURITY FIX: Strict double-submit cookie validation only
+    // Removed legacy X-Requested-With fallback (trivially spoofable)
     if (cookieToken && headerToken && cookieToken === headerToken) {
-        return next();
-    }
-
-    // Legacy fallback for existing clients
-    if (xRequestedWith === 'XMLHttpRequest') {
         return next();
     }
 

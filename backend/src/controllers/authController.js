@@ -119,7 +119,7 @@ async function callback(req, res) {
         const encryptedRefreshToken = encrypt(tokens.refreshToken);
 
         // Upsert user with new token family (invalidates old sessions)
-        await prisma.user.upsert({
+        const user = await prisma.user.upsert({
             where: { spotifyId: profile.spotifyId },
             update: {
                 email: profile.email,
@@ -146,16 +146,12 @@ async function callback(req, res) {
             }
         });
 
-        const user = await prisma.user.findUnique({
-            where: { spotifyId: profile.spotifyId }
-        });
-
         const jwtToken = generateJWT(user, tokens.accessToken, tokenExpiry, tokenFamily);
         const cookieOptions = getCookieOptions();
         res.cookie('jwt', jwtToken, cookieOptions);
 
-        // Redirect to frontend
-        res.redirect(`${env.frontendUrl}/callback?token=${encodeURIComponent(jwtToken)}`);
+        // SECURITY FIX: Redirect WITHOUT token in URL (token is in HttpOnly cookie)
+        res.redirect(`${env.frontendUrl}/callback`);
     } catch (error) {
         console.error('Callback error:', error.message, error.stack);
         res.redirect(`${env.frontendUrl}/login?error=callback_failed`);

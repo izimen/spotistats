@@ -2,20 +2,16 @@
  * GCP Cloud Scheduler Authentication Middleware
  *
  * Accepts requests if ANY of the following conditions are met:
- * 1. Header X-Cloudscheduler: true (from GCP)
- * 2. Authorization: Bearer <CRON_SECRET_KEY>
- * 3. In development mode (bypass)
+ * 1. Authorization: Bearer <CRON_SECRET_KEY>
+ * 2. In development mode (bypass)
+ *
+ * SECURITY: X-Cloudscheduler header was removed — it's trivially spoofable
+ * by any client and provides no real authentication.
  */
 const env = require('../config/env');
 
 function cronAuth(req, res, next) {
-    // Method 1: GCP Cloud Scheduler header
-    if (req.headers['x-cloudscheduler'] === 'true') {
-        console.log('[CronAuth] Authorized via X-Cloudscheduler header');
-        return next();
-    }
-
-    // Method 2: Secret key in Authorization header
+    // Method 1: Secret key in Authorization header
     const authHeader = req.headers['authorization'];
     if (authHeader && env.cronSecretKey) {
         const token = authHeader.replace('Bearer ', '');
@@ -25,7 +21,7 @@ function cronAuth(req, res, next) {
         }
     }
 
-    // Method 3: Development bypass
+    // Method 2: Development bypass
     if (!env.isProduction) {
         console.warn('[CronAuth] DEV MODE: Allowing request without auth');
         return next();

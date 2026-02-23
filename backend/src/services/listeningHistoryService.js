@@ -5,6 +5,7 @@
  */
 
 const prisma = require('../utils/prismaClient');
+const { Prisma } = require('@prisma/client');
 const spotifyService = require('./spotifyService');
 
 /**
@@ -114,11 +115,15 @@ async function getUserHistory(userId, options = {}) {
                 orderBy: { _count: { id: 'desc' } },
                 take: 1
             }),
-            // All playedAt for hour aggregation (Prisma doesn't support groupBy on date functions)
-            prisma.streamingHistory.findMany({
-                where,
-                select: { playedAt: true }
-            }),
+            // PERFORMANCE FIX: Aggregate hours in SQL instead of loading all records into memory
+            prisma.$queryRaw`
+                SELECT EXTRACT(HOUR FROM "playedAt")::int as hour, COUNT(*)::int as count
+                FROM "StreamingHistory"
+                WHERE "userId" = ${userId}
+                ${from ? Prisma.sql`AND "playedAt" >= ${from}` : Prisma.empty}
+                ${to ? Prisma.sql`AND "playedAt" <= ${to}` : Prisma.empty}
+                GROUP BY hour ORDER BY hour
+            `,
             // Unique tracks count for listening mode
             prisma.streamingHistory.groupBy({
                 by: ['trackName', 'artistName'],
@@ -126,13 +131,11 @@ async function getUserHistory(userId, options = {}) {
             })
         ]);
 
-        // Calculate top hours from playedAt data
+        // Build hourCounts from SQL result
         const hourCounts = {};
         for (let i = 0; i < 24; i++) hourCounts[i] = 0;
-
-        allPlaysForHours.forEach(play => {
-            const hour = new Date(play.playedAt).getHours();
-            hourCounts[hour]++;
+        allPlaysForHours.forEach(row => {
+            hourCounts[row.hour] = row.count;
         });
 
         // Get top 3 hours sorted by count
@@ -229,25 +232,22 @@ async function getListeningByDay(userId, days = 7) {
  * @returns {Promise<Array<{hour: number, count: number, intensity: number}>>}
  */
 async function getListeningByHour(userId) {
-    // Get all plays (time only)
-    const plays = await prisma.streamingHistory.findMany({
-        where: { userId },
-        select: { playedAt: true }
-    });
+    // PERFORMANCE FIX: Aggregate in SQL instead of loading all records into memory
+    const hourData = await prisma.$queryRaw`
+        SELECT EXTRACT(HOUR FROM "playedAt")::int as hour, COUNT(*)::int as count
+        FROM "StreamingHistory"
+        WHERE "userId" = ${userId}
+        GROUP BY hour ORDER BY hour
+    `;
 
-    if (plays.length === 0) {
+    if (hourData.length === 0) {
         return [];
     }
 
-    // Initialize hours 0-23
+    // Initialize hours 0-23 and fill from query result
     const hours = {};
     for (let i = 0; i < 24; i++) hours[i] = 0;
-
-    // Count plays per hour
-    plays.forEach(p => {
-        const h = new Date(p.playedAt).getHours();
-        hours[h]++;
-    });
+    hourData.forEach(row => { hours[row.hour] = row.count; });
 
     // Calculate max for intensity
     const maxCount = Math.max(...Object.values(hours), 1);

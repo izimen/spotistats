@@ -209,7 +209,7 @@ describe('Auth Endpoints', () => {
             const res = await request(app)
                 .post('/auth/logout')
                 .set('Cookie', [`jwt=${token}`])
-                .set('X-Requested-With', 'XMLHttpRequest');
+                .set('X-CSRF-Token', 'test-csrf-token');
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('message', 'Logged out successfully');
@@ -224,7 +224,7 @@ describe('Auth Endpoints', () => {
             // Logout is idempotent - it should succeed even without a token
             const res = await request(app)
                 .post('/auth/logout')
-                .set('X-Requested-With', 'XMLHttpRequest');
+                .set('X-CSRF-Token', 'test-csrf-token');
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('message', 'Logged out successfully');

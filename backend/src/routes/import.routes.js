@@ -55,11 +55,11 @@ router.post('/file',
 // Get import status and history
 router.get('/status', apiLimiter, importController.getImportStatus);
 
-// Get specific import by ID
-router.get('/:id', apiLimiter, importController.getImportById);
-
 // Get aggregated statistics from imported data
 router.get('/stats', apiLimiter, importController.getHistoryStats);
+
+// Get specific import by ID (MUST be after /stats to avoid matching 'stats' as :id)
+router.get('/:id', apiLimiter, importController.getImportById);
 
 // Delete all imported history (GDPR) - SENSITIVE OPERATION
 router.delete('/history',

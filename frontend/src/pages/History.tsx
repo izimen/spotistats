@@ -14,6 +14,7 @@ import HistoryList from "@/components/HistoryList";
 import StatisticsGrid from "@/components/StatisticsGrid";
 import { isValidImageUrl } from "@/lib/utils";
 import { AxiosError } from "axios";
+import api from "@/lib/api";
 
 interface HistoryItem {
   trackId?: string;
@@ -216,8 +217,8 @@ const History = () => {
 
     const fetchMusicDNA = async () => {
       try {
-        const response = await fetch('/api/stats/dna', { credentials: 'include' });
-        const data = await response.json();
+        const response = await api.get('/api/v1/stats/dna');
+        const data = response.data;
         if (data.success && data.data) {
           setApiMusicDNA(data.data);
         }
@@ -237,8 +238,8 @@ const History = () => {
 
     const fetchPrediction = async () => {
       try {
-        const response = await fetch('/api/stats/prediction', { credentials: 'include' });
-        const data = await response.json();
+        const response = await api.get('/api/v1/stats/prediction');
+        const data = response.data;
         if (data.success && data.data) {
           setApiPrediction(data.data);
         }
@@ -258,8 +259,8 @@ const History = () => {
 
     const fetchHeatmap = async () => {
       try {
-        const response = await fetch('/api/stats/listening-history/heatmap', { credentials: 'include' });
-        const data = await response.json();
+        const response = await api.get('/api/v1/stats/listening-history/heatmap');
+        const data = response.data;
         if (data.success && data.data && data.data.length > 0) {
           setApiHeatmap(data.data);
         }
@@ -281,10 +282,8 @@ const History = () => {
   const spinRoulette = async () => {
     setIsSpinning(true);
     try {
-      const response = await fetch('/api/stats/discovery/roulette', {
-        credentials: 'include'
-      });
-      const data = await response.json();
+      const response = await api.get('/api/v1/stats/discovery/roulette');
+      const data = response.data;
 
       if (data.success && data.data) {
         setRouletteTrack({
