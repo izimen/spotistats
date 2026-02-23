@@ -69,7 +69,7 @@ function csrfProtection(req, res, next) {
 
     // Skip specific paths if needed (webhooks, cron endpoints)
     const skipPaths = [
-        '/api/cron/sync-listening-history' // Cron has its own auth
+        '/api/v1/cron/' // Cron routes have their own auth (Bearer secret key)
     ];
     if (skipPaths.some(path => req.path.startsWith(path))) {
         return next();
