@@ -26,12 +26,20 @@ const Callback = () => {
                 return;
             }
 
-            // SECURITY FIX: Token is now in HttpOnly cookie (set by backend)
-            // No token in URL — just verify auth via /auth/me which reads the cookie
+            // Cross-domain flow: Backend passes JWT as URL parameter because
+            // Cloud Run uses separate domains (.a.run.app is a public suffix,
+            // so cookies can't be shared between backend and frontend).
+            const tokenFromUrl = searchParams.get('token');
+            if (tokenFromUrl) {
+                localStorage.setItem('spotify_jwt', tokenFromUrl);
+                // Clear token from URL immediately for security
+                window.history.replaceState({}, '', '/callback');
+            }
+
             await new Promise(resolve => setTimeout(resolve, 500));
 
             try {
-                // Verify token is working via cookie-authenticated request
+                // Verify token is working
                 const response = await authAPI.getUser();
                 if (response.data.user) {
                     setStatus('success');
