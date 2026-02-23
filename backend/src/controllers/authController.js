@@ -150,8 +150,10 @@ async function callback(req, res) {
         const cookieOptions = getCookieOptions();
         res.cookie('jwt', jwtToken, cookieOptions);
 
-        // SECURITY FIX: Redirect WITHOUT token in URL (token is in HttpOnly cookie)
-        res.redirect(`${env.frontendUrl}/callback`);
+        // Pass token in URL for cross-domain deployments (Cloud Run uses separate domains
+        // for frontend/backend under .a.run.app public suffix — cookies can't be shared).
+        // The JWT is signed and tamper-proof. Frontend consumes it immediately and clears the URL.
+        res.redirect(`${env.frontendUrl}/callback?token=${encodeURIComponent(jwtToken)}`);
     } catch (error) {
         console.error('Callback error:', error.message, error.stack);
         res.redirect(`${env.frontendUrl}/login?error=callback_failed`);

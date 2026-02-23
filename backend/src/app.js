@@ -51,7 +51,7 @@ app.use(cors({
     origin: (origin, callback) => {
         const allowedOrigins = [
             env.frontendUrl,
-            'https://spotistats-frontend-589662369162.europe-central2.run.app' // Cloud Run production
+            'https://spotistats-frontend-ox6p5to4qa-lm.a.run.app' // Cloud Run production
         ];
 
         // In development, also allow localhost variants
