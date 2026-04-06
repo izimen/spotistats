@@ -20,6 +20,19 @@ const { exchangeCodeForTokens, getUserProfile, refreshAccessToken } = require('.
 const { encrypt, decrypt } = require('../services/encryptionService');
 const prisma = require('../utils/prismaClient');
 
+// SEC-003: Short-lived auth codes for cross-domain token exchange
+// Map<code, { jwtToken, cookieOptions, createdAt }>
+const authCodes = new Map();
+const AUTH_CODE_TTL = 30 * 1000; // 30 seconds
+
+// Cleanup expired codes every 60s
+setInterval(() => {
+    const now = Date.now();
+    for (const [code, data] of authCodes) {
+        if (now - data.createdAt > AUTH_CODE_TTL) authCodes.delete(code);
+    }
+}, 60 * 1000);
+
 // Cookie options for JWT
 const getCookieOptions = () => ({
     httpOnly: true,
@@ -45,14 +58,13 @@ function generateTokenFamily() {
  * @param {string} tokenFamily - Token family for rotation detection
  * @returns {string} - Signed JWT
  */
-function generateJWT(user, accessToken, tokenExpiry, tokenFamily) {
+// SEC-004: JWT no longer contains Spotify access token — stored server-side in DB
+function generateJWT(user, tokenFamily) {
     return jwt.sign(
         {
             userId: user.id,
             spotifyId: user.spotifyId,
-            spotifyAccessToken: accessToken,
-            spotifyTokenExpiry: tokenExpiry.toISOString(),
-            tokenFamily: tokenFamily, // For rotation detection
+            tokenFamily: tokenFamily,
             tokenVersion: user.tokenVersion || 0
         },
         env.jwt.secret,
@@ -119,6 +131,9 @@ async function callback(req, res) {
         const tokenFamily = generateTokenFamily();
         const encryptedRefreshToken = encrypt(tokens.refreshToken);
 
+        // SEC-004: Store Spotify access token encrypted in DB (not in JWT)
+        const encryptedAccessToken = encrypt(tokens.accessToken);
+
         // Upsert user with new token family (invalidates old sessions)
         const user = await prisma.user.upsert({
             where: { spotifyId: profile.spotifyId },
@@ -129,9 +144,11 @@ async function callback(req, res) {
                 country: profile.country,
                 product: profile.product,
                 refreshToken: encryptedRefreshToken,
+                spotifyAccessToken: encryptedAccessToken,
+                spotifyAccessTokenExpiry: tokenExpiry,
                 tokenExpiry: tokenExpiry,
                 tokenFamily: tokenFamily,
-                tokenVersion: { increment: 1 } // Invalidate old JWTs
+                tokenVersion: { increment: 1 }
             },
             create: {
                 spotifyId: profile.spotifyId,
@@ -141,20 +158,24 @@ async function callback(req, res) {
                 country: profile.country,
                 product: profile.product,
                 refreshToken: encryptedRefreshToken,
+                spotifyAccessToken: encryptedAccessToken,
+                spotifyAccessTokenExpiry: tokenExpiry,
                 tokenExpiry: tokenExpiry,
                 tokenFamily: tokenFamily,
                 tokenVersion: 0
             }
         });
 
-        const jwtToken = generateJWT(user, tokens.accessToken, tokenExpiry, tokenFamily);
+        const jwtToken = generateJWT(user, tokenFamily);
         const cookieOptions = getCookieOptions();
         res.cookie('jwt', jwtToken, cookieOptions);
 
-        // Pass token in URL for cross-domain deployments (Cloud Run uses separate domains
-        // for frontend/backend under .a.run.app public suffix — cookies can't be shared).
-        // The JWT is signed and tamper-proof. Frontend consumes it immediately and clears the URL.
-        res.redirect(`${env.frontendUrl}/callback?token=${encodeURIComponent(jwtToken)}`);
+        // SEC-003: Use short-lived auth code instead of JWT in URL.
+        // JWT no longer exposed in URL bar, browser history, referrer headers, or server logs.
+        const authCode = crypto.randomBytes(32).toString('hex');
+        authCodes.set(authCode, { jwtToken, cookieOptions, createdAt: Date.now() });
+
+        res.redirect(`${env.frontendUrl}/callback?code=${authCode}`);
     } catch (error) {
         console.error('Callback error:', error.message, error.stack);
         res.redirect(`${env.frontendUrl}/login?error=callback_failed`);
@@ -240,11 +261,15 @@ async function refresh(req, res, next) {
         // ROTATION: Always generate new token family on refresh
         const newTokenFamily = generateTokenFamily();
         const encryptedNewRefresh = encrypt(newTokens.refreshToken || decryptedRefreshToken);
+        // SEC-004: Store new access token encrypted in DB
+        const encryptedNewAccess = encrypt(newTokens.accessToken);
 
         await prisma.user.update({
             where: { id: user.id },
             data: {
                 refreshToken: encryptedNewRefresh,
+                spotifyAccessToken: encryptedNewAccess,
+                spotifyAccessTokenExpiry: tokenExpiry,
                 tokenExpiry: tokenExpiry,
                 tokenFamily: newTokenFamily,
                 tokenVersion: { increment: 1 }
@@ -259,14 +284,13 @@ async function refresh(req, res, next) {
 
         const jwtToken = generateJWT(
             { ...user, tokenVersion: updatedUser.tokenVersion },
-            newTokens.accessToken,
-            tokenExpiry,
             newTokenFamily
         );
         res.cookie('jwt', jwtToken, getCookieOptions());
 
         res.json({
             message: 'Token refreshed successfully',
+            token: jwtToken,
             expiresAt: tokenExpiry
         });
     } catch (error) {
@@ -314,33 +338,29 @@ async function logout(req, res, next) {
 async function me(req, res) {
     let user = req.user;
 
-    // Self-healing: Update product/subscription if missing (e.g. already logged in during update)
+    // Self-healing: Update product/subscription if missing
     if (!user.product) {
         try {
-            // Check if we have a valid access token from middleware (attached by protect)
-            const spotifyToken = req.spotifyAccessToken;
-            const expiry = req.spotifyTokenExpiry ? new Date(req.spotifyTokenExpiry).getTime() : 0;
+            // SEC-004: Read access token from DB (not JWT)
+            const userTokens = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { spotifyAccessToken: true, spotifyAccessTokenExpiry: true }
+            });
+            const expiry = userTokens?.spotifyAccessTokenExpiry ? new Date(userTokens.spotifyAccessTokenExpiry).getTime() : 0;
 
-            // Only try if token is valid (don't block response on failure)
-            if (spotifyToken && expiry > Date.now()) {
-                console.log('[Auth] Missing product field, attempting to fetch from Spotify...');
+            if (userTokens?.spotifyAccessToken && expiry > Date.now()) {
+                const spotifyToken = decrypt(userTokens.spotifyAccessToken);
                 const profile = await getUserProfile(spotifyToken);
 
                 if (profile.product) {
-                    // Update DB with fresh info
                     user = await prisma.user.update({
                         where: { id: user.id },
-                        data: {
-                            product: profile.product,
-                            country: profile.country
-                        }
+                        data: { product: profile.product, country: profile.country }
                     });
-                    console.log(`[Auth] Self-healed profile data for user ${user.id}: ${user.product}`);
                 }
             }
         } catch (err) {
             console.warn('[Auth] Failed to auto-update profile (non-critical):', err.message);
-            // Continue with existing user data
         }
     }
 
@@ -398,11 +418,52 @@ async function deleteAccount(req, res, next) {
     }
 }
 
+/**
+ * POST /auth/exchange
+ * SEC-003: Exchange short-lived auth code for JWT token
+ * Code is single-use, expires in 30 seconds
+ */
+async function exchange(req, res) {
+    const { code } = req.body;
+
+    if (!code) {
+        return res.status(400).json({
+            error: 'MissingCode',
+            message: 'Authorization code is required'
+        });
+    }
+
+    const authData = authCodes.get(code);
+
+    if (!authData) {
+        return res.status(401).json({
+            error: 'InvalidCode',
+            message: 'Authorization code is invalid or expired'
+        });
+    }
+
+    // Single-use: delete immediately
+    authCodes.delete(code);
+
+    // Check TTL
+    if (Date.now() - authData.createdAt > AUTH_CODE_TTL) {
+        return res.status(401).json({
+            error: 'ExpiredCode',
+            message: 'Authorization code has expired'
+        });
+    }
+
+    // Set cookie and return token
+    res.cookie('jwt', authData.jwtToken, authData.cookieOptions);
+    res.json({ token: authData.jwtToken });
+}
+
 module.exports = {
     login,
     callback,
     refresh,
     logout,
     me,
-    deleteAccount
+    deleteAccount,
+    exchange
 };
