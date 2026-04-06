@@ -51,9 +51,16 @@ function validateParams(req) {
 }
 
 /**
+ * API-004: Per-user mutex to prevent concurrent token refreshes.
+ * Without this, 5 simultaneous requests with expired JWT each trigger
+ * refreshAccessToken() independently, causing Spotify token reuse detection.
+ */
+const refreshLocks = new Map(); // userId -> Promise<string>
+
+/**
  * Get fresh access token for user
  * First tries to use the access token from JWT if still valid,
- * otherwise refreshes using the stored refresh token
+ * otherwise refreshes using the stored refresh token (with mutex)
  */
 async function getAccessToken(req, user) {
     // First check if we have a valid access token from the JWT
@@ -67,13 +74,30 @@ async function getAccessToken(req, user) {
         const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
 
         if (expiryTime > now + bufferMs) {
-            console.log('Using access token from JWT (still valid)');
             return jwtAccessToken;
         }
-        console.log('JWT access token expired, refreshing...');
     }
 
-    // Need to refresh - fetch refreshToken from DB (not on req.user after SEC-016)
+    // API-004: If another request is already refreshing for this user, wait for it
+    if (refreshLocks.has(user.id)) {
+        return refreshLocks.get(user.id);
+    }
+
+    // Start refresh and store the promise so concurrent requests can wait
+    const refreshPromise = doRefreshToken(user);
+    refreshLocks.set(user.id, refreshPromise);
+
+    try {
+        return await refreshPromise;
+    } finally {
+        refreshLocks.delete(user.id);
+    }
+}
+
+/**
+ * Internal: actually refresh the Spotify token
+ */
+async function doRefreshToken(user) {
     const userWithToken = await prisma.user.findUnique({
         where: { id: user.id },
         select: { refreshToken: true }
@@ -89,15 +113,12 @@ async function getAccessToken(req, user) {
     try {
         const decryptedRefreshToken = encryptionService.decrypt(userWithToken.refreshToken);
         const tokens = await spotifyService.refreshAccessToken(decryptedRefreshToken);
-        console.log('Token refreshed successfully');
         return tokens.accessToken;
     } catch (err) {
-        // Handle revoked/invalid refresh token
         if (err.message?.includes('invalid_grant') ||
             err.message?.includes('revoked') ||
             err.body?.error === 'invalid_grant') {
 
-            // Clear the invalid token from DB
             await prisma.user.update({
                 where: { id: user.id },
                 data: { refreshToken: null }

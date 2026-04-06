@@ -1,4 +1,4 @@
-import { Music, Headphones, Clock, TrendingUp, Cake, Mic2, Loader2, Sparkles } from "lucide-react";
+import { Music, Headphones, Clock, TrendingUp, Cake, Mic2, Loader2, Sparkles, Info, X } from "lucide-react";
 import { useState, useEffect, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import StatsCard from "@/components/StatsCard";
@@ -39,9 +39,14 @@ interface SpotifyTrack {
   spotifyUrl?: string | null;
 }
 
+const ONBOARDING_DISMISSED_KEY = 'spotistats_onboarding_dismissed';
+
 const Index = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
+  const [onboardingDismissed, setOnboardingDismissed] = useState(
+    () => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true'
+  );
   const apiTimeRange = mapTimeRange(timeRange);
 
   const { data: user, isLoading: userLoading, error: userError } = useUser();
@@ -112,6 +117,33 @@ const Index = () => {
           <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
         </div>
       </section>
+
+      {/* UX-001: Onboarding banner for first-time users */}
+      {!onboardingDismissed && !artistsLoading && (!allArtists || allArtists.length === 0) && (
+        <section className="opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
+          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <button
+              onClick={() => { setOnboardingDismissed(true); localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true'); }}
+              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Zamknij"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Info className="w-5 h-5 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground">Witaj w SpotiStats!</h3>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Twoje statystyki sluchania pojawia sie automatycznie — wystarczy, ze sluchasz muzyki na Spotify.</p>
+                  <p>Mozesz tez zaimportowac pelna historie sluchania z pliku JSON (Spotify Extended History) w zakladce <strong>Historia</strong>.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Stats Grid - Clean 4-column layout */}
       <section className="relative">
