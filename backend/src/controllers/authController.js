@@ -20,18 +20,8 @@ const { exchangeCodeForTokens, getUserProfile, refreshAccessToken } = require('.
 const { encrypt, decrypt } = require('../services/encryptionService');
 const prisma = require('../utils/prismaClient');
 
-// SEC-003: Short-lived auth codes for cross-domain token exchange
-// Map<code, { jwtToken, cookieOptions, createdAt }>
-const authCodes = new Map();
-const AUTH_CODE_TTL = 30 * 1000; // 30 seconds
-
-// Cleanup expired codes every 60s
-setInterval(() => {
-    const now = Date.now();
-    for (const [code, data] of authCodes) {
-        if (now - data.createdAt > AUTH_CODE_TTL) authCodes.delete(code);
-    }
-}, 60 * 1000);
+// SEC-003: Auth code TTL
+const AUTH_CODE_TTL = 60 * 1000; // 60 seconds
 
 // Cookie options for JWT
 const getCookieOptions = () => ({
@@ -170,10 +160,15 @@ async function callback(req, res) {
         const cookieOptions = getCookieOptions();
         res.cookie('jwt', jwtToken, cookieOptions);
 
-        // SEC-003: Use short-lived auth code instead of JWT in URL.
-        // JWT no longer exposed in URL bar, browser history, referrer headers, or server logs.
+        // SEC-003: Store short-lived auth code in DB (works across Cloud Run instances)
         const authCode = crypto.randomBytes(32).toString('hex');
-        authCodes.set(authCode, { jwtToken, cookieOptions, createdAt: Date.now() });
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                authCode: authCode,
+                authCodeExpiry: new Date(Date.now() + AUTH_CODE_TTL)
+            }
+        });
 
         res.redirect(`${env.frontendUrl}/callback?code=${authCode}`);
     } catch (error) {
@@ -433,29 +428,35 @@ async function exchange(req, res) {
         });
     }
 
-    const authData = authCodes.get(code);
+    // Look up user by auth code in DB (works across Cloud Run instances)
+    const user = await prisma.user.findFirst({
+        where: { authCode: code }
+    });
 
-    if (!authData) {
+    if (!user) {
         return res.status(401).json({
             error: 'InvalidCode',
             message: 'Authorization code is invalid or expired'
         });
     }
 
-    // Single-use: delete immediately
-    authCodes.delete(code);
-
     // Check TTL
-    if (Date.now() - authData.createdAt > AUTH_CODE_TTL) {
+    if (!user.authCodeExpiry || new Date() > user.authCodeExpiry) {
+        // Clear expired code
+        await prisma.user.update({ where: { id: user.id }, data: { authCode: null, authCodeExpiry: null } });
         return res.status(401).json({
             error: 'ExpiredCode',
             message: 'Authorization code has expired'
         });
     }
 
-    // Set cookie and return token
-    res.cookie('jwt', authData.jwtToken, authData.cookieOptions);
-    res.json({ token: authData.jwtToken });
+    // Single-use: clear immediately
+    await prisma.user.update({ where: { id: user.id }, data: { authCode: null, authCodeExpiry: null } });
+
+    // Generate JWT and set cookie
+    const jwtToken = generateJWT(user, user.tokenFamily);
+    res.cookie('jwt', jwtToken, getCookieOptions());
+    res.json({ token: jwtToken });
 }
 
 module.exports = {
