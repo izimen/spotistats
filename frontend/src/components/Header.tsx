@@ -125,10 +125,14 @@ const Header = () => {
       </div>
 
       {/* Mobile Navigation - slide down */}
-      <div className={`
-        md:hidden overflow-hidden transition-all duration-300 ease-out
-        ${mobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}
-      `}>
+      {/* A11Y-007: Close menu on Escape key */}
+      <div
+        className={`
+          md:hidden overflow-hidden transition-all duration-300 ease-out
+          ${mobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}
+        `}
+        onKeyDown={(e) => { if (e.key === 'Escape') setMobileMenuOpen(false); }}
+      >
         <div className="bg-card/95 backdrop-blur-xl border-t border-border/30">
           <nav className="container mx-auto px-4 py-3 space-y-1">
             {navItems.map((item, index) => {

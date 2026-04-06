@@ -92,6 +92,9 @@ const TopArtistCard = React.memo(({ rank, name, image, delay = 0, spotifyUrl }: 
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={handleCardClick}
+      tabIndex={0}
+      role="link"
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(); }}
     >
       {/* Glass edge effect for top 3 */}
       {isTop3 && (

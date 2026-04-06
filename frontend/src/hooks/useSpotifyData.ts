@@ -107,8 +107,9 @@ export function useRecentlyPlayed(limit = 50) {
             const response = await statsAPI.getRecentlyPlayed(limit);
             return response.data.tracks;
         },
-        staleTime: preview ? Infinity : 1000 * 60 * 1,
-        refetchInterval: preview ? false : 1000 * 60 * 1,
+        // PERF-005: Increased from 1min to 5min to reduce Spotify API quota usage
+        staleTime: preview ? Infinity : 1000 * 60 * 5,
+        refetchInterval: preview ? false : 1000 * 60 * 5,
         refetchIntervalInBackground: false,
     });
 }

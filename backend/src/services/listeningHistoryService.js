@@ -381,7 +381,8 @@ async function collectForAllActiveUsers() {
         }
 
         const user = users[i];
-        const userName = user.displayName || user.spotifyId;
+        // SEC-015: Log userId instead of displayName for privacy
+        const userLabel = user.id.substring(0, 8);
 
         try {
             // 1. Decrypt and refresh token
@@ -389,7 +390,7 @@ async function collectForAllActiveUsers() {
             const tokens = await spotifyService.refreshAccessToken(decryptedToken);
 
             if (!tokens?.accessToken) {
-                console.log(`[Cron] User ${userName}: Failed to get access token, skipping`);
+                console.log(`[Cron] User ${userLabel}: Failed to get access token, skipping`);
                 results.skipped++;
                 results.details.push({ userId: user.id, status: 'skipped', reason: 'no_access_token' });
                 continue;
@@ -413,11 +414,11 @@ async function collectForAllActiveUsers() {
             });
 
             if (result.collected > 0) {
-                console.log(`[Cron] User ${userName}: collected=${result.collected}, skipped=${result.skipped}`);
+                console.log(`[Cron] User ${userLabel}: collected=${result.collected}, skipped=${result.skipped}`);
             }
 
         } catch (error) {
-            console.error(`[Cron] User ${userName}: Error - ${error.message}`);
+            console.error(`[Cron] User ${userLabel}: Error - ${error.message}`);
 
             // If token is revoked/invalid, clear it from DB
             if (error.message?.includes('invalid_grant') ||

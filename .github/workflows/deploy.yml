@@ -92,7 +92,7 @@ jobs:
             --min-instances=0 \
             --max-instances=10 \
             --set-env-vars="NODE_ENV=production" \
-            --set-secrets="DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,SPOTIFY_CLIENT_ID=SPOTIFY_CLIENT_ID:latest,SPOTIFY_CLIENT_SECRET=SPOTIFY_CLIENT_SECRET:latest,SPOTIFY_REDIRECT_URI=SPOTIFY_REDIRECT_URI:latest,JWT_SECRET=JWT_SECRET:latest,FRONTEND_URL=FRONTEND_URL:latest,CRON_SECRET_KEY=CRON_SECRET_KEY:latest" \
+            --set-secrets="DATABASE_URL=DATABASE_URL:latest,DIRECT_URL=DIRECT_URL:latest,SPOTIFY_CLIENT_ID=SPOTIFY_CLIENT_ID:latest,SPOTIFY_CLIENT_SECRET=SPOTIFY_CLIENT_SECRET:latest,SPOTIFY_REDIRECT_URI=SPOTIFY_REDIRECT_URI:latest,JWT_SECRET=JWT_SECRET:latest,FRONTEND_URL=FRONTEND_URL:latest,CRON_SECRET_KEY=CRON_SECRET_KEY:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest" \
             --allow-unauthenticated
 
       - name: Get Backend URL
@@ -101,6 +101,17 @@ jobs:
           URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} --region=${{ env.GCP_REGION }} --format='value(status.url)')
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "Backend URL: $URL"
+
+      # OPS-002: Smoke test after deploy
+      - name: Smoke Test Backend
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.backend-url.outputs.url }}/health")
+          if [ "$STATUS" != "200" ]; then
+            echo "Smoke test failed! /health returned $STATUS"
+            exit 1
+          fi
+          echo "Smoke test passed (/health returned 200)"
 
     outputs:
       backend_url: ${{ steps.backend-url.outputs.url }}

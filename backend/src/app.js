@@ -16,7 +16,6 @@ const { sentryRequestHandler, sentryErrorHandler } = require('./middleware/sentr
 const authRoutes = require('./routes/auth.routes');
 const statsRoutes = require('./routes/stats.routes');
 const importRoutes = require('./routes/import.routes');
-const profileRoutes = require('./routes/profile.routes');
 const cronRoutes = require('./routes/cron.routes');
 
 // Create Express app
@@ -49,10 +48,10 @@ app.use(helmet({
 // SECURITY FIX: localhost origins only in development, production uses env.frontendUrl
 app.use(cors({
     origin: (origin, callback) => {
+        // API-008: No hardcoded URLs - use env.frontendUrl only
         const allowedOrigins = [
-            env.frontendUrl,
-            'https://spotistats-frontend-ox6p5to4qa-lm.a.run.app' // Cloud Run production
-        ];
+            env.frontendUrl
+        ].filter(Boolean);
 
         // In development, also allow localhost variants
         if (!env.isProduction) {
@@ -140,7 +139,7 @@ app.use('/auth', authRoutes);
 // API v1 routes
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/import', importRoutes);
-app.use('/api/v1/profile', profileRoutes);
+// API-010: profileController removed (was empty placeholder)
 app.use('/api/v1/cron', cronRoutes);
 
 // NOTE: Legacy /api/* routes removed — frontend should use /api/v1/* only

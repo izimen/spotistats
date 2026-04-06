@@ -473,8 +473,15 @@ async function getListeningHistory(req, res, next) {
             offset: parseInt(offset, 10) || 0,
         };
 
-        if (from) options.from = new Date(from);
-        if (to) options.to = new Date(to);
+        // API-003: Validate date params
+        if (from) {
+            const fromDate = new Date(from);
+            if (!isNaN(fromDate.getTime())) options.from = fromDate;
+        }
+        if (to) {
+            const toDate = new Date(to);
+            if (!isNaN(toDate.getTime())) options.to = toDate;
+        }
 
         const result = await listeningHistoryService.getUserHistory(userId, options);
 
@@ -688,11 +695,8 @@ async function getDiscoveryRoulette(req, res, next) {
             data: track
         });
     } catch (error) {
-        console.error('[Discovery] Roulette error:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message || 'Nie udalo sie wygenerowac rekomendacji'
-        });
+        // API-007: Use next(error) for consistent RFC 7807 error handling
+        next(error);
     }
 }
 
