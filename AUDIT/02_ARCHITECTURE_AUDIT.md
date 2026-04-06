@@ -30,7 +30,7 @@ Aplikacja opiera sie na klasycznej architekturze SPA + REST API z dobrym podzial
 - **Opis:** JWT zawiera `spotifyAccessToken` i `spotifyTokenExpiry`. Kompromitacja JWT daje atakujacemu dostep do konta Spotify uzytkownika.
 - **Wplyw:** Wyciek JWT (np. z logów, URL, browser extensions) = dostep do danych Spotify
 - **Rekomendacja:** Przechowuj Spotify access token server-side (w sesji lub zaszyfrowany w DB). JWT powinien zawierac tylko userId i tokenVersion.
-- **Status:** proposed
+- **Status:** ✅ FIXED (PR #34) — Access token zaszyfrowany w DB, JWT lean
 
 ### ARCH-F02: Brak Redis dla Cache/Sessions
 - **Severity:** Medium
@@ -38,7 +38,7 @@ Aplikacja opiera sie na klasycznej architekturze SPA + REST API z dobrym podzial
 - **Opis:** Cache top items w PostgreSQL zamiast Redis. Rate limiting fallback do in-memory (nie wspoldzielony miedzy instancjami Cloud Run).
 - **Wplyw:** Na wielu instancjach Cloud Run, rate limiting nie jest wspoldzielony. Cache jest wolniejszy niz powinien.
 - **Rekomendacja:** Dodaj Redis (Cloud Memorystore) dla rate limiting i cache.
-- **Status:** proposed
+- **Status:** backlog
 
 ### ARCH-F03: Brak Warstwy DTO
 - **Severity:** Low
@@ -46,7 +46,7 @@ Aplikacja opiera sie na klasycznej architekturze SPA + REST API z dobrym podzial
 - **Opis:** Kontrolery bezposrednio mapuja odpowiedzi API Spotify na format JSON. Brak zdefiniowanych interfejsow/DTO dla odpowiedzi.
 - **Wplyw:** Ryzyko niechcianego wycieku danych przy zmianie struktury Spotify API.
 - **Rekomendacja:** Dodaj warstwe response mapping/DTO (opcjonalnie - TypeScript na backend pomoze).
-- **Status:** proposed
+- **Status:** backlog
 
 ### ARCH-F04: Circuit Breaker - Globalny Stan
 - **Severity:** Medium
@@ -54,7 +54,7 @@ Aplikacja opiera sie na klasycznej architekturze SPA + REST API z dobrym podzial
 - **Opis:** Circuit breaker uzywa globalnych zmiennych (`circuitState`, `failureCount`). Na Cloud Run z wieloma instancjami, kazda instancja ma wlasny stan.
 - **Wplyw:** Circuit breaker nie chroni skutecznie gdy ruch jest rozproszony miedzy instancjami.
 - **Rekomendacja:** Akceptowalne na obecna skale. Dla wiekszego ruchu - Redis-backed circuit breaker.
-- **Status:** proposed
+- **Status:** backlog
 
 ### ARCH-F05: Brak Shared Types
 - **Severity:** Low
@@ -62,4 +62,4 @@ Aplikacja opiera sie na klasycznej architekturze SPA + REST API z dobrym podzial
 - **Opis:** Frontend definiuje interfejsy TypeScript niezaleznie od backendu. Brak wspoldzielonych typow miedzy front i back.
 - **Wplyw:** Ryzyko desynchronizacji typow przy zmianach API.
 - **Rekomendacja:** Rozwazyc monorepo z shared types package lub generowanie typow z OpenAPI spec.
-- **Status:** proposed
+- **Status:** backlog

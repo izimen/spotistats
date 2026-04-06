@@ -21,7 +21,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
   GROUP BY day ORDER BY day
   ```
 - **Impact estimate:** 10-100x szybciej dla duzych zbiorow danych
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-002: Import - Synchroniczny JSON.parse 200MB
 - **Severity:** HIGH
@@ -30,7 +30,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Wplyw:** Zablokowany event loop, timeout, OOM
 - **Rekomendacja:** Uzyj streaming JSON parser (np. `stream-json`) lub worker thread
 - **Impact estimate:** Zapobiegniecie OOM i timeoutom
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-003: Brak Image Optimization
 - **Severity:** Medium
@@ -43,7 +43,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Wplyw:** Wiekszy LCP, CLS, bandwidth
 - **Rekomendacja:** Dodaj `loading="lazy"`, `width`/`height`, `decoding="async"` do obrazow
 - **Impact estimate:** Poprawa LCP o 200-500ms
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-004: AnimatedBackground na Kazdej Stronie
 - **Severity:** Medium
@@ -52,7 +52,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Wplyw:** Zuzycie baterii na mobile, jank na slabszych urzadzeniach
 - **Rekomendacja:** Sprawdz czy AnimatedBackground jest lekki. Rozważ wylaczenie na mobile lub przy `prefers-reduced-motion`.
 - **Impact estimate:** Poprawa battery life i FPS na mobile
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-005: React Query - Nadmierny Refetch
 - **Severity:** Low
@@ -60,7 +60,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Opis:** `useRecentlyPlayed` ma `refetchInterval: 1000 * 60 * 1` (co minute) i `staleTime: 1000 * 60 * 1`. To powoduje requesty co minute nawet gdy uzytkownik nie jest aktywny.
 - **Wplyw:** Zbedne requesty API, zuzycie quota Spotify
 - **Rekomendacja:** Zwieksz interval do 5 minut, dodaj `refetchOnWindowFocus: true` zamiast periodic refetch
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-006: Vendor UI Chunk Zawiera Tylko 3 Pakiety
 - **Severity:** Low
@@ -68,7 +68,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Opis:** `vendor-ui` chunk zawiera tylko `lucide-react`, `@radix-ui/react-tooltip`, `@radix-ui/react-slot`. Inne Radix pakiety ladowane w glownym bundle.
 - **Wplyw:** Suboptymalne chunk splitting
 - **Rekomendacja:** Dodaj wiecej Radix pakietow do vendor-ui chunk lub usun manual chunks i pozwol Vite na automatyczne splitting
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-007: Podwojne DB Query w protect + controller
 - **Severity:** Medium
@@ -77,7 +77,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Wplyw:** Dodatkowy round-trip do DB na kazdy authenticated request
 - **Rekomendacja:** Uzyj `req.user` z middleware zamiast ponownego pobierania
 - **Impact estimate:** -50% zapytan do tabeli User
-- **Status:** proposed
+- **Status:** backlog
 
 ### PERF-008: Brak Connection Pooling Config
 - **Severity:** Low
@@ -85,7 +85,7 @@ Dobre fundamenty (lazy loading, code splitting, vendor chunks, 24h DB cache). Gl
 - **Opis:** Uzywa PgBouncer (port 6543) ale brak konfiguracji pool size w Prisma
 - **Wplyw:** Domyslne ustawienia moga nie byc optymalne
 - **Rekomendacja:** Dodaj `connection_limit` w DATABASE_URL i rozwazyc `pgbouncer=true&connection_limit=10`
-- **Status:** proposed
+- **Status:** backlog
 
 ---
 
