@@ -38,6 +38,9 @@ RUN addgroup -g 1001 -S nodejs && \
 
 USER nodejs
 
+# OPS-009: Limit Node heap to 400MB (Cloud Run gives 512Mi, leave room for OS)
+ENV NODE_OPTIONS="--max-old-space-size=400"
+
 # Expose port
 EXPOSE 5000
 

@@ -51,9 +51,16 @@ function validateParams(req) {
 }
 
 /**
+ * API-004: Per-user mutex to prevent concurrent token refreshes.
+ * Without this, 5 simultaneous requests with expired JWT each trigger
+ * refreshAccessToken() independently, causing Spotify token reuse detection.
+ */
+const refreshLocks = new Map(); // userId -> Promise<string>
+
+/**
  * Get fresh access token for user
  * First tries to use the access token from JWT if still valid,
- * otherwise refreshes using the stored refresh token
+ * otherwise refreshes using the stored refresh token (with mutex)
  */
 async function getAccessToken(req, user) {
     // First check if we have a valid access token from the JWT
@@ -67,14 +74,36 @@ async function getAccessToken(req, user) {
         const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
 
         if (expiryTime > now + bufferMs) {
-            console.log('Using access token from JWT (still valid)');
             return jwtAccessToken;
         }
-        console.log('JWT access token expired, refreshing...');
     }
 
-    // Need to refresh - check if we have a refresh token
-    if (!user.refreshToken) {
+    // API-004: If another request is already refreshing for this user, wait for it
+    if (refreshLocks.has(user.id)) {
+        return refreshLocks.get(user.id);
+    }
+
+    // Start refresh and store the promise so concurrent requests can wait
+    const refreshPromise = doRefreshToken(user);
+    refreshLocks.set(user.id, refreshPromise);
+
+    try {
+        return await refreshPromise;
+    } finally {
+        refreshLocks.delete(user.id);
+    }
+}
+
+/**
+ * Internal: actually refresh the Spotify token
+ */
+async function doRefreshToken(user) {
+    const userWithToken = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { refreshToken: true }
+    });
+
+    if (!userWithToken?.refreshToken) {
         const error = new Error('No refresh token available. Please log in again.');
         error.code = 'NO_REFRESH_TOKEN';
         error.statusCode = 401;
@@ -82,17 +111,14 @@ async function getAccessToken(req, user) {
     }
 
     try {
-        const decryptedRefreshToken = encryptionService.decrypt(user.refreshToken);
+        const decryptedRefreshToken = encryptionService.decrypt(userWithToken.refreshToken);
         const tokens = await spotifyService.refreshAccessToken(decryptedRefreshToken);
-        console.log('Token refreshed successfully');
         return tokens.accessToken;
     } catch (err) {
-        // Handle revoked/invalid refresh token
         if (err.message?.includes('invalid_grant') ||
             err.message?.includes('revoked') ||
             err.body?.error === 'invalid_grant') {
 
-            // Clear the invalid token from DB
             await prisma.user.update({
                 where: { id: user.id },
                 data: { refreshToken: null }
@@ -116,11 +142,8 @@ async function getTopArtists(req, res, next) {
         const { time_range, limit } = validateParams(req);
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getTopArtists(accessToken, userId, {
             time_range,
@@ -159,11 +182,8 @@ async function getTopTracks(req, res, next) {
         const { time_range, limit } = validateParams(req);
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getTopTracks(accessToken, userId, {
             time_range,
@@ -208,11 +228,8 @@ async function getTopAlbums(req, res, next) {
         const { time_range, limit } = validateParams(req);
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getTopAlbums(accessToken, userId, {
             time_range,
@@ -255,11 +272,8 @@ async function getRecentlyPlayed(req, res, next) {
 
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getRecentlyPlayed(accessToken, { limit });
 
@@ -449,11 +463,8 @@ async function syncListeningHistory(req, res, next) {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await listeningHistoryService.collectFromAPI(userId, accessToken);
 
@@ -462,8 +473,8 @@ async function syncListeningHistory(req, res, next) {
             collected: result.collected,
             skipped: result.skipped,
             message: result.collected > 0
-                ? `Zsynchronizowano ${result.collected} nowych utworĂłw`
-                : 'Brak nowych utworĂłw do synchronizacji'
+                ? `Zsynchronizowano ${result.collected} nowych utworow`
+                : 'Brak nowych utworow do synchronizacji'
         });
     } catch (error) {
         next(error);
@@ -483,8 +494,15 @@ async function getListeningHistory(req, res, next) {
             offset: parseInt(offset, 10) || 0,
         };
 
-        if (from) options.from = new Date(from);
-        if (to) options.to = new Date(to);
+        // API-003: Validate date params
+        if (from) {
+            const fromDate = new Date(from);
+            if (!isNaN(fromDate.getTime())) options.from = fromDate;
+        }
+        if (to) {
+            const toDate = new Date(to);
+            if (!isNaN(toDate.getTime())) options.to = toDate;
+        }
 
         const result = await listeningHistoryService.getUserHistory(userId, options);
 
@@ -552,11 +570,8 @@ async function getAudioFeatures(req, res, next) {
             });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getAudioFeatures(accessToken, trackIds);
 
@@ -578,20 +593,20 @@ async function getAudioFeatures(req, res, next) {
         }
 
         // Determine mood based on averages
-        let mood = 'đźŽµ ZrĂłwnowaĹĽony';
+        let mood = 'Zrownowazony';
         if (averages) {
             if (averages.valence > 0.7 && averages.energy > 0.7) {
-                mood = 'đźŽ‰ Imprezowy';
+                mood = 'Imprezowy';
             } else if (averages.valence < 0.3) {
-                mood = 'đź’” Melancholijny';
+                mood = 'Melancholijny';
             } else if (averages.energy > 0.8) {
-                mood = 'đź’Ş Energiczny';
+                mood = 'Energiczny';
             } else if (averages.acousticness > 0.7) {
-                mood = 'đźŚ Spokojny';
+                mood = 'Spokojny';
             } else if (averages.danceability > 0.7) {
-                mood = 'đź’ Taneczny';
+                mood = 'Taneczny';
             } else if (averages.valence > 0.6) {
-                mood = 'đź’• Romantyczny';
+                mood = 'Romantyczny';
             }
         }
 
@@ -644,11 +659,8 @@ async function getMusicDNA(req, res, next) {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const dna = await musicDNAService.calculateMusicDNA(userId, accessToken);
 
@@ -656,7 +668,7 @@ async function getMusicDNA(req, res, next) {
             return res.json({
                 success: true,
                 data: null,
-                message: 'NiewystarczajÄ…ca iloĹ›Ä‡ danych do analizy DNA'
+                message: 'Niewystarczajaca ilosc danych do analizy DNA'
             });
         }
 
@@ -694,11 +706,8 @@ async function getDiscoveryRoulette(req, res, next) {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const track = await discoveryService.getDiscoveryTrack(userId, accessToken);
 
@@ -707,11 +716,8 @@ async function getDiscoveryRoulette(req, res, next) {
             data: track
         });
     } catch (error) {
-        console.error('[Discovery] Roulette error:', error.message);
-        res.status(500).json({
-            success: false,
-            error: error.message || 'Nie udaĹ‚o siÄ™ wygenerowaÄ‡ rekomendacji'
-        });
+        // API-007: Use next(error) for consistent RFC 7807 error handling
+        next(error);
     }
 }
 

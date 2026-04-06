@@ -21,6 +21,74 @@ import {
 
 export type TimeRange = 'short_term' | 'medium_term' | 'long_term';
 
+// FE-005: Proper TypeScript interfaces for API responses
+export interface SpotifyUser {
+    id: string;
+    spotifyId: string;
+    email: string;
+    displayName: string;
+    avatarUrl: string | null;
+    country: string | null;
+    product: string | null;
+}
+
+export interface SpotifyArtist {
+    rank: number;
+    name: string;
+    image: string | null;
+    genres: string[];
+    spotifyUrl: string | null;
+    popularity?: number;
+}
+
+export interface SpotifyTrack {
+    rank: number;
+    title: string;
+    artist: string;
+    album: string;
+    image: string | null;
+    duration: string;
+    durationMs: number;
+    previewUrl: string | null;
+    spotifyUrl: string | null;
+    trackId: string;
+}
+
+export interface SpotifyAlbum {
+    rank: number;
+    name: string;
+    artist: string;
+    image: string | null;
+    spotifyUrl: string | null;
+}
+
+export interface RecentlyPlayedTrack {
+    trackName: string;
+    artistName: string;
+    albumName: string;
+    albumImage: string | null;
+    playedAt: string;
+    spotifyUrl: string | null;
+    durationMs: number;
+}
+
+export interface HistoryPlay {
+    id: string;
+    trackName: string;
+    artistName: string;
+    albumName: string | null;
+    albumImage?: string | null;
+    msPlayed: number;
+    playedAt: string;
+    spotifyUri: string | null;
+}
+
+export interface OverviewStats {
+    totalTracks: number;
+    totalArtists: number;
+    totalMinutes: number;
+}
+
 // Map UI time range to API time range
 // Spotify API supports: short_term (~4 weeks), medium_term (~6 months), long_term (~1 year)
 export const mapTimeRange = (uiRange: string): TimeRange => {
@@ -47,7 +115,7 @@ const mockDelay = <T>(data: T): Promise<T> =>
 
 // Fetch current user
 export function useUser() {
-    return useQuery({
+    return useQuery<SpotifyUser>({
         queryKey: ['user'],
         queryFn: async () => {
             if (preview) return mockDelay(MOCK_USER);
@@ -61,7 +129,7 @@ export function useUser() {
 
 // Fetch top artists
 export function useTopArtists(timeRange: TimeRange = 'medium_term', limit = 20) {
-    return useQuery({
+    return useQuery<SpotifyArtist[]>({
         queryKey: ['topArtists', timeRange, limit],
         queryFn: async () => {
             if (preview) return mockDelay(MOCK_TOP_ARTISTS.slice(0, limit));
@@ -74,7 +142,7 @@ export function useTopArtists(timeRange: TimeRange = 'medium_term', limit = 20) 
 
 // Fetch top tracks
 export function useTopTracks(timeRange: TimeRange = 'medium_term', limit = 20) {
-    return useQuery({
+    return useQuery<SpotifyTrack[]>({
         queryKey: ['topTracks', timeRange, limit],
         queryFn: async () => {
             if (preview) return mockDelay(MOCK_TOP_TRACKS.slice(0, limit));
@@ -87,7 +155,7 @@ export function useTopTracks(timeRange: TimeRange = 'medium_term', limit = 20) {
 
 // Fetch top albums
 export function useTopAlbums(timeRange: TimeRange = 'medium_term', limit = 20) {
-    return useQuery({
+    return useQuery<SpotifyAlbum[]>({
         queryKey: ['topAlbums', timeRange, limit],
         queryFn: async () => {
             if (preview) return mockDelay([]);
@@ -100,15 +168,16 @@ export function useTopAlbums(timeRange: TimeRange = 'medium_term', limit = 20) {
 
 // Fetch recently played
 export function useRecentlyPlayed(limit = 50) {
-    return useQuery({
+    return useQuery<RecentlyPlayedTrack[]>({
         queryKey: ['recentlyPlayed', limit],
         queryFn: async () => {
             if (preview) return mockDelay(MOCK_RECENTLY_PLAYED);
             const response = await statsAPI.getRecentlyPlayed(limit);
             return response.data.tracks;
         },
-        staleTime: preview ? Infinity : 1000 * 60 * 1,
-        refetchInterval: preview ? false : 1000 * 60 * 1,
+        // PERF-005: Increased from 1min to 5min to reduce Spotify API quota usage
+        staleTime: preview ? Infinity : 1000 * 60 * 5,
+        refetchInterval: preview ? false : 1000 * 60 * 5,
         refetchIntervalInBackground: false,
     });
 }
@@ -123,7 +192,7 @@ export function useListeningHistory(options: {
     const queryKey = ['listeningHistory', options.from?.toISOString(), options.to?.toISOString(), options.limit, options.offset];
 
     return useQuery<{
-        plays: any[];
+        plays: HistoryPlay[];
         total: number;
         totalTimeMs?: number;
         hasMore: boolean;
@@ -151,7 +220,7 @@ export function useListeningHistory(options: {
 
 // Fetch overview stats
 export function useOverview() {
-    return useQuery({
+    return useQuery<OverviewStats>({
         queryKey: ['overview'],
         queryFn: async () => {
             if (preview) return mockDelay({ totalTracks: 237, totalArtists: 89, totalMinutes: 830 });

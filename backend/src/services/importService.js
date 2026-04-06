@@ -6,6 +6,7 @@
  * Aggregates data BEFORE saving to comply with Spotify ToS
  */
 const prisma = require('../utils/prismaClient');
+const { Prisma } = require('@prisma/client');
 
 // Batch size for database operations
 const BATCH_SIZE = 1000;
@@ -128,21 +129,26 @@ async function processStreamingHistory(data, userId, importId) {
     for (let i = 0; i < aggregatedArray.length; i += BATCH_SIZE) {
         const batch = aggregatedArray.slice(i, i + BATCH_SIZE);
 
-        // PERFORMANCE FIX: Bulk upsert via raw SQL instead of N+1 individual upserts
+        // SECURITY FIX (SEC-002): Parameterized queries instead of string interpolation
+        // Previous code used $executeRawUnsafe with string concatenation = SQL injection risk
         try {
-            const values = batch.map(stat =>
-                `('${userId}', '${stat.trackUri.replace(/'/g, "''")}', '${stat.artistName.replace(/'/g, "''")}', '${stat.trackName.replace(/'/g, "''")}', ${stat.albumName ? `'${stat.albumName.replace(/'/g, "''")}'` : 'NULL'}, ${stat.playCount}, ${stat.totalMsPlayed}, '${stat.firstPlayed.toISOString()}'::timestamp, '${stat.lastPlayed.toISOString()}'::timestamp)`
-            ).join(',\n');
+            // Build parameterized VALUES using Prisma.sql tagged template
+            const valueFragments = batch.map(stat =>
+                Prisma.sql`(${userId}, ${stat.trackUri}, ${stat.artistName}, ${stat.trackName}, ${stat.albumName}, ${stat.playCount}, ${stat.totalMsPlayed}, ${stat.firstPlayed}::timestamp, ${stat.lastPlayed}::timestamp)`
+            );
 
-            await prisma.$executeRawUnsafe(`
+            // Join fragments with commas
+            const valuesList = Prisma.join(valueFragments);
+
+            await prisma.$executeRaw`
                 INSERT INTO "AggregatedStats" ("userId", "trackUri", "artistName", "trackName", "albumName", "playCount", "totalMsPlayed", "firstPlayed", "lastPlayed")
-                VALUES ${values}
+                VALUES ${valuesList}
                 ON CONFLICT ("userId", "trackUri") DO UPDATE SET
                     "playCount" = "AggregatedStats"."playCount" + EXCLUDED."playCount",
                     "totalMsPlayed" = "AggregatedStats"."totalMsPlayed" + EXCLUDED."totalMsPlayed",
                     "lastPlayed" = GREATEST("AggregatedStats"."lastPlayed", EXCLUDED."lastPlayed"),
                     "firstPlayed" = LEAST("AggregatedStats"."firstPlayed", EXCLUDED."firstPlayed")
-            `);
+            `;
             aggregatedUpserted += batch.length;
         } catch (err) {
             console.error('Bulk aggregated upsert error:', err.message);

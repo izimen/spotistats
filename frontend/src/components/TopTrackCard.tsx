@@ -194,6 +194,9 @@ const TopTrackCard = React.memo(({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleCardClick}
+        tabIndex={0}
+        role="link"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(); }}
       >
         {/* Hidden audio element */}
         {previewUrl && (

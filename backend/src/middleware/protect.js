@@ -51,8 +51,24 @@ async function protect(req, res, next) {
             });
         }
 
+        // SEC-016: Select only needed fields - don't leak refreshToken to req.user
         const user = await prisma.user.findUnique({
-            where: { id: decoded.userId }
+            where: { id: decoded.userId },
+            select: {
+                id: true,
+                spotifyId: true,
+                email: true,
+                displayName: true,
+                avatarUrl: true,
+                country: true,
+                product: true,
+                tokenVersion: true,
+                tokenFamily: true,
+                tokenExpiry: true,
+                refreshToken: true, // needed for existence check only
+                createdAt: true,
+                updatedAt: true
+            }
         });
 
         if (!user) {
@@ -81,8 +97,9 @@ async function protect(req, res, next) {
             });
         }
 
-        // Attach to request
-        req.user = user;
+        // Attach to request (strip refreshToken - downstream code shouldn't see it)
+        const { refreshToken: _rt, ...safeUser } = user;
+        req.user = safeUser;
         req.spotifyAccessToken = decoded.spotifyAccessToken;
         req.spotifyTokenExpiry = decoded.spotifyTokenExpiry;
         req.tokenFamily = decoded.tokenFamily;

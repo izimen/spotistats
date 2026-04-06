@@ -33,9 +33,9 @@ jobs:
         run: npm ci
         working-directory: ./backend
 
+      # OPS-004: Removed continue-on-error — high severity vulns should block merge
       - name: Audit Backend Dependencies
         working-directory: ./backend
-        continue-on-error: true
         run: npm audit --audit-level=high
 
       - name: Install Frontend Dependencies
@@ -44,5 +44,4 @@ jobs:
 
       - name: Audit Frontend Dependencies
         working-directory: ./frontend
-        continue-on-error: true
         run: npm audit --audit-level=high

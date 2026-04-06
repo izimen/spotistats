@@ -16,7 +16,6 @@ const { sentryRequestHandler, sentryErrorHandler } = require('./middleware/sentr
 const authRoutes = require('./routes/auth.routes');
 const statsRoutes = require('./routes/stats.routes');
 const importRoutes = require('./routes/import.routes');
-const profileRoutes = require('./routes/profile.routes');
 const cronRoutes = require('./routes/cron.routes');
 
 // Create Express app
@@ -49,10 +48,10 @@ app.use(helmet({
 // SECURITY FIX: localhost origins only in development, production uses env.frontendUrl
 app.use(cors({
     origin: (origin, callback) => {
+        // API-008: No hardcoded URLs - use env.frontendUrl only
         const allowedOrigins = [
-            env.frontendUrl,
-            'https://spotistats-frontend-ox6p5to4qa-lm.a.run.app' // Cloud Run production
-        ];
+            env.frontendUrl
+        ].filter(Boolean);
 
         // In development, also allow localhost variants
         if (!env.isProduction) {
@@ -64,8 +63,13 @@ app.use(cors({
             );
         }
 
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
+        // SEC-006: Reject requests with no origin in production
+        // Null origin can be exploited via file:// URLs or sandboxed iframes
+        if (!origin) {
+            // In development, allow no-origin for curl/Postman testing
+            if (!env.isProduction) return callback(null, true);
+            return callback(new Error('Not allowed by CORS'));
+        }
 
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
@@ -85,8 +89,9 @@ app.use(generalLimiter);
 // Body Parsing (must be before CSRF)
 // ===================
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// SEC-008: Reduced from 10MB to 1MB to prevent memory exhaustion on 512MB Cloud Run
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 // ===================
@@ -107,11 +112,11 @@ app.use(csrfProtection);
 // Health Check & Metrics
 // ===================
 
+// SEC-013: Don't expose environment info in health check
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
-        timestamp: new Date().toISOString(),
-        env: env.nodeEnv
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -134,7 +139,7 @@ app.use('/auth', authRoutes);
 // API v1 routes
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/import', importRoutes);
-app.use('/api/v1/profile', profileRoutes);
+// API-010: profileController removed (was empty placeholder)
 app.use('/api/v1/cron', cronRoutes);
 
 // NOTE: Legacy /api/* routes removed — frontend should use /api/v1/* only

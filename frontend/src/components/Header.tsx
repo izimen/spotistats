@@ -101,6 +101,7 @@ const Header = () => {
                 `}
               >
                 <User className="w-4.5 h-4.5" />
+                <span className="sr-only">Profil</span>
               </Button>
             </Link>
 
@@ -110,6 +111,8 @@ const Header = () => {
               size="icon"
               className="md:hidden rounded-full w-9 h-9 text-muted-foreground hover:text-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Zamknij menu" : "Otworz menu"}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
                 <X className="w-5 h-5" />
@@ -122,10 +125,14 @@ const Header = () => {
       </div>
 
       {/* Mobile Navigation - slide down */}
-      <div className={`
-        md:hidden overflow-hidden transition-all duration-300 ease-out
-        ${mobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}
-      `}>
+      {/* A11Y-007: Close menu on Escape key */}
+      <div
+        className={`
+          md:hidden overflow-hidden transition-all duration-300 ease-out
+          ${mobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}
+        `}
+        onKeyDown={(e) => { if (e.key === 'Escape') setMobileMenuOpen(false); }}
+      >
         <div className="bg-card/95 backdrop-blur-xl border-t border-border/30">
           <nav className="container mx-auto px-4 py-3 space-y-1">
             {navItems.map((item, index) => {
