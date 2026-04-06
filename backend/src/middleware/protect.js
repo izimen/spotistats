@@ -97,11 +97,10 @@ async function protect(req, res, next) {
             });
         }
 
-        // Attach to request (strip refreshToken - downstream code shouldn't see it)
+        // Attach to request (strip sensitive tokens - downstream code shouldn't see them)
         const { refreshToken: _rt, ...safeUser } = user;
         req.user = safeUser;
-        req.spotifyAccessToken = decoded.spotifyAccessToken;
-        req.spotifyTokenExpiry = decoded.spotifyTokenExpiry;
+        // SEC-004: Access token no longer in JWT — read from DB in statsController
         req.tokenFamily = decoded.tokenFamily;
         req.tokenVersion = decoded.tokenVersion;
 
@@ -143,8 +142,7 @@ async function optionalAuth(req, res, next) {
 
         if (user && decoded.tokenVersion === user.tokenVersion) {
             req.user = user;
-            req.spotifyAccessToken = decoded.spotifyAccessToken;
-            req.spotifyTokenExpiry = decoded.spotifyTokenExpiry;
+            // SEC-004: Access token no longer in JWT
             req.tokenFamily = decoded.tokenFamily;
             req.tokenVersion = decoded.tokenVersion;
         }

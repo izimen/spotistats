@@ -21,10 +21,12 @@ model User {
   product      String?
 
   // Token management with rotation support
-  refreshToken String?  @db.Text // Encrypted, nullable for logout
-  tokenExpiry  DateTime?
-  tokenFamily  String?  // For refresh token rotation detection
-  tokenVersion Int      @default(0) // Increment to invalidate all sessions
+  refreshToken            String?   @db.Text // Encrypted, nullable for logout
+  spotifyAccessToken      String?   @db.Text // SEC-004: Encrypted, stored server-side
+  spotifyAccessTokenExpiry DateTime? // When the Spotify access token expires
+  tokenExpiry             DateTime?
+  tokenFamily             String?   // For refresh token rotation detection
+  tokenVersion            Int       @default(0) // Increment to invalidate all sessions
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

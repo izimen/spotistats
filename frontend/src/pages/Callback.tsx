@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Music, Loader2, CheckCircle, XCircle } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { authAPI } from "@/lib/api";
+import { authAPI, api } from "@/lib/api";
 
 const Callback = () => {
     const navigate = useNavigate();
@@ -26,17 +26,27 @@ const Callback = () => {
                 return;
             }
 
-            // Cross-domain flow: Backend passes JWT as URL parameter because
-            // Cloud Run uses separate domains (.a.run.app is a public suffix,
-            // so cookies can't be shared between backend and frontend).
-            const tokenFromUrl = searchParams.get('token');
-            if (tokenFromUrl) {
-                localStorage.setItem('spotify_jwt', tokenFromUrl);
-                // Clear token from URL immediately for security
+            // SEC-003: Exchange short-lived auth code for JWT via POST
+            // JWT is never exposed in URL bar, browser history, or referrer headers
+            const authCode = searchParams.get('code');
+            if (authCode) {
+                // Clear code from URL immediately
                 window.history.replaceState({}, '', '/callback');
+                try {
+                    const response = await api.post('/auth/exchange', { code: authCode });
+                    if (response.data?.token) {
+                        localStorage.setItem('spotify_jwt', response.data.token);
+                    }
+                } catch (err) {
+                    console.error('Code exchange failed:', err);
+                    setStatus('error');
+                    setMessage('Nie udalo sie wymienic kodu autoryzacji');
+                    setTimeout(() => navigate('/login?error=exchange_failed'), 2000);
+                    return;
+                }
             }
 
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 300));
 
             try {
                 // Verify token is working

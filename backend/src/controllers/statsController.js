@@ -58,23 +58,23 @@ function validateParams(req) {
 const refreshLocks = new Map(); // userId -> Promise<string>
 
 /**
- * Get fresh access token for user
- * First tries to use the access token from JWT if still valid,
- * otherwise refreshes using the stored refresh token (with mutex)
+ * SEC-004: Get access token from DB (no longer in JWT)
+ * Checks DB for valid encrypted token, refreshes if expired (with mutex)
  */
 async function getAccessToken(req, user) {
-    // First check if we have a valid access token from the JWT
-    const jwtAccessToken = req.spotifyAccessToken;
-    const jwtTokenExpiry = req.spotifyTokenExpiry;
+    // Read encrypted access token from DB
+    const userTokens = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { spotifyAccessToken: true, spotifyAccessTokenExpiry: true }
+    });
 
-    // If JWT token exists and hasn't expired (with 5 min buffer)
-    if (jwtAccessToken && jwtTokenExpiry) {
-        const expiryTime = new Date(jwtTokenExpiry).getTime();
-        const now = Date.now();
-        const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
+    // If DB token exists and hasn't expired (with 5 min buffer)
+    if (userTokens?.spotifyAccessToken && userTokens?.spotifyAccessTokenExpiry) {
+        const expiryTime = new Date(userTokens.spotifyAccessTokenExpiry).getTime();
+        const bufferMs = 5 * 60 * 1000;
 
-        if (expiryTime > now + bufferMs) {
-            return jwtAccessToken;
+        if (expiryTime > Date.now() + bufferMs) {
+            return encryptionService.decrypt(userTokens.spotifyAccessToken);
         }
     }
 
@@ -83,7 +83,6 @@ async function getAccessToken(req, user) {
         return refreshLocks.get(user.id);
     }
 
-    // Start refresh and store the promise so concurrent requests can wait
     const refreshPromise = doRefreshToken(user);
     refreshLocks.set(user.id, refreshPromise);
 
@@ -113,6 +112,17 @@ async function doRefreshToken(user) {
     try {
         const decryptedRefreshToken = encryptionService.decrypt(userWithToken.refreshToken);
         const tokens = await spotifyService.refreshAccessToken(decryptedRefreshToken);
+
+        // SEC-004: Store refreshed access token encrypted in DB
+        const tokenExpiry = new Date(Date.now() + (tokens.expiresIn || 3600) * 1000);
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                spotifyAccessToken: encryptionService.encrypt(tokens.accessToken),
+                spotifyAccessTokenExpiry: tokenExpiry
+            }
+        });
+
         return tokens.accessToken;
     } catch (err) {
         if (err.message?.includes('invalid_grant') ||

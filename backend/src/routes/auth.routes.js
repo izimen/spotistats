@@ -11,6 +11,8 @@ const authController = require('../controllers/authController');
 // Public routes with rate limiting
 router.get('/login', authLimiter, authController.login);
 router.get('/callback', authLimiter, authController.callback);
+// SEC-003: Exchange auth code for JWT (public, rate limited, single-use)
+router.post('/exchange', authLimiter, authController.exchange);
 
 // Protected routes
 router.post('/refresh', protect, authController.refresh);
