@@ -21,7 +21,9 @@ const ChartSkeleton = () => (
   </div>
 );
 
-interface SpotifyArtist {
+// Local types for raw API response shapes (differ from hook's display types)
+// Used by formatters: calculateTopGenres needs genres[], calculateListeningAge needs album.releaseDate
+interface RawArtist {
   name: string;
   image?: string;
   popularity?: number;
@@ -29,11 +31,11 @@ interface SpotifyArtist {
   spotifyUrl?: string | null;
 }
 
-interface SpotifyTrack {
+interface RawTrack {
   name: string;
   artists?: { name: string }[];
   artist?: string;
-  album?: { image?: string };
+  album?: { image?: string; releaseDate?: string };
   duration?: number;
   previewUrl?: string | null;
   spotifyUrl?: string | null;
@@ -60,7 +62,7 @@ const Index = () => {
     }
   }, [userError, navigate]);
 
-  const formattedArtists = (allArtists?.slice(0, 5) || []).map((artist: SpotifyArtist, index: number) => ({
+  const formattedArtists = (allArtists?.slice(0, 5) || []).map((artist: RawArtist, index: number) => ({
     rank: index + 1,
     name: artist.name,
     image: artist.image || "/assets/default-album.svg",
@@ -68,7 +70,7 @@ const Index = () => {
     spotifyUrl: artist.spotifyUrl
   }));
 
-  const formattedTracks = (allTracks?.slice(0, 5) || []).map((track: SpotifyTrack, index: number) => ({
+  const formattedTracks = (allTracks?.slice(0, 5) || []).map((track: RawTrack, index: number) => ({
     rank: index + 1,
     title: track.name,
     artist: track.artists?.[0]?.name || track.artist,

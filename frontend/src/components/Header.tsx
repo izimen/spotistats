@@ -29,6 +29,17 @@ const Header = () => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // A11Y-007: Close mobile menu on Escape key (window-level listener)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [mobileMenuOpen]);
+
   return (
     <header className={`
       fixed top-0 left-0 right-0 z-50
@@ -125,14 +136,10 @@ const Header = () => {
       </div>
 
       {/* Mobile Navigation - slide down */}
-      {/* A11Y-007: Close menu on Escape key */}
-      <div
-        className={`
-          md:hidden overflow-hidden transition-all duration-300 ease-out
-          ${mobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}
-        `}
-        onKeyDown={(e) => { if (e.key === 'Escape') setMobileMenuOpen(false); }}
-      >
+      <div className={`
+        md:hidden overflow-hidden transition-all duration-300 ease-out
+        ${mobileMenuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}
+      `}>
         <div className="bg-card/95 backdrop-blur-xl border-t border-border/30">
           <nav className="container mx-auto px-4 py-3 space-y-1">
             {navItems.map((item, index) => {
