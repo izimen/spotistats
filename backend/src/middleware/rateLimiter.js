@@ -82,7 +82,7 @@ const generalLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
     windowMs: 3 * 60 * 1000, // 3 minutes
-    max: 3, // 3 attempts per window
+    max: env.rateLimits.auth || 10, // login + callback + exchange = 3 per login flow
     message: {
         error: 'TooManyAuthAttempts',
         message: 'Too many authentication attempts, please try again in 3 minutes'
