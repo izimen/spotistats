@@ -114,7 +114,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Scenariusz ataku:** XSS moze odczytac token z localStorage
 - **Wplyw:** Kradzież sesji przez XSS
 - **Rekomendacja:** Preferuj httpOnly cookies (juz uzywane jako fallback). Usun localStorage token jesli cookie dziala.
-- **Status:** proposed
+- **Status:** backlog
 
 ### SEC-008: Body Size Limit 10MB dla JSON
 - **Severity:** Medium
@@ -154,7 +154,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** `...(env.isProduction ? {} : { stack: err.stack })`
 - **Wplyw:** Stack trace widoczny w development - OK, ale upewnij sie, ze NODE_ENV=production w Cloud Run
 - **Rekomendacja:** Zweryfikuj, ze deploy.yml ustawia NODE_ENV=production (zweryfikowano - OK)
-- **Status:** proposed
+- **Status:** backlog
 
 ---
 
@@ -173,7 +173,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** `app.get('/metrics', metricsEndpoint)` - brak middleware auth
 - **Wplyw:** Minimalny (prom-client nie jest zainstalowany), ale gdyby byl - metryki publiczne
 - **Rekomendacja:** Dodaj auth middleware lub ogranicz do internal network
-- **Status:** proposed
+- **Status:** backlog
 
 ### SEC-015: Console.log z User Info w Cron
 - **Severity:** Low

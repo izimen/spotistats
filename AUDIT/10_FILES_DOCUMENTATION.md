@@ -91,17 +91,17 @@
 | Sciezka | Rola | Rekomendacja | Status |
 |---------|------|-------------|--------|
 | `frontend/HEAD` | Git internal | **USUN** | ✅ .gitignore |
-| `frontend/config` | Git internal | **USUN** | pending |
-| `frontend/description` | Git internal | **USUN** | pending |
+| `frontend/config` | Git internal | **USUN** | ✅ .gitignore |
+| `frontend/description` | Git internal | **USUN** | ✅ .gitignore |
 | `frontend/hooks/*.sample` | Git hook samples | **USUN** | ✅ .gitignore |
 | `frontend/index` | Git index | **USUN** | ✅ .gitignore |
-| `frontend/info/exclude` | Git internal | **USUN** | pending |
+| `frontend/info/exclude` | Git internal | **USUN** | ✅ .gitignore |
 | `frontend/logs/` | Git logs | **USUN** | ✅ .gitignore |
 | `frontend/objects/` | Git objects (pack) | **USUN** | ✅ .gitignore |
 | `frontend/packed-refs` | Git internal | **USUN** | ✅ .gitignore |
 | `frontend/refs/` | Git refs | **USUN** | ✅ .gitignore |
 | `frontend/dist/` | Build artifacts | **USUN**, dodaj do .gitignore | ✅ .gitignore |
-| `frontend/src/styles/utilities-backup.css` | Backup CSS | Zweryfikuj i usun | pending |
+| `frontend/src/styles/utilities-backup.css` | Backup CSS | ✅ USUNIETY | ✅ DONE |
 
 ### Root Files
 | Sciezka | Rola | Ryzyka | Rekomendacje |

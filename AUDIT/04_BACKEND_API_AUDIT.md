@@ -44,7 +44,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
   Komentarz w kodzie mowi "CRITICAL: Uses JSONStream for memory-efficient parsing" ale faktycznie uzywa `JSON.parse` (synchroniczny, full memory).
 - **Wplyw:** OOM na instancji Cloud Run (512MB) przy duzych plikach
 - **Rekomendacja:** Uzyj stream parsera (JSONStream lub clarinet) lub podziel plik na chunki
-- **Status:** proposed
+- **Status:** backlog
 
 ### API-006: Brak Paginacji dla getListeningByDay
 - **Severity:** Low
@@ -52,7 +52,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 - **Opis:** `findMany` bez limitu - pobiera WSZYSTKIE plays z zakresu dat. Jesli uzytkownik ma 100k+ plays, to laduje wszystkie do pamieci.
 - **Wplyw:** Wolne zapytanie + duze zuzycie pamieci
 - **Rekomendacja:** Uzyj SQL aggregation (`GROUP BY DAY(playedAt)`) zamiast ladowania wszystkich rekordow
-- **Status:** proposed
+- **Status:** backlog
 
 ### API-007: Niespojne Error Handling w Discovery
 - **Severity:** Low

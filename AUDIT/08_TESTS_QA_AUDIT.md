@@ -46,7 +46,7 @@
   - useSpotifyData hooks (mock API, verify data transformation)
   - Callback page (token extraction from URL)
   - api.ts interceptors (401 handling, refresh flow)
-- **Status:** proposed
+- **Status:** backlog
 
 ### TEST-004: Brak Integration Tests (Real DB)
 - **Severity:** Medium
@@ -54,7 +54,7 @@
 - **Opis:** Wszystkie testy mockuja Prisma. Brak testow z prawdziwa baza danych.
 - **Wplyw:** Mocked tests moga nie wykryc bledow migracji, constraints, lub zapytan
 - **Rekomendacja:** Dodaj integration tests z Docker PostgreSQL (np. testcontainers)
-- **Status:** proposed
+- **Status:** backlog
 
 ### TEST-005: Business Tests - Mock-heavy, Shallow
 - **Severity:** Medium
@@ -62,7 +62,7 @@
 - **Opis:** Wiele testow po prostu mockuje Prisma i sprawdza zwrocone wartosci mocka (np. "verify ordering" sprawdza hardcoded mock data). To testuje logike mockowania, nie logike biznesowa.
 - **Wplyw:** Niski wartosc dodana testow
 - **Rekomendacja:** Przetestuj REALNIE logike serwisow (np. importService.processStreamingHistory z prawdziwymi danymi i prawdziwa baza)
-- **Status:** proposed
+- **Status:** backlog
 
 ### TEST-006: Brak Test dla Import SQL Injection
 - **Severity:** HIGH
@@ -70,7 +70,7 @@
 - **Opis:** Krytyczny bug SEC-002 (SQL injection w importService) nie jest pokryty zadnym testem
 - **Wplyw:** Bug mogl byc wczesniej wychwycony
 - **Rekomendacja:** Dodaj test z payloadem zawierajacym SQL injection w trackName/artistName
-- **Status:** proposed
+- **Status:** backlog
 
 ---
 

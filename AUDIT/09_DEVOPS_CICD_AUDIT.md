@@ -14,7 +14,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** Push to main -> deploy prosto na produkcje. Brak staging/preview environment.
 - **Wplyw:** Kazdy merge to ryzyko produkcyjnego incydentu
 - **Rekomendacja:** Dodaj staging deployment (np. na osobnym Cloud Run service) uruchamiany na PR
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-002: Brak Smoke Tests po Deploy
 - **Severity:** HIGH
@@ -22,7 +22,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** Deploy konczy sie na `gcloud run deploy`. Brak weryfikacji ze serwis dziala po deploymencie.
 - **Wplyw:** Uszkodzony deploy moze nie byc wykryty
 - **Rekomendacja:** Dodaj step `curl $BACKEND_URL/health` po deploy i fail workflow jesli nie 200
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-003: Brak npm test w CI/CD
 - **Severity:** HIGH
@@ -30,7 +30,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** Pipeline nie uruchamia testow przed deploy. Kod z failujacymi testami moze byc deployowany.
 - **Wplyw:** Brak quality gate
 - **Rekomendacja:** Dodaj job `test` przed `deploy-backend` z `npm test`
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-004: Security Scan continue-on-error
 - **Severity:** Medium
@@ -38,7 +38,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** `continue-on-error: true` na `npm audit` - vulnerabilities nie blokuja merge
 - **Wplyw:** Known vulnerabilities moga byc ignorowane
 - **Rekomendacja:** Usun `continue-on-error` i napraw vulnerabilities, lub dodaj allowlist
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-005: Brak ENCRYPTION_KEY w CI/CD Secrets
 - **Severity:** Medium
@@ -46,7 +46,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** `--set-secrets` nie zawiera `ENCRYPTION_KEY`. Backend fallback do JWT_SECRET z warningiem.
 - **Wplyw:** Enkrypcja tokenow uzywa tego samego klucza co JWT signing
 - **Rekomendacja:** Dodaj `ENCRYPTION_KEY` do GCP Secret Manager i do `--set-secrets`
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-006: Docker Build Kopiuje Caly Kontekst
 - **Severity:** Medium
@@ -70,7 +70,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
   node_modules/
   bun.lockb
   ```
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-007: Brak Monitoring/Alerting
 - **Severity:** Medium
@@ -78,7 +78,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** `prom-client` i `@sentry/node` sa referencowane w kodzie ale NIE SA w dependencies. Metrics i Sentry sa stubs (gracefully degrade to noop).
 - **Wplyw:** Brak visibility w performance, bledy, health
 - **Rekomendacja:** Albo zainstaluj i skonfiguruj (dodaj do package.json), albo usun kod metryk/sentry
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-008: Cloud Run min-instances=0
 - **Severity:** Low
@@ -86,7 +86,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** `--min-instances=0` dla obu serwisow. Cold start na kazdym pierwszym requeście po inactivity.
 - **Wplyw:** Cold start delay (~2-5s) dla pierwszego uzytkownika
 - **Rekomendacja:** Rozwazyc `--min-instances=1` jesli budzet pozwala
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-009: Brak Resource Limits w Backend Dockerfile
 - **Severity:** Low
@@ -94,7 +94,7 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** Brak NODE_OPTIONS z --max-old-space-size. Cloud Run daje 512Mi ale Node moze sprobowac uzyc wiecej.
 - **Wplyw:** Potencjalny OOM kill
 - **Rekomendacja:** Dodaj `ENV NODE_OPTIONS="--max-old-space-size=400"` w Dockerfile
-- **Status:** proposed
+- **Status:** backlog
 
 ### OPS-010: Frontend VITE_API_URL Baked w Build
 - **Severity:** Low
@@ -102,4 +102,4 @@ CI/CD dziala (deploy na push to main), security scan z Gitleaks, Docker multi-st
 - **Opis:** `VITE_API_URL` jest build-time variable (baked into JS). Zmiana backend URL wymaga rebuild frontendu.
 - **Wplyw:** Tight coupling deployment frontend-backend
 - **Rekomendacja:** Akceptowalne - to standardowe podejscie dla Vite SPA
-- **Status:** proposed
+- **Status:** backlog
