@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => ({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-query': ['@tanstack/react-query', 'axios'],
           'vendor-charts': ['recharts'],
-          'vendor-ui': ['lucide-react', '@radix-ui/react-tooltip', '@radix-ui/react-slot'],
+          'vendor-ui': ['lucide-react', '@radix-ui/react-tooltip', '@radix-ui/react-slot', '@radix-ui/react-dialog', '@radix-ui/react-separator', '@radix-ui/react-toggle'],
         },
       },
     },

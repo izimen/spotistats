@@ -1,8 +1,8 @@
-import { User, LogOut, Loader2, Mail, CreditCard, Shield, Fingerprint } from "lucide-react";
+import { User, LogOut, Loader2, Mail, CreditCard, Shield, Fingerprint, Music, Clock, Headphones } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-import { useUser } from "@/hooks/useSpotifyData";
+import { useUser, useListeningChart } from "@/hooks/useSpotifyData";
 import { authAPI } from "@/lib/api";
 import { useEffect } from "react";
 import { AxiosError } from "axios";
@@ -11,6 +11,7 @@ const Profile = () => {
   const navigate = useNavigate();
 
   const { data: user, isLoading: userLoading, error: userError } = useUser();
+  const { data: chartData } = useListeningChart(30);
 
   // Redirect on 401
   useEffect(() => {
@@ -94,6 +95,39 @@ const Profile = () => {
           </div>
         </div>
       </section>
+
+      {/* UX-006: Listening Stats */}
+      {chartData?.stats && (
+        <section className="mb-8">
+          <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+            <Headphones className="w-5 h-5 text-primary" />
+            Twoje statystyki
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-xl bg-card border border-border/50 text-center">
+              <Music className="w-6 h-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">{chartData.stats.totalPlays.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">Odsluchanych utworow</p>
+            </div>
+            <div className="p-5 rounded-xl bg-card border border-border/50 text-center">
+              <Clock className="w-6 h-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">
+                {chartData.stats.firstPlay
+                  ? new Date(chartData.stats.firstPlay).toLocaleDateString('pl-PL')
+                  : '-'}
+              </p>
+              <p className="text-sm text-muted-foreground">Zbieranie danych od</p>
+            </div>
+            <div className="p-5 rounded-xl bg-card border border-border/50 text-center">
+              <Headphones className="w-6 h-6 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">
+                {chartData.stats.collectionActive ? 'Aktywne' : 'Nieaktywne'}
+              </p>
+              <p className="text-sm text-muted-foreground">Zbieranie historii</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="max-w-2xl mx-auto">
         {/* Account Details */}
