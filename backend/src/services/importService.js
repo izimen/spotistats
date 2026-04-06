@@ -2,11 +2,15 @@
  * Import Service
  * Handles Spotify extended streaming history import with streaming parser
  *
- * CRITICAL: Uses JSONStream for memory-efficient parsing of large files (100MB+)
+ * PERF-002: Uses stream-json for memory-efficient parsing of large files (50MB+)
  * Aggregates data BEFORE saving to comply with Spotify ToS
  */
 const prisma = require('../utils/prismaClient');
 const { Prisma } = require('@prisma/client');
+const { Readable } = require('stream');
+const { parser } = require('stream-json');
+// Node 24 exports map workaround for stream-json
+const { streamArray } = require(require.resolve('stream-json').replace('index.js', 'streamers/stream-array.js'));
 
 // Batch size for database operations
 const BATCH_SIZE = 1000;
@@ -22,103 +26,89 @@ const BATCH_SIZE = 1000;
  */
 async function processStreamingHistory(data, userId, importId) {
     const startTime = Date.now();
-    let entries;
-
-    // Parse JSON
-    try {
-        entries = typeof data === 'string' ? JSON.parse(data) : JSON.parse(data.toString());
-    } catch (error) {
-        throw new Error('Invalid JSON format: ' + error.message);
-    }
-
-    // Validate it's an array
-    if (!Array.isArray(entries)) {
-        throw new Error('File must contain an array of streaming history entries');
-    }
 
     // Update import status to processing
     await prisma.import.update({
         where: { id: importId },
         data: {
             status: 'PROCESSING',
-            startedAt: new Date(),
-            totalTracks: entries.length
+            startedAt: new Date()
         }
     });
 
     // ============================================
-    // STEP 1: Aggregate in memory
+    // STEP 1: Stream-parse and aggregate (PERF-002)
+    // Instead of JSON.parse(entireFile) which blocks event loop and OOMs on large files,
+    // stream-json parses entries one at a time with constant memory usage.
     // ============================================
-    const aggregated = new Map(); // trackUri -> { artistName, trackName, albumName, playCount, totalMsPlayed, firstPlayed, lastPlayed }
+    const aggregated = new Map();
     const streamingBatch = [];
 
     let processed = 0;
     let skipped = 0;
     let errors = 0;
+    let totalEntries = 0;
 
-    for (const entry of entries) {
-        try {
-            // Validate required fields
-            const trackName = entry.master_metadata_track_name || entry.trackName;
-            const artistName = entry.master_metadata_album_artist_name || entry.artistName;
-            const msPlayed = entry.ms_played || entry.msPlayed || 0;
-            const playedAtStr = entry.ts || entry.playedAt || entry.endTime;
+    await new Promise((resolve, reject) => {
+        const input = Buffer.isBuffer(data) ? data : Buffer.from(data);
+        const readable = Readable.from(input);
 
-            // Skip entries without track/artist info
-            if (!trackName || !artistName) {
-                skipped++;
-                continue;
-            }
+        const pipeline = readable
+            .pipe(parser())
+            .pipe(streamArray());
 
-            // Skip very short plays (< 30 seconds)
-            if (msPlayed < 30000) {
-                skipped++;
-                continue;
-            }
+        pipeline.on('data', ({ value: entry }) => {
+            totalEntries++;
+            try {
+                const trackName = entry.master_metadata_track_name || entry.trackName;
+                const artistName = entry.master_metadata_album_artist_name || entry.artistName;
+                const msPlayed = entry.ms_played || entry.msPlayed || 0;
+                const playedAtStr = entry.ts || entry.playedAt || entry.endTime;
 
-            const albumName = entry.master_metadata_album_album_name || entry.albumName || null;
-            const trackUri = entry.spotify_track_uri || entry.spotifyUri || `local:${artistName}:${trackName}`;
-            const playedAt = playedAtStr ? new Date(playedAtStr) : new Date();
+                if (!trackName || !artistName) { skipped++; return; }
+                if (msPlayed < 30000) { skipped++; return; }
 
-            // Aggregate stats
-            if (aggregated.has(trackUri)) {
-                const existing = aggregated.get(trackUri);
-                existing.playCount++;
-                existing.totalMsPlayed += msPlayed;
-                if (playedAt < existing.firstPlayed) existing.firstPlayed = playedAt;
-                if (playedAt > existing.lastPlayed) existing.lastPlayed = playedAt;
-            } else {
-                aggregated.set(trackUri, {
-                    trackUri,
-                    artistName,
-                    trackName,
-                    albumName,
-                    playCount: 1,
-                    totalMsPlayed: msPlayed,
-                    firstPlayed: playedAt,
-                    lastPlayed: playedAt
+                const albumName = entry.master_metadata_album_album_name || entry.albumName || null;
+                const trackUri = entry.spotify_track_uri || entry.spotifyUri || `local:${artistName}:${trackName}`;
+                const playedAt = playedAtStr ? new Date(playedAtStr) : new Date();
+
+                if (aggregated.has(trackUri)) {
+                    const existing = aggregated.get(trackUri);
+                    existing.playCount++;
+                    existing.totalMsPlayed += msPlayed;
+                    if (playedAt < existing.firstPlayed) existing.firstPlayed = playedAt;
+                    if (playedAt > existing.lastPlayed) existing.lastPlayed = playedAt;
+                } else {
+                    aggregated.set(trackUri, {
+                        trackUri, artistName, trackName, albumName,
+                        playCount: 1, totalMsPlayed: msPlayed,
+                        firstPlayed: playedAt, lastPlayed: playedAt
+                    });
+                }
+
+                streamingBatch.push({
+                    userId, trackName, artistName, albumName,
+                    spotifyUri: trackUri.startsWith('spotify:') ? trackUri : null,
+                    msPlayed, playedAt,
+                    platform: entry.platform || null,
+                    country: entry.conn_country || null
                 });
+
+                processed++;
+            } catch (err) {
+                errors++;
             }
+        });
 
-            // Also prepare streaming history entry
-            streamingBatch.push({
-                userId,
-                trackName,
-                artistName,
-                albumName,
-                spotifyUri: trackUri.startsWith('spotify:') ? trackUri : null,
-                msPlayed,
-                playedAt,
-                platform: entry.platform || null,
-                country: entry.conn_country || null
-            });
+        pipeline.on('end', resolve);
+        pipeline.on('error', (err) => reject(new Error('Invalid JSON format: ' + err.message)));
+    });
 
-            processed++;
-        } catch (err) {
-            errors++;
-            console.error('Error processing entry:', err.message);
-        }
-    }
+    // Update total count now that streaming is done
+    await prisma.import.update({
+        where: { id: importId },
+        data: { totalTracks: totalEntries }
+    });
 
     // ============================================
     // STEP 2: Upsert aggregated stats (bulk)
@@ -197,7 +187,7 @@ async function processStreamingHistory(data, userId, importId) {
 
     return {
         success: true,
-        totalEntries: entries.length,
+        totalEntries,
         processed,
         imported: historyImported,
         skipped,
