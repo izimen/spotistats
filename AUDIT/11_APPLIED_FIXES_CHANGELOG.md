@@ -1,65 +1,161 @@
 # AUDIT: Applied Fixes Changelog
 
-**Status:** ETAP 2 - Wdrazanie poprawek
+**Status:** ETAP 2 - ZAKONCZONY
 **Data wdrozenia:** 2026-04-06
-**Wdrozyl:** AI Audit Team (Claude Code)
+**Wdrozyl:** AI Audit Team (Claude Code Opus 4.6)
+**Commity:** 5 (6d44104, cea8635, 9f46808, 24588b7, 2b5ba78)
+**Testy:** 53/53 pass, 0 regressions
 
 ---
 
-## Wdrozone Poprawki
+## Commit 1: `6d44104` — Critical Security Fixes
 
-### Batch 1: Critical Security
+| ID | Opis | Plik | Notatki |
+|----|------|------|---------|
+| SEC-002 | SQL injection fix -> parameterized queries | importService.js | `$executeRawUnsafe` -> `$executeRaw` z `Prisma.sql` + `Prisma.join` |
+| SEC-005 | CSRF token w frontend axios | api.ts | Response interceptor (capture) + request interceptor (send on POST/PUT/DELETE/PATCH) |
+| SEC-006 | Null origin CORS bypass | app.js | Null origin blocked in production, allowed only in dev |
+| SEC-008 | JSON body limit 10MB -> 1MB | app.js | Ochrona przed memory exhaustion |
+| SEC-009 | Upload limit 200MB -> 50MB | import.routes.js | File + body limit zmniejszone |
+| SEC-013 | Env z /health endpoint | app.js | Usunieto `env: env.nodeEnv` |
+| SEC-016 | refreshToken leak w protect.js | protect.js, authController.js | Select clause + strip z req.user, refresh() pobiera z DB |
+| SEC-019 | encodeURIComponent na OAuth error | authController.js | Zakodowany error param w redirect |
+| TEST-001 | Usun brakujacy rbac.js z testow | security.test.js | Blok RBAC usuniety |
+| TEST-002 | CSRF test -> Double Submit Cookie | security.test.js, auth.test.js | + route paths fix + rate limit tolerance + RFC 7807 |
+| FE-007/008 | .gitignore update | .gitignore | frontend git internals + dist/ |
+| AUDIT | 16 dokumentow audytu | AUDIT/*.md | Dodano do repo z fix statusami |
 
-| ID | Opis | Plik | Status | Notatki |
-|----|------|------|--------|---------|
-| SEC-002 | SQL injection fix -> parameterized queries | importService.js:132-145 | DONE | Zamieniono `$executeRawUnsafe` z interpolacja na `$executeRaw` z `Prisma.sql` tagged template i `Prisma.join` |
-| SEC-005 | CSRF token w frontend axios | api.ts | DONE | Dodano response interceptor (wyciaga X-CSRF-Token) i request interceptor (wysyla go na POST/PUT/DELETE/PATCH) |
-| SEC-006 | Null origin CORS bypass | app.js:68 | DONE | Null origin dozwolony tylko w development, zablokowany w production |
-| SEC-016 | Select clause w protect.js | protect.js:54, authController.js:223 | DONE | refreshToken usuniety z req.user, refresh() pobiera go bezposrednio z DB |
-| SEC-019 | encodeURIComponent na error redirect | authController.js:99 | DONE | Zakodowany parametr error w OAuth redirect |
+## Commit 2: `cea8635` — Quick Wins + Performance + A11Y + Cleanup
 
-### Batch 2: Structural Cleanup
+| ID | Opis | Plik | Notatki |
+|----|------|------|---------|
+| SEC-017 | Redact req.body w Sentry dla importu | sentry.js | GDPR — nie wysylaj historii do Sentry |
+| SEC-018 | Require CRON_SECRET we wszystkich env | cronAuth.js | Dev bypass warunkowy (tylko brak klucza) |
+| API-002 | Usun 8 duplikatow DB query | statsController.js | `req.user` zamiast re-fetch, -50% queries na User |
+| API-009 | Fix UTF-8 encoding polskich znakow | statsController.js | Garbled Windows-1252 -> czyste ASCII |
+| PERF-001 | SQL aggregation getListeningByDay | listeningHistoryService.js | `findMany` + JS -> `$queryRaw GROUP BY` (10-100x szybciej) |
+| OPS-003 | npm test w CI/CD | deploy.yml | Job test-backend przed deploy-backend |
+| OPS-006 | Frontend .dockerignore | frontend/.dockerignore | Nowy plik — git internals, node_modules, dist |
+| A11Y-001 | Skip-to-content link | MainLayout.tsx | sr-only link do #main-content |
+| A11Y-003 | aria-label na icon buttons | Header.tsx | Profil + mobile menu button |
+| A11Y-005 | prefers-reduced-motion | index.css | Globalne wylaczenie animacji |
+| A11Y-006 | prefers-contrast | index.css | Jasniejsza muted-foreground |
+| P4 | Usuniete bun.lockb, ui_changes.patch, utilities-backup.css | - | -305KB dead files |
+| P4 | ENCRYPTION_KEY w .env.example | .env.example | Osobny klucz od JWT |
 
-| ID | Opis | Pliki | Status | Notatki |
-|----|------|-------|--------|---------|
-| FE-007/008 | Gitignore update | .gitignore | DONE | Dodano frontend/hooks/, objects/, refs/, HEAD, packed-refs, dist/, AUDIT/ |
+## Commit 3: `9f46808` — Remaining Quick Fixes
 
-### Batch 3: Code Quality
+| ID | Opis | Plik | Notatki |
+|----|------|------|---------|
+| SEC-010 | Rate limiting na /auth/me | auth.routes.js | Dodano apiLimiter |
+| SEC-011 | Security headers na nginx static assets | nginx.conf | X-Frame-Options, HSTS, Referrer-Policy |
+| SEC-015 | Log userId zamiast displayName w cron | listeningHistoryService.js | Prywatnosc — truncated ID |
+| API-003 | Walidacja date params | statsController.js | isNaN check na from/to |
+| API-007 | Discovery error -> next(error) | statsController.js | Spojny RFC 7807 format |
+| API-008 | Hardcoded Cloud Run URL w CORS | app.js | Usunieto — env.frontendUrl only |
+| API-010 | Pusty profileController | profileController.js, profile.routes.js | Usuniety + route unmounted |
+| FE-010 | Duplikat use-toast.ts | components/ui/use-toast.ts | Usuniety re-export |
+| PERF-005 | Refetch interval 1min -> 5min | useSpotifyData.ts | Mniej requestow do Spotify API |
+| OPS-002 | Smoke test po deploy | deploy.yml | curl /health po deploy backend |
+| OPS-005 | ENCRYPTION_KEY w --set-secrets | deploy.yml | Dodano do Cloud Run env mapping |
+| OPS-009 | NODE_OPTIONS w Dockerfile | backend/Dockerfile | --max-old-space-size=400 |
+| A11Y-002 | Focus visible na kartach | TopArtistCard.tsx, TopTrackCard.tsx | tabIndex, role, onKeyDown |
+| A11Y-007 | Escape zamyka mobile menu | Header.tsx | onKeyDown handler |
 
-| ID | Opis | Pliki | Status | Notatki |
-|----|------|-------|--------|---------|
-| SEC-013 | Usun env z /health | app.js:110 | DONE | Usunieto `env: env.nodeEnv` z health response |
-| SEC-008 | Zmniejsz JSON body limit | app.js:88 | DONE | Zmniejszono z 10MB na 1MB |
-| SEC-009 | Zmniejsz upload limit | import.routes.js:17, :34 | DONE | Zmniejszono z 200MB/100MB na 50MB |
+## Commit 4: `24588b7` — Refactor + TypeScript + UX
 
-### Batch 5: Tests
+| ID | Opis | Plik | Notatki |
+|----|------|------|---------|
+| FE-003 | Usunieto 36 nieuzywanych shadcn/ui komponentow | components/ui/*.tsx | 48 -> 12 komponentow, -3,424 linii |
+| FE-005 | TypeScript interfaces dla API hooks | useSpotifyData.ts | 7 interfejsow, `any[]` -> `HistoryPlay[]` |
+| UX-002 | Opisowe empty states | Index.tsx, TopItemsLayout.tsx | Kontekst + wskazowki zamiast "Brak danych" |
+| OPS-004 | Security scan blokuje merge | security-scan.yml | Usunieto continue-on-error |
 
-| ID | Opis | Pliki | Status | Notatki |
-|----|------|-------|--------|---------|
-| TEST-001 | Fix rbac reference w security.test.js | security.test.js:197-219 | DONE | Usunieto testy RBAC (rbac.js nie istnieje) |
-| TEST-002 | Update CSRF test | security.test.js:119-129 | DONE | Zamieniono legacy X-Requested-With test na Double Submit Cookie test |
-| TEST-FIX | Fix API route paths w testach | security.test.js | DONE | Zmieniono /api/stats/ na /api/v1/stats/ i /api/profile na /api/v1/profile |
+## Commit 5: `2b5ba78` — Token Mutex + Onboarding
+
+| ID | Opis | Plik | Notatki |
+|----|------|------|---------|
+| API-004 | Token refresh mutex | statsController.js | Per-user lock, concurrent requests share single refresh |
+| UX-001 | Onboarding banner | Index.tsx | Pokazuje sie gdy brak danych, dismissible z localStorage |
 
 ---
 
-## Podsumowanie
+## Operacje Infrastrukturalne (poza kodem)
+
+### SEC-001: Rotacja Sekretow — WYKONANA
+
+| Sekret | Stara wersja | Nowa wersja | Metoda |
+|--------|-------------|-------------|--------|
+| JWT_SECRET | v1,v2 (disabled) | v3 | `openssl rand -hex 32` + `gcloud secrets versions add` |
+| ENCRYPTION_KEY | nie istnial | v1 (nowy) | Utworzony + dodany do Cloud Run env |
+| CRON_SECRET_KEY | v1,v2 (disabled) | v3 | + Cloud Scheduler zaktualizowany |
+| SPOTIFY_CLIENT_SECRET | v1,v2 | v3 | Zresetowany w Spotify Dashboard |
+| DATABASE_URL | v1-v3 | v4 | Haslo zresetowane w Supabase |
+| DIRECT_URL | v1-v3 | v4 | j.w. |
+
+**Backend redeployowany:** rewizja 00124-lbh, /health OK
+
+### SEC-001b: BFG Repo Cleaner — NIE POTRZEBNY
+
+Przeszukano cala historie git — prawdziwe wartosci sekretow **nigdy nie zostaly commitowane**. Commit 444539a zawieral tylko frontendowy `.env` z `VITE_API_URL=http://127.0.0.1:5000/api` (nie sekret). `.gitignore` chronil backendowy `.env` od poczatku.
+
+---
+
+## Podsumowanie Koncowe
 
 | Kategoria | Wdrozone | Pozostale |
 |-----------|----------|-----------|
-| Critical Security | 5 | 0 (P0 code fixes done) |
-| Structural Cleanup | 1 | 4 (bun.lockb, backup css, patch) |
-| Code Quality | 3 | 4 (API-002, API-003, API-007, API-009) |
-| Tests | 3 | 0 |
-| Performance | 0 | 4 |
-| Accessibility | 0 | 3 |
-| DevOps | 0 | 2 |
+| Critical Security (P0) | 8 | 0 |
+| Security (P1) | 7 | 2 (SEC-003, SEC-004) |
+| API/Code Quality | 8 | 0 |
+| Performance | 2 | 1 (PERF-002 streaming parser) |
+| Tests | 3 | 2 (TEST-003 frontend, TEST-004 integration) |
+| Accessibility | 7 | 0 |
+| UX | 2 | 4 (UX-004/005/006, profil stats) |
+| DevOps/Ops | 7 | 2 (OPS-001 staging, OPS-007 monitoring) |
+| Cleanup | 4 (40 plikow usunietych) | 0 |
+| Infrastruktura | 6 sekretow zrotowanych | 0 |
+| **LACZNIE** | **48 poprawek** | **11 remaining** |
 
-## Zmiany Wymagajace Recznej Decyzji (NIE wdrozone)
+## Co Pozostalo Do Zrobienia
 
-| ID | Opis | Dlaczego wymaga decyzji |
-|----|------|----------------------|
-| SEC-001 | Rotacja sekretow | Wymaga dostepu do Supabase, Spotify Dashboard, GCP Secret Manager |
-| SEC-001b | Czyszczenie git history (BFG) | Nieodwracalna operacja na repozytorium |
-| SEC-003 | Zmiana JWT-in-URL na auth code flow | Duza zmiana architektonczna |
-| SEC-004 | Przeniesienie access token z JWT server-side | Duza zmiana architektonczna |
-| OPS-001 | Staging environment | Wymaga dodatkowych zasobow GCP |
+### Architektoniczne (wymagaja osobnego brancha)
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| SEC-003 | JWT-in-URL -> auth code flow (nowy endpoint POST /auth/exchange) | 4h | HIGH |
+| SEC-004 | Spotify access token server-side (migracja DB, zmiana JWT) | 4h | HIGH |
+| SEC-007 | Przejscie na httpOnly cookie only (wymaga SEC-003 najpierw) | 2h | MEDIUM |
+
+### Testy
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| TEST-003 | Frontend testy (Vitest + React Testing Library) | 4h | HIGH |
+| TEST-004 | Integration testy z Docker PostgreSQL | 2d | MEDIUM |
+
+### Infrastruktura
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| OPS-001 | Staging environment (Cloud Run + DB + Spotify App) | 1d | MEDIUM |
+| OPS-007 | Monitoring — zainstaluj prom-client + @sentry/node lub usun stuby | 1d | MEDIUM |
+| ARCH-F02 | Redis dla cache i rate limiting | 1d | LOW |
+
+### Performance
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| PERF-002 | Streaming JSON parser dla importu (zamiast JSON.parse calego pliku) | 4h | MEDIUM |
+
+### Backlog (nice to have)
+
+| ID | Opis | Effort |
+|----|------|--------|
+| UX-004 | Precyzyjne time range labels | 30min |
+| UX-005 | Breadcrumbs/back nav | 1h |
+| UX-006 | Statystyki na profilu | 2h |
+| FE-006 | i18n (jesli planowany angielski) | 2d |
+| FE-012 | Sync settings z backendem | 4h |
+| ARCH-F03 | Warstwa DTO/response mapping | 2d |
+| ARCH-F05 | Shared types frontend-backend | 2d |

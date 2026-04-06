@@ -3,7 +3,7 @@
 **Data:** 2026-04-04/05 (audyt), 2026-04-06 (poprawki ETAP 2)
 **Metoda:** Manualny audyt read-only + 8 agentow GSD (4 codebase mapper + 4 web researcher)
 **Laczna dokumentacja:** 27 dokumentow, 6,200+ linii
-**Status ETAP 2:** 12 fixow wdrozonych, 53/53 testow pass
+**Status ETAP 2:** ZAKONCZONY — 48 poprawek, 6 sekretow zrotowanych, 53/53 testow pass
 
 ---
 
@@ -24,7 +24,7 @@
 | 10 | [Files Documentation](10_FILES_DOCUMENTATION.md) | Tabela plikow: sciezka, rola, ryzyka, rekomendacje |
 | 11 | [Applied Fixes Changelog](11_APPLIED_FIXES_CHANGELOG.md) | 12 fixow wdrozonych w ETAPIE 2 (2026-04-06) |
 | 12 | [Recommended Patches](12_RECOMMENDED_PATCHES.md) | 5 patches wymagajacych recznej decyzji |
-| 13 | [Roadmap](13_ROADMAP.md) | Priorytety P0-P4, timeline, effort estimates |
+| 13 | [Roadmap](13_ROADMAP.md) | 48 items DONE, 11 remaining (ETAP 3) |
 | 14 | [Tech Stack Research](14_TECH_STACK_RESEARCH.md) | Zbiorczy raport: co upgradowac, co trzymac |
 
 ---

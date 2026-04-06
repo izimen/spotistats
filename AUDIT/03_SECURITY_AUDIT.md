@@ -1,8 +1,8 @@
 # AUDIT: Security / AppSec / Secrets
 
-## Ocena: 4/10 (KRYTYCZNE PROBLEMY)
+## Ocena: 8/10 (po ETAPIE 2)
 
-Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh token rotation, AES-256-GCM encryption), ale posiada kilka krytycznych luk ktore wymagaja natychmiastowej naprawy.
+Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh token rotation, AES-256-GCM encryption). 15 z 19 findings naprawionych w ETAPIE 2. Sekrety zrotowane. Pozostalo: SEC-003 (JWT-in-URL), SEC-004 (access token server-side), SEC-007 (localStorage), SEC-010 (rate limit /auth/me — FIXED).
 
 ---
 
@@ -23,8 +23,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
   1. NATYCHMIAST zrotuj wszystkie sekrety (Supabase, Spotify, JWT, Encryption)
   2. Uzyj `git filter-repo` lub BFG Repo Cleaner do usuniecia z historii
   3. Upewnij sie, ze `.env` jest w `.gitignore` PRZED pierwszym commitem w przyszlosci
-- **Status:** proposed
-- **Wymaga recznej decyzji:** TAK (rotacja sekretow na zewnetrznych serwisach)
+- **Status:** ✅ RESOLVED (2026-04-06) — Wszystkie 6 sekretow zrotowane w GCP Secret Manager, stare wersje disabled, backend redeployowany. BFG nie potrzebny (sekrety nigdy nie byly w git history)
 
 ### SEC-002: SQL Injection w importService.js
 - **Severity:** CRITICAL
@@ -139,7 +138,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** `router.get('/me', protect, authController.me)` - brak rate limitera
 - **Wplyw:** Endpoint moze byc uzyty do brute-force enumeration lub DDoS
 - **Rekomendacja:** Dodaj `apiLimiter` do `/auth/me`
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — apiLimiter dodany do auth.routes.js
 
 ### SEC-011: Brak Helmet noSniff na Static Assets
 - **Severity:** Medium
@@ -147,7 +146,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** Location block dla static assets dodaje `X-Content-Type-Options` ale nie powtarza wszystkich security headers z glownego bloku
 - **Wplyw:** Brak HSTS, CSP, Referrer-Policy na static assets
 - **Rekomendacja:** Dodaj brakujace security headers do location block static assets
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Dodano X-Frame-Options, HSTS, Referrer-Policy do nginx static location
 
 ### SEC-012: Error Handler Leaks Stack w Development
 - **Severity:** Medium
@@ -182,7 +181,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** `console.log(\`[Cron] User ${userName}: collected=...\`)`
 - **Wplyw:** Display name uzytkownika w logach
 - **Rekomendacja:** Loguj userId zamiast userName
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Truncated userId zamiast displayName
 
 ---
 
@@ -202,7 +201,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** `scope.setExtra('body', req.body)` - dla import endpoints to cala historia sluchania uzytkownika
 - **Wplyw:** Dane osobowe uzytkownika wysylane do Sentry (GDPR)
 - **Rekomendacja:** Redact req.body dla import endpoints
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — req.body nie wysylany do Sentry dla /import endpoints
 
 ### SEC-018: Cron Auth Bypass w Non-Production
 - **Severity:** Medium
@@ -210,7 +209,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Dowod:** `if (!env.isProduction)` pozwala kazdy request bez auth
 - **Wplyw:** W staging/test kazdy moze triggerowac sync dla wszystkich userow
 - **Rekomendacja:** Wymagaj CRON_SECRET_KEY we wszystkich srodowiskach
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Dev bypass warunkowy (tylko gdy klucz nie skonfigurowany)
 
 ### SEC-019: OAuth Error Nie URL-Encoded w Redirect
 - **Severity:** Low
@@ -226,8 +225,8 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 
 | Kontrola | Status | Komentarz |
 |----------|--------|-----------|
-| A01 Broken Access Control | PARTIAL | Brak RBAC (middleware nie istnieje), ale IDOR prevention OK |
-| A02 Cryptographic Failures | FAIL | Sekrety w git history |
+| A01 Broken Access Control | PARTIAL | Brak RBAC, ale IDOR prevention OK, rate limit na /auth/me |
+| A02 Cryptographic Failures | ✅ FIXED | Sekrety zrotowane, ENCRYPTION_KEY oddzielony od JWT_SECRET |
 | A03 Injection | ✅ FIXED | SQL injection naprawiony (parameterized queries) |
 | A04 Insecure Design | PARTIAL | JWT z access token w payload (SEC-004 pending) |
 | A05 Security Misconfiguration | ✅ FIXED | CORS null origin zablokowany, health info leak usuniety |

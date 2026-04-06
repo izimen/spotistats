@@ -18,10 +18,8 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 ### API-002: Podwojne Pobieranie User z DB
 - **Severity:** Medium
 - **Lokalizacja:** `backend/src/controllers/statsController.js:119-121`
-- **Opis:** `protect` middleware juz pobiera usera z DB i ustawia `req.user`. Kontrolery ponownie pobieraja usera: `const user = await prisma.user.findUnique({ where: { id: userId } })`. To powoduje niepotrzebne zapytanie do DB na kazdy request.
-- **Wplyw:** Podwojne zapytanie do bazy danych na kazdy request stats
-- **Rekomendacja:** Uzyj `req.user` bezposrednio zamiast ponownego pobierania
-- **Status:** proposed
+- **Opis:** `protect` middleware juz pobiera usera z DB i ustawia `req.user`. Kontrolery ponownie pobieraja usera.
+- **Status:** ✅ FIXED (2026-04-06) — Usunieto 8 duplikatow, `getAccessToken` pobiera refreshToken z DB sam
 
 ### API-003: Brak Walidacji `from`/`to` Date Params
 - **Severity:** Medium
@@ -29,7 +27,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 - **Opis:** `if (from) options.from = new Date(from);` - brak walidacji ze `from` jest poprawna data. `new Date('invalid')` zwraca `Invalid Date` co moze powodowac nieoczekiwane zapytania Prisma.
 - **Wplyw:** Potencjalny error 500 lub nieoczekiwane wyniki
 - **Rekomendacja:** Waliduj daty z Zod lub recznym sprawdzeniem `isNaN(date.getTime())`
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — isNaN check na from/to
 
 ### API-004: getAccessToken - Wielokrotne Odswiezanie
 - **Severity:** Medium
@@ -37,7 +35,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 - **Opis:** Kazdy kontroler niezaleznie wywoluje `getAccessToken()`. Jesli wiele requestow przychodzi naraz z wygaslym tokenem, kazdy z nich odswiezy token oddzielnie (race condition na refresh token).
 - **Wplyw:** Wielokrotne odswiezanie tokenu, potencjalny token reuse detection false positive
 - **Rekomendacja:** Implementuj token refresh lock (mutex) lub centralna logike odswiezania
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Per-user Map lock, concurrent requests share single refresh
 
 ### API-005: Import - Caly Plik w Pamieci
 - **Severity:** Medium
@@ -62,7 +60,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 - **Opis:** `getDiscoveryRoulette` zwraca blad z `error.message` bezposrednio do klienta, zamiast przekazac do `next(error)` i error handlera.
 - **Wplyw:** Niespojny format bledow
 - **Rekomendacja:** Uzyj `next(error)` jak w innych kontrolerach
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — next(error) for RFC 7807 consistency
 
 ### API-008: Hardcoded Cloud Run URL w CORS
 - **Severity:** Low
@@ -70,7 +68,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 - **Opis:** `'https://spotistats-frontend-ox6p5to4qa-lm.a.run.app'` - hardcoded URL. Jesli Cloud Run zmieni URL (nowy deployment), CORS przestanie dzialac.
 - **Wplyw:** Staly URL moze byc nieaktualny po redeploymencie
 - **Rekomendacja:** Przenies do zmiennej srodowiskowej (np. `ALLOWED_ORIGINS`)
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Usunieto hardcoded URL, env.frontendUrl only
 
 ### API-009: Encoding Issues w Odpowiedziach (UTF-8/Windows-1252)
 - **Severity:** Medium
@@ -83,7 +81,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
   Podobnie w `statsController.js:581-595` (mood labels).
 - **Wplyw:** Zepsute polskie znaki w UI
 - **Rekomendacja:** Upewnij sie, ze pliki sa zapisane w UTF-8 (bez BOM). Prawdopodobnie problem z edytorem.
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Garbled Windows-1252 -> czyste ASCII (emojis removed)
 
 ### API-010: profileController Jest Pusty
 - **Severity:** Low
@@ -91,7 +89,7 @@ Solidna implementacja z dobrymi praktykami (walidacja Zod, caching, circuit brea
 - **Opis:** Plik eksportuje pusty obiekt `module.exports = {};`
 - **Wplyw:** Zbedny plik w repo
 - **Rekomendacja:** Usun lub dodaj TODO komentarz z planem
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-06) — Plik usuniety + route unmounted z app.js
 
 ---
 

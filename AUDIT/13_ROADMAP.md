@@ -1,89 +1,122 @@
 # AUDIT: Roadmap
 
-## Immediate Critical (TERAZ - przed nastepnym deploy)
+**Ostatnia aktualizacja:** 2026-04-06 (po ETAPIE 2)
 
-| Priorytet | ID | Opis | Effort | Impact | Status |
-|-----------|-----|------|--------|--------|--------|
-| P0 | SEC-001 | Rotacja wszystkich sekretow | 2h | Eliminuje ryzyko kompromitacji | ⏳ wymaga recznej decyzji |
-| P0 | SEC-002 | Naprawa SQL injection w importService | 30min | Eliminuje krytyczna luke | ✅ DONE |
-| P0 | SEC-005 | CSRF token w frontend axios | 30min | Naprawia CSRF ochrone | ✅ DONE |
-| P0 | TEST-001 | Fix security.test.js (rbac reference) | 15min | Testy znow dzialaja | ✅ DONE |
-| P0 | SEC-016 | Dodaj select clause w protect.js (nie leakuj refreshToken) | 10min | Eliminuje wyciek tokenu | ✅ DONE |
+## ETAP 2 — ZAKONCZONY (48 poprawek)
 
-## Quick Wins (1-2 dni)
+### P0 — Critical Security
 
-| Priorytet | ID | Opis | Effort | Impact | Status |
-|-----------|-----|------|--------|--------|--------|
-| P1 | SEC-006 | Usun null origin CORS bypass | 5min | Lepsze CORS | ✅ DONE |
-| P1 | SEC-017 | Redact req.body w Sentry (import endpoints) | 10min | GDPR compliance | pending |
-| P1 | SEC-018 | Wymagaj CRON_SECRET we wszystkich env | 5min | Bezpieczniejszy staging | pending |
-| P1 | SEC-019 | encodeURIComponent na OAuth error redirect | 2min | Bezpieczny redirect | ✅ DONE |
-| P1 | FE-008 | Usun git internals z frontend/ | 10min | Czyste repo | ✅ DONE |
-| P1 | FE-007 | Usun frontend/dist/ z repo | 5min | Czyste repo | ✅ DONE |
-| P1 | API-002 | Usun podwojne DB query (req.user) | 15min | -50% DB queries na User | pending |
-| P1 | API-009 | Fix UTF-8 encoding polskich znakow | 10min | Poprawne wyswietlanie | pending |
-| P1 | PERF-001 | SQL aggregation zamiast findMany | 30min | 10-100x szybciej | pending |
-| P1 | OPS-003 | Dodaj npm test do deploy.yml | 10min | Quality gate | pending |
-| P1 | OPS-006 | Update frontend .dockerignore | 5min | Mniejszy Docker context | pending |
-| P1 | TEST-002 | Update CSRF test | 15min | Poprawne security testy | ✅ DONE |
-| P1 | A11Y-003 | aria-label na icon buttons | 10min | Lepsze a11y | pending |
-| P1 | SEC-013 | Usun env z /health | 2min | Mniejsze info disclosure | ✅ DONE |
-| P1 | SEC-008 | Zmniejsz JSON body limit do 1MB | 5min | DDoS protection | ✅ DONE |
-| P1 | SEC-009 | Zmniejsz upload limit do 50MB | 5min | Memory protection | ✅ DONE |
+| ID | Opis | Status |
+|----|------|--------|
+| SEC-001 | Rotacja 6 sekretow (JWT, Encryption, Cron, Spotify, DB x2) | ✅ DONE (GCP Secret Manager) |
+| SEC-001b | BFG Repo Cleaner | ✅ NIE POTRZEBNY (sekrety nigdy w git) |
+| SEC-002 | SQL injection fix (parameterized queries) | ✅ DONE |
+| SEC-005 | CSRF token w frontend axios | ✅ DONE |
+| SEC-016 | Select clause w protect.js | ✅ DONE |
+| TEST-001 | Fix security.test.js (rbac, CSRF, routes) | ✅ DONE |
 
-## Next Sprint (1-2 tygodnie)
+### P1 — Quick Wins
 
-| Priorytet | ID | Opis | Effort | Impact |
-|-----------|-----|------|--------|--------|
-| P2 | SEC-003 | Zmiana JWT-in-URL na auth code | 4h | Eliminuje wyciek JWT z URL |
-| P2 | SEC-004 | Access token server-side | 4h | Eliminuje wyciek Spotify token |
-| P2 | SEC-007 | Przejscie na httpOnly cookie only | 2h | Lepsza ochrona XSS |
-| P2 | PERF-002 | Streaming JSON parser dla importu | 4h | Obsluga duzych plikow |
-| P2 | OPS-002 | Smoke tests po deploy | 1h | Wykrywanie uszkodzonych deploy |
-| P2 | TEST-003 | Podstawowe testy frontend (hooks) | 4h | Regression protection |
-| P2 | A11Y-001 | Skip-to-content link | 15min | a11y compliance |
-| P2 | A11Y-005 | prefers-reduced-motion | 15min | a11y compliance |
-| P2 | A11Y-006 | Poprawa kontrastu muted-foreground | 10min | Czytelnosc |
-| P2 | UX-001 | Onboarding po pierwszym logowaniu | 2h | Lepsze doswiadczenie nowego uzytkownika |
-| P2 | UX-002 | Opisowe empty states | 1h | Lepsze UX |
-
-## Strategic Refactors (1-2 miesiace)
-
-| Priorytet | ID | Opis | Effort | Impact |
-|-----------|-----|------|--------|--------|
-| P3 | ARCH-F02 | Redis dla cache i rate limiting | 1d | Wspoldzielony state miedzy instancjami |
-| P3 | OPS-001 | Staging environment | 1d | Bezpieczniejsze deploymenty |
-| P3 | OPS-007 | Monitoring (Prometheus + Grafana lub Cloud Monitoring) | 1d | Visibility |
-| P3 | TEST-004 | Integration tests z Docker PostgreSQL | 2d | Real DB coverage |
-| P3 | ARCH-F05 | Shared types (OpenAPI spec lub monorepo) | 2d | Type safety FE-BE |
-| P3 | API-004 | Token refresh mutex | 4h | Eliminuje race conditions |
-| P3 | SEC-001b | BFG Repo Cleaner (czyszczenie historii) | 2h | Czysty git history |
-| P3 | FE-003 | Usun nieuzywane shadcn/ui komponenty | 1h | Czyste repo |
-
-## Nice to Have (backlog)
-
-| Priorytet | ID | Opis | Effort | Impact |
-|-----------|-----|------|--------|--------|
-| P4 | ARCH-F03 | Warstwa DTO/response mapping | 2d | Lepszy kontrakt API |
-| P4 | SEC-008 | Zmniejsz JSON body limit do 1MB | 5min | DDoS protection |
-| P4 | SEC-009 | Zmniejsz upload limit do 50MB | 5min | Memory protection |
-| P4 | UX-004 | Precyzyjne time range labels | 30min | Jasnosc |
-| P4 | UX-005 | Breadcrumbs/back nav | 1h | Nawigacja |
-| P4 | UX-006 | Statystyki na profilu | 2h | Bogate profile page |
-| P4 | FE-006 | i18n (jesli planowany angielski) | 2d | Lokalizacja |
-| P4 | FE-012 | Sync settings z backendem | 4h | Cross-device settings |
-| P4 | A11Y-007 | Focus trap w mobile menu | 1h | a11y compliance |
-| P4 | PERF-004 | AnimatedBackground disable na mobile | 30min | Battery/performance |
-| P4 | OPS-008 | min-instances=1 (cold start) | 5min | Szybszy pierwszy request |
-| P4 | OPS-009 | NODE_OPTIONS w Dockerfile | 5min | OOM protection |
+| ID | Opis | Status |
+|----|------|--------|
+| SEC-006 | Null origin CORS bypass | ✅ DONE |
+| SEC-008 | JSON body limit 10MB -> 1MB | ✅ DONE |
+| SEC-009 | Upload limit 200MB -> 50MB | ✅ DONE |
+| SEC-010 | Rate limiting na /auth/me | ✅ DONE |
+| SEC-011 | Security headers na nginx static | ✅ DONE |
+| SEC-013 | Env z /health endpoint | ✅ DONE |
+| SEC-015 | Log userId zamiast displayName | ✅ DONE |
+| SEC-017 | Redact req.body w Sentry | ✅ DONE |
+| SEC-018 | Require CRON_SECRET we wszystkich env | ✅ DONE |
+| SEC-019 | encodeURIComponent na OAuth error | ✅ DONE |
+| API-002 | Usun 8 duplikatow DB query | ✅ DONE |
+| API-003 | Walidacja date params | ✅ DONE |
+| API-004 | Token refresh mutex | ✅ DONE |
+| API-007 | Discovery error -> next(error) | ✅ DONE |
+| API-008 | Hardcoded Cloud Run URL w CORS | ✅ DONE |
+| API-009 | Fix UTF-8 encoding | ✅ DONE |
+| API-010 | Usun pusty profileController | ✅ DONE |
+| FE-001 | CSRF token w axios (= SEC-005) | ✅ DONE |
+| FE-003 | Usun 36 nieuzywanych shadcn/ui | ✅ DONE |
+| FE-005 | TypeScript interfaces dla hooks | ✅ DONE |
+| FE-007 | dist/ w .gitignore | ✅ DONE |
+| FE-008 | Git internals w .gitignore | ✅ DONE |
+| FE-010 | Duplikat use-toast.ts | ✅ DONE |
+| PERF-001 | SQL aggregation getListeningByDay | ✅ DONE |
+| PERF-005 | Refetch interval 1min -> 5min | ✅ DONE |
+| OPS-002 | Smoke test po deploy | ✅ DONE |
+| OPS-003 | npm test w CI/CD | ✅ DONE |
+| OPS-004 | Security scan blokuje merge | ✅ DONE |
+| OPS-005 | ENCRYPTION_KEY w --set-secrets | ✅ DONE |
+| OPS-006 | Frontend .dockerignore | ✅ DONE |
+| OPS-009 | NODE_OPTIONS w Dockerfile | ✅ DONE |
+| TEST-002 | CSRF test -> Double Submit Cookie | ✅ DONE |
+| A11Y-001 | Skip-to-content link | ✅ DONE |
+| A11Y-002 | Focus visible na kartach | ✅ DONE |
+| A11Y-003 | aria-label na icon buttons | ✅ DONE |
+| A11Y-005 | prefers-reduced-motion | ✅ DONE |
+| A11Y-006 | prefers-contrast | ✅ DONE |
+| A11Y-007 | Escape zamyka mobile menu | ✅ DONE |
+| UX-001 | Onboarding banner | ✅ DONE |
+| UX-002 | Opisowe empty states | ✅ DONE |
+| P4 | Usunieto bun.lockb, patch, backup css | ✅ DONE |
+| P4 | ENCRYPTION_KEY w .env.example | ✅ DONE |
 
 ---
 
-## Timeline Estimate
+## ETAP 3 — DO ZROBIENIA
+
+### Architektoniczne (wymagaja osobnego brancha)
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| SEC-003 | JWT-in-URL -> auth code flow (POST /auth/exchange) | 4h | HIGH |
+| SEC-004 | Spotify access token server-side (migracja DB) | 4h | HIGH |
+| SEC-007 | Przejscie na httpOnly cookie only (wymaga SEC-003) | 2h | MEDIUM |
+
+### Testy
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| TEST-003 | Frontend testy (Vitest + React Testing Library) | 4h | HIGH |
+| TEST-004 | Integration testy z Docker PostgreSQL | 2d | MEDIUM |
+
+### Infrastruktura
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| OPS-001 | Staging environment (Cloud Run + DB + Spotify App) | 1d | MEDIUM |
+| OPS-007 | Monitoring — prom-client + @sentry/node lub usun stuby | 1d | MEDIUM |
+| ARCH-F02 | Redis dla cache i rate limiting | 1d | LOW |
+
+### Performance
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| PERF-002 | Streaming JSON parser dla importu | 4h | MEDIUM |
+
+### Backlog (nice to have)
+
+| ID | Opis | Effort |
+|----|------|--------|
+| UX-004 | Precyzyjne time range labels | 30min |
+| UX-005 | Breadcrumbs/back nav | 1h |
+| UX-006 | Statystyki na profilu | 2h |
+| FE-006 | i18n (jesli planowany angielski) | 2d |
+| FE-012 | Sync settings z backendem | 4h |
+| ARCH-F03 | Warstwa DTO/response mapping | 2d |
+| ARCH-F05 | Shared types frontend-backend | 2d |
+| PERF-006 | Lepsza Vite chunk strategy | 30min |
+| PERF-008 | Connection pooling config | 15min |
+
+---
+
+## Timeline
 
 ```
-Tydzien 1: Immediate Critical + Quick Wins
-Tydzien 2-3: Next Sprint items
-Miesiac 2: Strategic Refactors (Redis, staging, monitoring)
-Ongoing: Nice to Have (backlog)
+ETAP 2 (2026-04-06): 48 poprawek — ZAKONCZONY
+ETAP 3a: SEC-003 + SEC-004 + SEC-007 (auth refactor) — ~10h
+ETAP 3b: TEST-003 + TEST-004 (testy) — ~3d
+ETAP 3c: OPS-001 + OPS-007 (staging + monitoring) — ~2d
+Ongoing: Backlog items
 ```
