@@ -63,13 +63,9 @@ app.use(cors({
             );
         }
 
-        // SEC-006: Reject requests with no origin in production
-        // Null origin can be exploited via file:// URLs or sandboxed iframes
-        if (!origin) {
-            // In development, allow no-origin for curl/Postman testing
-            if (!env.isProduction) return callback(null, true);
-            return callback(new Error('Not allowed by CORS'));
-        }
+        // Allow requests with no origin (server-to-server, curl, health checks, Cloud Scheduler)
+        // These are not subject to browser same-origin policy so CORS doesn't apply
+        if (!origin) return callback(null, true);
 
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
