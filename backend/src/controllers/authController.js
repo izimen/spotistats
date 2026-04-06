@@ -187,7 +187,6 @@ async function refresh(req, res, next) {
         const user = req.user;
         const jwtTokenFamily = req.tokenFamily;
         const jwtTokenVersion = req.tokenVersion;
-        const currentTokenExpiry = req.spotifyTokenExpiry;
 
         // Token version check - detect stolen/old tokens
         if (jwtTokenVersion !== undefined && user.tokenVersion !== jwtTokenVersion) {
@@ -227,12 +226,16 @@ async function refresh(req, res, next) {
             });
         }
 
-        // Check if token needs refresh
+        // SEC-004: Check if Spotify token needs refresh (read expiry from DB)
+        const userExpiry = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { spotifyAccessTokenExpiry: true }
+        });
         const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
-        if (currentTokenExpiry && new Date(currentTokenExpiry) > fiveMinutesFromNow) {
+        if (userExpiry?.spotifyAccessTokenExpiry && userExpiry.spotifyAccessTokenExpiry > fiveMinutesFromNow) {
             return res.json({
                 message: 'Token is still valid',
-                expiresAt: currentTokenExpiry
+                expiresAt: userExpiry.spotifyAccessTokenExpiry
             });
         }
 
@@ -418,45 +421,48 @@ async function deleteAccount(req, res, next) {
  * SEC-003: Exchange short-lived auth code for JWT token
  * Code is single-use, expires in 30 seconds
  */
-async function exchange(req, res) {
-    const { code } = req.body;
+async function exchange(req, res, next) {
+    try {
+        const { code } = req.body;
 
-    if (!code) {
-        return res.status(400).json({
-            error: 'MissingCode',
-            message: 'Authorization code is required'
+        if (!code) {
+            return res.status(400).json({
+                error: 'MissingCode',
+                message: 'Authorization code is required'
+            });
+        }
+
+        // Look up user by auth code in DB (works across Cloud Run instances)
+        const user = await prisma.user.findFirst({
+            where: { authCode: code }
         });
-    }
 
-    // Look up user by auth code in DB (works across Cloud Run instances)
-    const user = await prisma.user.findFirst({
-        where: { authCode: code }
-    });
+        if (!user) {
+            return res.status(401).json({
+                error: 'InvalidCode',
+                message: 'Authorization code is invalid or expired'
+            });
+        }
 
-    if (!user) {
-        return res.status(401).json({
-            error: 'InvalidCode',
-            message: 'Authorization code is invalid or expired'
-        });
-    }
+        // Check TTL
+        if (!user.authCodeExpiry || new Date() > user.authCodeExpiry) {
+            await prisma.user.update({ where: { id: user.id }, data: { authCode: null, authCodeExpiry: null } });
+            return res.status(401).json({
+                error: 'ExpiredCode',
+                message: 'Authorization code has expired'
+            });
+        }
 
-    // Check TTL
-    if (!user.authCodeExpiry || new Date() > user.authCodeExpiry) {
-        // Clear expired code
+        // Single-use: clear immediately
         await prisma.user.update({ where: { id: user.id }, data: { authCode: null, authCodeExpiry: null } });
-        return res.status(401).json({
-            error: 'ExpiredCode',
-            message: 'Authorization code has expired'
-        });
+
+        // Generate JWT and set cookie
+        const jwtToken = generateJWT(user, user.tokenFamily);
+        res.cookie('jwt', jwtToken, getCookieOptions());
+        res.json({ token: jwtToken });
+    } catch (error) {
+        next(error);
     }
-
-    // Single-use: clear immediately
-    await prisma.user.update({ where: { id: user.id }, data: { authCode: null, authCodeExpiry: null } });
-
-    // Generate JWT and set cookie
-    const jwtToken = generateJWT(user, user.tokenFamily);
-    res.cookie('jwt', jwtToken, getCookieOptions());
-    res.json({ token: jwtToken });
 }
 
 module.exports = {

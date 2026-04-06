@@ -80,7 +80,13 @@ async function getAccessToken(req, user) {
 
     // API-004: If another request is already refreshing for this user, wait for it
     if (refreshLocks.has(user.id)) {
-        return refreshLocks.get(user.id);
+        try {
+            return await refreshLocks.get(user.id);
+        } catch (err) {
+            // Lock holder failed — clean up so next request can retry
+            refreshLocks.delete(user.id);
+            throw err;
+        }
     }
 
     const refreshPromise = doRefreshToken(user);
