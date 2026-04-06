@@ -21,10 +21,14 @@ function cronAuth(req, res, next) {
         }
     }
 
-    // Method 2: Development bypass
-    if (!env.isProduction) {
-        console.warn('[CronAuth] DEV MODE: Allowing request without auth');
-        return next();
+    // SEC-018: Require CRON_SECRET_KEY in all environments
+    // Dev bypass removed - use CRON_SECRET_KEY even locally for consistency
+    if (!env.cronSecretKey) {
+        console.warn('[CronAuth] No CRON_SECRET_KEY configured - set it in .env');
+        if (!env.isProduction) {
+            // Only allow bypass if key is not configured at all (fresh setup)
+            return next();
+        }
     }
 
     // Unauthorized

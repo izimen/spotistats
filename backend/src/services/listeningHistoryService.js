@@ -194,23 +194,20 @@ async function getListeningByDay(userId, days = 7) {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    // Get all plays in the date range
-    const plays = await prisma.streamingHistory.findMany({
-        where: {
-            userId,
-            playedAt: { gte: startDate },
-        },
-        select: { playedAt: true },
-    });
+    // PERF-001: SQL aggregation instead of loading all records into memory
+    // EXTRACT(DOW) returns 0=Sunday, 1=Monday, ..., 6=Saturday (same as JS getDay())
+    const dayData = await prisma.$queryRaw`
+        SELECT EXTRACT(DOW FROM "playedAt")::int as dow, COUNT(*)::int as count
+        FROM "StreamingHistory"
+        WHERE "userId" = ${userId} AND "playedAt" >= ${startDate}
+        GROUP BY dow ORDER BY dow
+    `;
 
-    // Aggregate by day of week
-    const dayNames = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+    // Build lookup from SQL results
     const dayCounts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    dayData.forEach(row => { dayCounts[row.dow] = row.count; });
 
-    plays.forEach(play => {
-        const dayOfWeek = play.playedAt.getDay();
-        dayCounts[dayOfWeek]++;
-    });
+    const dayNames = ['Niedziela', 'Poniedzialek', 'Wtorek', 'Sroda', 'Czwartek', 'Piatek', 'Sobota'];
 
     // Return in Monday-first order (matching ListeningChart)
     return [

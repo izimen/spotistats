@@ -257,3 +257,22 @@ select {
 ::placeholder {
   @apply text-muted-foreground/60;
 }
+
+/* A11Y-005: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A11Y-006: Improve muted-foreground contrast for readability */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: 0 0% 70%;
+  }
+}

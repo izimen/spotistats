@@ -73,8 +73,13 @@ async function getAccessToken(req, user) {
         console.log('JWT access token expired, refreshing...');
     }
 
-    // Need to refresh - check if we have a refresh token
-    if (!user.refreshToken) {
+    // Need to refresh - fetch refreshToken from DB (not on req.user after SEC-016)
+    const userWithToken = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { refreshToken: true }
+    });
+
+    if (!userWithToken?.refreshToken) {
         const error = new Error('No refresh token available. Please log in again.');
         error.code = 'NO_REFRESH_TOKEN';
         error.statusCode = 401;
@@ -82,7 +87,7 @@ async function getAccessToken(req, user) {
     }
 
     try {
-        const decryptedRefreshToken = encryptionService.decrypt(user.refreshToken);
+        const decryptedRefreshToken = encryptionService.decrypt(userWithToken.refreshToken);
         const tokens = await spotifyService.refreshAccessToken(decryptedRefreshToken);
         console.log('Token refreshed successfully');
         return tokens.accessToken;
@@ -116,11 +121,8 @@ async function getTopArtists(req, res, next) {
         const { time_range, limit } = validateParams(req);
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getTopArtists(accessToken, userId, {
             time_range,
@@ -159,11 +161,8 @@ async function getTopTracks(req, res, next) {
         const { time_range, limit } = validateParams(req);
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getTopTracks(accessToken, userId, {
             time_range,
@@ -208,11 +207,8 @@ async function getTopAlbums(req, res, next) {
         const { time_range, limit } = validateParams(req);
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getTopAlbums(accessToken, userId, {
             time_range,
@@ -255,11 +251,8 @@ async function getRecentlyPlayed(req, res, next) {
 
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getRecentlyPlayed(accessToken, { limit });
 
@@ -449,11 +442,8 @@ async function syncListeningHistory(req, res, next) {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await listeningHistoryService.collectFromAPI(userId, accessToken);
 
@@ -462,8 +452,8 @@ async function syncListeningHistory(req, res, next) {
             collected: result.collected,
             skipped: result.skipped,
             message: result.collected > 0
-                ? `Zsynchronizowano ${result.collected} nowych utworĂłw`
-                : 'Brak nowych utworĂłw do synchronizacji'
+                ? `Zsynchronizowano ${result.collected} nowych utworow`
+                : 'Brak nowych utworow do synchronizacji'
         });
     } catch (error) {
         next(error);
@@ -552,11 +542,8 @@ async function getAudioFeatures(req, res, next) {
             });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const result = await spotifyService.getAudioFeatures(accessToken, trackIds);
 
@@ -578,20 +565,20 @@ async function getAudioFeatures(req, res, next) {
         }
 
         // Determine mood based on averages
-        let mood = 'đźŽµ ZrĂłwnowaĹĽony';
+        let mood = 'Zrownowazony';
         if (averages) {
             if (averages.valence > 0.7 && averages.energy > 0.7) {
-                mood = 'đźŽ‰ Imprezowy';
+                mood = 'Imprezowy';
             } else if (averages.valence < 0.3) {
-                mood = 'đź’” Melancholijny';
+                mood = 'Melancholijny';
             } else if (averages.energy > 0.8) {
-                mood = 'đź’Ş Energiczny';
+                mood = 'Energiczny';
             } else if (averages.acousticness > 0.7) {
-                mood = 'đźŚ Spokojny';
+                mood = 'Spokojny';
             } else if (averages.danceability > 0.7) {
-                mood = 'đź’ Taneczny';
+                mood = 'Taneczny';
             } else if (averages.valence > 0.6) {
-                mood = 'đź’• Romantyczny';
+                mood = 'Romantyczny';
             }
         }
 
@@ -644,11 +631,8 @@ async function getMusicDNA(req, res, next) {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const dna = await musicDNAService.calculateMusicDNA(userId, accessToken);
 
@@ -656,7 +640,7 @@ async function getMusicDNA(req, res, next) {
             return res.json({
                 success: true,
                 data: null,
-                message: 'NiewystarczajÄ…ca iloĹ›Ä‡ danych do analizy DNA'
+                message: 'Niewystarczajaca ilosc danych do analizy DNA'
             });
         }
 
@@ -694,11 +678,8 @@ async function getDiscoveryRoulette(req, res, next) {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        const accessToken = await getAccessToken(req, user);
+        // API-002: Use req.user directly instead of re-fetching from DB
+        const accessToken = await getAccessToken(req, req.user);
 
         const track = await discoveryService.getDiscoveryTrack(userId, accessToken);
 
@@ -710,7 +691,7 @@ async function getDiscoveryRoulette(req, res, next) {
         console.error('[Discovery] Roulette error:', error.message);
         res.status(500).json({
             success: false,
-            error: error.message || 'Nie udaĹ‚o siÄ™ wygenerowaÄ‡ rekomendacji'
+            error: error.message || 'Nie udalo sie wygenerowac rekomendacji'
         });
     }
 }

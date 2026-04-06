@@ -101,6 +101,7 @@ const Header = () => {
                 `}
               >
                 <User className="w-4.5 h-4.5" />
+                <span className="sr-only">Profil</span>
               </Button>
             </Link>
 
@@ -110,6 +111,8 @@ const Header = () => {
               size="icon"
               className="md:hidden rounded-full w-9 h-9 text-muted-foreground hover:text-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Zamknij menu" : "Otworz menu"}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
                 <X className="w-5 h-5" />

@@ -87,8 +87,12 @@ function sentryErrorHandler(error, req, res, next) {
     Sentry.withScope((scope) => {
         scope.setExtra('url', req.url);
         scope.setExtra('method', req.method);
-        scope.setExtra('body', req.body);
         scope.setExtra('query', req.query);
+
+        // SEC-017: Don't send req.body for import endpoints (contains user listening history - GDPR)
+        if (req.url && !req.url.includes('/import')) {
+            scope.setExtra('body', req.body);
+        }
 
         Sentry.captureException(error);
     });
