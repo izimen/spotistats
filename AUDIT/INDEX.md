@@ -1,9 +1,9 @@
 # SpotiStats - Full Audit & Research Index
 
-**Data:** 2026-04-04/05 (audyt), 2026-04-06 (poprawki ETAP 2)
-**Metoda:** Manualny audyt read-only + 8 agentow GSD (4 codebase mapper + 4 web researcher)
+**Data:** 2026-04-04/05 (audyt), 2026-04-06/07 (poprawki ETAP 2+3)
+**Metoda:** Manualny audyt read-only + 8 agentow GSD + 2 code review agentow
 **Laczna dokumentacja:** 27 dokumentow, 6,200+ linii
-**Status ETAP 2:** ZAKONCZONY — 48 poprawek, 6 sekretow zrotowanych, 53/53 testow pass
+**Status:** ETAP 2+3 ZAKONCZONY — ~55 poprawek, 11 PR-ow, 6 sekretow, 75 testow pass
 
 ---
 

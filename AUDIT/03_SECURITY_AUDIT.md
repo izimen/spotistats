@@ -1,6 +1,6 @@
 # AUDIT: Security / AppSec / Secrets
 
-## Ocena: 8/10 (po ETAPIE 2)
+## Ocena: 9/10 (po ETAPIE 2+3)
 
 Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh token rotation, AES-256-GCM encryption). 15 z 19 findings naprawionych w ETAPIE 2. Sekrety zrotowane. Pozostalo: SEC-003 (JWT-in-URL), SEC-004 (access token server-side), SEC-007 (localStorage), SEC-010 (rate limit /auth/me — FIXED).
 
@@ -62,8 +62,8 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
   - Referrer header jesli uzytkownik kliknie link zewnetrzny
   - Narzedzia monitorujace (APM, analytics)
 - **Wplyw:** Wyciek JWT = sesja + dostep Spotify
-- **Rekomendacja:** Uzyj krotkotrwalego authorization code (np. 30s, single-use) zamiast pelnego JWT w URL. Frontend wymienia code na JWT przez bezpieczny POST.
-- **Status:** proposed
+- **Rekomendacja:** Uzyj krotkotrwalego authorization code (np. 30s, single-use) zamiast pelnego JWT w URL.
+- **Status:** ✅ FIXED (2026-04-07, PR #34, #37) — Auth code flow: redirect z ?code=, POST /auth/exchange, kody w DB (multi-instance safe), 60s TTL, single-use, CSRF skip
 
 ### SEC-004: Spotify Access Token w JWT Payload
 - **Severity:** HIGH
@@ -72,7 +72,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 - **Scenariusz ataku:** Wyciek JWT (XSS, log leak, URL) daje atakujacemu dostep do Spotify API uzytkownika
 - **Wplyw:** Atakujacy moze odczytac dane Spotify uzytkownika
 - **Rekomendacja:** Przechowuj access token server-side (DB/Redis), nie w JWT
-- **Status:** proposed
+- **Status:** ✅ FIXED (2026-04-07, PR #34) — Access token zaszyfrowany AES-256-GCM w DB (spotifyAccessToken + spotifyAccessTokenExpiry). JWT zawiera tylko userId, spotifyId, tokenFamily, tokenVersion
 
 ### SEC-005: Frontend nie wysyla CSRF Token
 - **Severity:** HIGH
@@ -228,7 +228,7 @@ Aplikacja ma solidne fundamenty bezpieczenstwa (Helmet, CORS, PKCE, refresh toke
 | A01 Broken Access Control | PARTIAL | Brak RBAC, ale IDOR prevention OK, rate limit na /auth/me |
 | A02 Cryptographic Failures | ✅ FIXED | Sekrety zrotowane, ENCRYPTION_KEY oddzielony od JWT_SECRET |
 | A03 Injection | ✅ FIXED | SQL injection naprawiony (parameterized queries) |
-| A04 Insecure Design | PARTIAL | JWT z access token w payload (SEC-004 pending) |
+| A04 Insecure Design | ✅ FIXED | Access token server-side, auth code flow, JWT lean |
 | A05 Security Misconfiguration | ✅ FIXED | CORS null origin zablokowany, health info leak usuniety |
 | A06 Vulnerable Components | OK | npm audit w CI/CD |
 | A07 Authentication Failures | OK | PKCE, token rotation, version check |

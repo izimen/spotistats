@@ -1,122 +1,77 @@
 # AUDIT: Roadmap
 
-**Ostatnia aktualizacja:** 2026-04-06 (po ETAPIE 2)
-
-## ETAP 2 — ZAKONCZONY (48 poprawek)
-
-### P0 — Critical Security
-
-| ID | Opis | Status |
-|----|------|--------|
-| SEC-001 | Rotacja 6 sekretow (JWT, Encryption, Cron, Spotify, DB x2) | ✅ DONE (GCP Secret Manager) |
-| SEC-001b | BFG Repo Cleaner | ✅ NIE POTRZEBNY (sekrety nigdy w git) |
-| SEC-002 | SQL injection fix (parameterized queries) | ✅ DONE |
-| SEC-005 | CSRF token w frontend axios | ✅ DONE |
-| SEC-016 | Select clause w protect.js | ✅ DONE |
-| TEST-001 | Fix security.test.js (rbac, CSRF, routes) | ✅ DONE |
-
-### P1 — Quick Wins
-
-| ID | Opis | Status |
-|----|------|--------|
-| SEC-006 | Null origin CORS bypass | ✅ DONE |
-| SEC-008 | JSON body limit 10MB -> 1MB | ✅ DONE |
-| SEC-009 | Upload limit 200MB -> 50MB | ✅ DONE |
-| SEC-010 | Rate limiting na /auth/me | ✅ DONE |
-| SEC-011 | Security headers na nginx static | ✅ DONE |
-| SEC-013 | Env z /health endpoint | ✅ DONE |
-| SEC-015 | Log userId zamiast displayName | ✅ DONE |
-| SEC-017 | Redact req.body w Sentry | ✅ DONE |
-| SEC-018 | Require CRON_SECRET we wszystkich env | ✅ DONE |
-| SEC-019 | encodeURIComponent na OAuth error | ✅ DONE |
-| API-002 | Usun 8 duplikatow DB query | ✅ DONE |
-| API-003 | Walidacja date params | ✅ DONE |
-| API-004 | Token refresh mutex | ✅ DONE |
-| API-007 | Discovery error -> next(error) | ✅ DONE |
-| API-008 | Hardcoded Cloud Run URL w CORS | ✅ DONE |
-| API-009 | Fix UTF-8 encoding | ✅ DONE |
-| API-010 | Usun pusty profileController | ✅ DONE |
-| FE-001 | CSRF token w axios (= SEC-005) | ✅ DONE |
-| FE-003 | Usun 36 nieuzywanych shadcn/ui | ✅ DONE |
-| FE-005 | TypeScript interfaces dla hooks | ✅ DONE |
-| FE-007 | dist/ w .gitignore | ✅ DONE |
-| FE-008 | Git internals w .gitignore | ✅ DONE |
-| FE-010 | Duplikat use-toast.ts | ✅ DONE |
-| PERF-001 | SQL aggregation getListeningByDay | ✅ DONE |
-| PERF-005 | Refetch interval 1min -> 5min | ✅ DONE |
-| OPS-002 | Smoke test po deploy | ✅ DONE |
-| OPS-003 | npm test w CI/CD | ✅ DONE |
-| OPS-004 | Security scan blokuje merge | ✅ DONE |
-| OPS-005 | ENCRYPTION_KEY w --set-secrets | ✅ DONE |
-| OPS-006 | Frontend .dockerignore | ✅ DONE |
-| OPS-009 | NODE_OPTIONS w Dockerfile | ✅ DONE |
-| TEST-002 | CSRF test -> Double Submit Cookie | ✅ DONE |
-| A11Y-001 | Skip-to-content link | ✅ DONE |
-| A11Y-002 | Focus visible na kartach | ✅ DONE |
-| A11Y-003 | aria-label na icon buttons | ✅ DONE |
-| A11Y-005 | prefers-reduced-motion | ✅ DONE |
-| A11Y-006 | prefers-contrast | ✅ DONE |
-| A11Y-007 | Escape zamyka mobile menu | ✅ DONE |
-| UX-001 | Onboarding banner | ✅ DONE |
-| UX-002 | Opisowe empty states | ✅ DONE |
-| P4 | Usunieto bun.lockb, patch, backup css | ✅ DONE |
-| P4 | ENCRYPTION_KEY w .env.example | ✅ DONE |
+**Ostatnia aktualizacja:** 2026-04-07 (po 11 PR-ach)
 
 ---
 
-## ETAP 3 — DO ZROBIENIA
+## ETAP 2 — ZAKONCZONY (48 poprawek, 6 sekretow, 2 migracje DB)
 
-### Architektoniczne (wymagaja osobnego brancha)
+Wszystkie P0/P1 items zrealizowane. Pelna lista w [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md).
+
+## ETAP 3 — ZAKONCZONY (PR #34-#41)
+
+| ID | Opis | PR | Status |
+|----|------|-----|--------|
+| SEC-003 | Auth code flow (POST /auth/exchange, DB-backed codes) | #34, #37 | ✅ DONE |
+| SEC-004 | Access token server-side (migracja DB, JWT lean) | #34 | ✅ DONE |
+| PERF-002 | Streaming JSON parser (stream-json) | #38 | ✅ DONE |
+| TEST-003 | Frontend testy (Vitest + RTL, 22 testy) | #39 | ✅ DONE |
+| - | npm audit fix (0 HIGH vulnerabilities) | #33 | ✅ DONE |
+| - | Jest --forceExit (CI hang fix) | #35 | ✅ DONE |
+| - | Auth rate limit 3->10 | #36 | ✅ DONE |
+| - | Code review fixes (frontend + backend) | #40, #41 | ✅ DONE |
+
+---
+
+## POZOSTALE — BACKLOG
+
+### Infrastruktura (wymaga zasobow/decyzji)
+
+| ID | Opis | Effort | Priorytet | Notatki |
+|----|------|--------|-----------|---------|
+| OPS-001 | Staging environment | 1d | MEDIUM | Osobne Cloud Run + DB + Spotify App, koszt ~$0 |
+| OPS-007 | Monitoring (Prometheus/Sentry) | 1d | MEDIUM | prom-client + @sentry/node sa stubami w kodzie |
+| ARCH-F02 | Redis dla cache i rate limiting | 1d | LOW | Rate limiting per-instance, cache w PostgreSQL |
+| TEST-004 | Integration testy z Docker PostgreSQL | 2d | MEDIUM | Obecne testy mockuja Prisma |
+
+### UX Polish
 
 | ID | Opis | Effort | Priorytet |
 |----|------|--------|-----------|
-| SEC-003 | JWT-in-URL -> auth code flow (POST /auth/exchange) | 4h | HIGH |
-| SEC-004 | Spotify access token server-side (migracja DB) | 4h | HIGH |
-| SEC-007 | Przejscie na httpOnly cookie only (wymaga SEC-003) | 2h | MEDIUM |
+| UX-004 | Precyzyjne time range labels ("4 Tygodnie" nie "Tydzien") | 30min | LOW |
+| UX-005 | Breadcrumbs/back nav na subpages | 1h | LOW |
+| UX-006 | Statystyki na profilu (total plays, hours) | 2h | LOW |
+| SEC-007 | httpOnly cookie only (usunac localStorage JWT) | 2h | LOW — wymaga custom domain |
 
-### Testy
-
-| ID | Opis | Effort | Priorytet |
-|----|------|--------|-----------|
-| TEST-003 | Frontend testy (Vitest + React Testing Library) | 4h | HIGH |
-| TEST-004 | Integration testy z Docker PostgreSQL | 2d | MEDIUM |
-
-### Infrastruktura
+### Architektura
 
 | ID | Opis | Effort | Priorytet |
 |----|------|--------|-----------|
-| OPS-001 | Staging environment (Cloud Run + DB + Spotify App) | 1d | MEDIUM |
-| OPS-007 | Monitoring — prom-client + @sentry/node lub usun stuby | 1d | MEDIUM |
-| ARCH-F02 | Redis dla cache i rate limiting | 1d | LOW |
+| ARCH-F03 | Warstwa DTO/response mapping | 2d | LOW |
+| ARCH-F05 | Shared types frontend-backend (OpenAPI lub monorepo) | 2d | LOW |
 
-### Performance
-
-| ID | Opis | Effort | Priorytet |
-|----|------|--------|-----------|
-| PERF-002 | Streaming JSON parser dla importu | 4h | MEDIUM |
-
-### Backlog (nice to have)
+### Inne
 
 | ID | Opis | Effort |
 |----|------|--------|
-| UX-004 | Precyzyjne time range labels | 30min |
-| UX-005 | Breadcrumbs/back nav | 1h |
-| UX-006 | Statystyki na profilu | 2h |
-| FE-006 | i18n (jesli planowany angielski) | 2d |
+| FE-006 | i18n (react-i18next) | 2d |
 | FE-012 | Sync settings z backendem | 4h |
-| ARCH-F03 | Warstwa DTO/response mapping | 2d |
-| ARCH-F05 | Shared types frontend-backend | 2d |
 | PERF-006 | Lepsza Vite chunk strategy | 30min |
-| PERF-008 | Connection pooling config | 15min |
+| PERF-008 | Connection pooling config w DATABASE_URL | 15min |
 
 ---
 
-## Timeline
+## Statystyki Projektu
 
-```
-ETAP 2 (2026-04-06): 48 poprawek — ZAKONCZONY
-ETAP 3a: SEC-003 + SEC-004 + SEC-007 (auth refactor) — ~10h
-ETAP 3b: TEST-003 + TEST-004 (testy) — ~3d
-ETAP 3c: OPS-001 + OPS-007 (staging + monitoring) — ~2d
-Ongoing: Backlog items
-```
+| Metryka | Wartosc |
+|---------|---------|
+| PRy zmergowane | 11 (#31-#41) |
+| Poprawki kodu | ~55 |
+| Sekrety zrotowane | 6 |
+| Migracje DB | 2 |
+| Testy backend | 53 pass |
+| Testy frontend | 22 pass |
+| Pliki usuniete | 40+ (shadcn/ui, junk) |
+| Linie usuniete | ~4,000+ |
+| Vulnerabilities HIGH | 0 (npm audit clean) |
+| CI/CD | testy + deploy + smoke test + security scan |

@@ -105,17 +105,17 @@ Przeszukano cala historie git — prawdziwe wartosci sekretow **nigdy nie zostal
 
 | Kategoria | Wdrozone | Pozostale |
 |-----------|----------|-----------|
-| Critical Security (P0) | 8 | 0 |
-| Security (P1) | 7 | 2 (SEC-003, SEC-004) |
-| API/Code Quality | 8 | 0 |
-| Performance | 2 | 1 (PERF-002 streaming parser) |
-| Tests | 3 | 2 (TEST-003 frontend, TEST-004 integration) |
-| Accessibility | 7 | 0 |
-| UX | 2 | 4 (UX-004/005/006, profil stats) |
+| Critical Security (P0) | 10 (w tym SEC-003, SEC-004) | 0 |
+| Security (P1) | 9 | 1 (SEC-007 httpOnly cookie) |
+| API/Code Quality | 8 + 3 review fixes | 0 |
+| Performance | 3 (PERF-001, PERF-002, PERF-005) | 0 |
+| Tests | 5 (backend fixes + 22 frontend tests) | 1 (TEST-004 integration) |
+| Accessibility | 7 + 1 review fix | 0 |
+| UX | 2 | 3 (UX-004/005/006) |
 | DevOps/Ops | 7 | 2 (OPS-001 staging, OPS-007 monitoring) |
-| Cleanup | 4 (40 plikow usunietych) | 0 |
-| Infrastruktura | 6 sekretow zrotowanych | 0 |
-| **LACZNIE** | **48 poprawek** | **11 remaining** |
+| Cleanup | 40+ plikow usunietych | 0 |
+| Infrastruktura | 6 sekretow + 2 migracje DB | 1 (ARCH-F02 Redis) |
+| **LACZNIE** | **~55 poprawek (11 PR-ow)** | **~8 backlog** |
 
 ## Co Pozostalo Do Zrobienia
 
@@ -142,16 +142,11 @@ Przeszukano cala historie git — prawdziwe wartosci sekretow **nigdy nie zostal
 | OPS-007 | Monitoring — zainstaluj prom-client + @sentry/node lub usun stuby | 1d | MEDIUM |
 | ARCH-F02 | Redis dla cache i rate limiting | 1d | LOW |
 
-### Performance
-
-| ID | Opis | Effort | Priorytet |
-|----|------|--------|-----------|
-| PERF-002 | Streaming JSON parser dla importu (zamiast JSON.parse calego pliku) | 4h | MEDIUM |
-
 ### Backlog (nice to have)
 
 | ID | Opis | Effort |
 |----|------|--------|
+| SEC-007 | httpOnly cookie only (wymaga custom domain) | 2h |
 | UX-004 | Precyzyjne time range labels | 30min |
 | UX-005 | Breadcrumbs/back nav | 1h |
 | UX-006 | Statystyki na profilu | 2h |
@@ -159,3 +154,43 @@ Przeszukano cala historie git — prawdziwe wartosci sekretow **nigdy nie zostal
 | FE-012 | Sync settings z backendem | 4h |
 | ARCH-F03 | Warstwa DTO/response mapping | 2d |
 | ARCH-F05 | Shared types frontend-backend | 2d |
+| PERF-006 | Lepsza Vite chunk strategy | 30min |
+| PERF-008 | Connection pooling config | 15min |
+
+---
+
+## ETAP 3 — Wdrozone (PR #34-#41, 2026-04-07)
+
+### PR #34: SEC-003 + SEC-004 — Auth Code Flow + Server-Side Token
+
+| ID | Opis | Notatki |
+|----|------|---------|
+| SEC-003 | Auth code flow | POST /auth/exchange, kody w DB (multi-instance), 60s TTL, single-use |
+| SEC-004 | Access token server-side | Zaszyfrowany AES-256-GCM w DB, JWT lean (4 pola), 2 migracje |
+
+### PR #35-#37: Hotfixy auth flow
+
+| Opis | PR | Notatki |
+|------|-----|---------|
+| Jest --forceExit | #35 | CI wisialo na open handles |
+| Auth rate limit 3->10 | #36 | Login flow = 3 requesty, stary limit za ciasny |
+| Auth code DB + CSRF skip | #37 | Memory Map nie dzialal na Cloud Run (multi-instance), CSRF blokowal /auth/exchange |
+
+### PR #38: PERF-002 — Streaming JSON Parser
+
+| ID | Opis | Notatki |
+|----|------|---------|
+| PERF-002 | stream-json zamiast JSON.parse | Constant memory, nie blokuje event loop |
+
+### PR #39: TEST-003 — Frontend Testy
+
+| ID | Opis | Notatki |
+|----|------|---------|
+| TEST-003 | Vitest + RTL + jsdom | 22 testy: api client, useSpotifyData hooks, genreUtils, listeningAge |
+
+### PR #40-#41: Code Review Fixes
+
+| Zrodlo | Opis | PR |
+|--------|------|-----|
+| Frontend review agent | Escape key -> window listener, typy renamed | #40 |
+| Backend review agent | req.spotifyTokenExpiry fix, exchange try-catch+next, mutex lock leak | #41 |

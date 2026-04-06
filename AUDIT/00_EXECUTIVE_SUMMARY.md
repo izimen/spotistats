@@ -23,7 +23,7 @@
 | Obszar | Ocena | Komentarz |
 |--------|-------|-----------|
 | Architektura | 7/10 | Solidna struktura MVC, dobre separation of concerns |
-| Bezpieczenstwo | 8/10 | 15 fixow security, sekrety zrotowane. Pozostalo: SEC-003 JWT-in-URL, SEC-004 token server-side |
+| Bezpieczenstwo | 9/10 | 19 fixow security, sekrety zrotowane, auth code flow, token server-side. Pozostalo: SEC-007 httpOnly cookie |
 | Backend | 8/10 | Mutex, walidacja, duplikaty DB usiniete, encoding fix, discovery errors |
 | Frontend | 8/10 | 36 dead components usuniete, TS interfaces, CSRF, empty states, onboarding |
 | UI/UX | 9/10 | Onboarding banner, empty states z CTA, a11y fixes |
@@ -54,15 +54,11 @@ Po zakonczeniu manualnego audytu, uruchomiono 4 rownolegle agenty GSD do niezale
 - ~~**Wplyw:** `$executeRawUnsafe` z interpolacja stringow~~
 - **Fix:** Zamieniono na `$executeRaw` z `Prisma.sql` tagged template + `Prisma.join` (2026-04-06)
 
-### 3. HIGH: JWT z Spotify access token w URL
-- **Plik:** `backend/src/controllers/authController.js:156`
-- **Wplyw:** JWT (zawierajacy Spotify access token) przesylany jako URL param - logowany w access logach, browser history, referrer
-- **Remediation:** Krotkotrwaly authorization code zamiast pelnego JWT
+### 3. ~~HIGH: JWT z Spotify access token w URL~~ ✅ FIXED (PR #34, #37)
+- **Fix:** Auth code flow — backend redirectuje z `?code=` (nie `?token=`), frontend wymienia code na JWT przez POST /auth/exchange. Kody w DB, single-use, 60s TTL.
 
-### 4. HIGH: Spotify access token w JWT payload
-- **Plik:** `backend/src/controllers/authController.js:50-57`
-- **Wplyw:** Kompromitacja JWT daje dostep do konta Spotify uzytkownika
-- **Remediation:** Przechowuj access token server-side, nie w JWT
+### 4. ~~HIGH: Spotify access token w JWT payload~~ ✅ FIXED (PR #34)
+- **Fix:** Access token zaszyfrowany AES-256-GCM w DB. JWT zawiera tylko userId, spotifyId, tokenFamily, tokenVersion. Migracja DB zastosowana.
 
 ### 5. ~~HIGH: Frontend nie wysyla CSRF token~~ ✅ FIXED
 - **Plik:** `frontend/src/lib/api.ts`
@@ -88,23 +84,27 @@ Po zakonczeniu manualnego audytu, uruchomiono 4 rownolegle agenty GSD do niezale
 | Commity | 30+ |
 | Pliki testowe | 3 (auth, business, security) |
 | CI/CD workflows | 2 (deploy, security-scan) |
-| Migracje DB | 6 |
+| Migracje DB | 8 (6 original + 2 new: access token + auth code) |
 
 ## Rekomendacja
 
-**ETAP 2 ZAKONCZONY (2026-04-06):**
-- 48 poprawek w 5 commitach
+**ETAP 2 + 3 ZAKONCZONY (2026-04-06/07):**
+- ~55 poprawek w 11 PR-ach (#31-#41)
 - 6 sekretow zrotowanych w GCP Secret Manager
-- 36 dead UI components usunietych (-3,424 linii)
-- 53/53 backend testow pass
-- TypeScript frontend kompiluje bez bledow
-- Backend redeployowany i zweryfikowany (smoke test OK)
+- 40+ plikow usunietych (-4,000+ linii dead code)
+- 2 migracje DB (access token server-side + auth code)
+- SEC-003: Auth code flow (JWT nigdy w URL)
+- SEC-004: Spotify access token zaszyfrowany w DB (nie w JWT)
+- PERF-002: Streaming JSON parser (stream-json)
+- 53/53 backend + 22/22 frontend testow pass
+- npm audit: 0 HIGH vulnerabilities
+- CI/CD: testy + deploy + smoke test + security scan
+- Code review agentami (frontend + backend) — 5 bugow znalezionych i naprawionych
 
-**Pozostale do zrobienia (ETAP 3):**
-1. SEC-003: JWT-in-URL -> auth code flow (4h, wymaga nowego endpointu)
-2. SEC-004: Access token server-side (4h, wymaga migracji DB)
-3. TEST-003: Frontend testy Vitest + RTL (4h)
+**Pozostale (backlog — nie blokuje produkcji):**
+1. OPS-001: Staging environment (1d)
+2. OPS-007: Monitoring — prom-client + @sentry/node (1d)
+3. ARCH-F02: Redis dla cache/rate limiting (1d)
 4. TEST-004: Integration testy z prawdziwa DB (2d)
-5. OPS-001: Staging environment (1d)
-6. OPS-007: Monitoring — prom-client + @sentry/node (1d)
-7. PERF-002: Streaming JSON parser dla importu (4h)
+5. UX polish: time range labels, breadcrumbs, profil stats
+6. SEC-007: httpOnly cookie only (wymaga custom domain)
