@@ -96,7 +96,8 @@ async function callback(req, res) {
 
     if (error) {
         console.error('OAuth error:', error);
-        return res.redirect(`${env.frontendUrl}/login?error=${error}`);
+        // SEC-019: Encode error param to prevent injection
+        return res.redirect(`${env.frontendUrl}/login?error=${encodeURIComponent(error)}`);
     }
 
     if (!code || !state) {
@@ -219,15 +220,20 @@ async function refresh(req, res, next) {
             });
         }
 
-        // Check if user has refresh token
-        if (!user.refreshToken) {
+        // Fetch refreshToken from DB (protect middleware strips it from req.user for safety)
+        const userWithToken = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { refreshToken: true }
+        });
+
+        if (!userWithToken?.refreshToken) {
             return res.status(401).json({
                 error: 'NoRefreshToken',
                 message: 'Session expired. Please log in again.'
             });
         }
 
-        const decryptedRefreshToken = decrypt(user.refreshToken);
+        const decryptedRefreshToken = decrypt(userWithToken.refreshToken);
         const newTokens = await refreshAccessToken(decryptedRefreshToken);
         const tokenExpiry = new Date(Date.now() + newTokens.expiresIn * 1000);
 

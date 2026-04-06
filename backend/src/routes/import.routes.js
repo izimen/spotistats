@@ -15,7 +15,7 @@ const { auditMiddleware, AUDIT_EVENTS } = require('../services/auditService');
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 200 * 1024 * 1024 // 200MB max
+        fileSize: 50 * 1024 * 1024 // SEC-009: Reduced from 200MB to 50MB (Cloud Run has 512MB RAM)
     },
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'application/json' || file.originalname.endsWith('.json')) {
@@ -31,7 +31,7 @@ router.use(protect);
 
 // Upload JSON data in request body
 router.post('/upload',
-    jsonSizeLimit(100 * 1024 * 1024), // 100MB max for body
+    jsonSizeLimit(50 * 1024 * 1024), // SEC-009: Reduced from 100MB to 50MB
     importLimiter, // Rate limit: 1 per 15 minutes
     auditMiddleware(AUDIT_EVENTS.IMPORT_STARTED, (req) => ({
         source: 'body',

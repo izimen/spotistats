@@ -90,7 +90,10 @@ export const api = axios.create({
     }
 });
 
-// Request interceptor - add Authorization header and check expiration
+// CSRF token storage (SEC-005 fix: frontend must send X-CSRF-Token header)
+let csrfToken: string | null = null;
+
+// Request interceptor - add Authorization header, CSRF token, and check expiration
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem(TOKEN_KEY);
@@ -104,14 +107,26 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        // Attach CSRF token to state-changing requests
+        if (csrfToken && ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')) {
+            config.headers['X-CSRF-Token'] = csrfToken;
+        }
+
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle 401 with auto-refresh and 429 rate limiting
+// Response interceptor - capture CSRF token, handle 401 with auto-refresh and 429 rate limiting
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Capture CSRF token from response headers (SEC-005 fix)
+        const newCsrfToken = response.headers['x-csrf-token'];
+        if (newCsrfToken) {
+            csrfToken = newCsrfToken;
+        }
+        return response;
+    },
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 

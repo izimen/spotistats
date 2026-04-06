@@ -7,3 +7,13 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+.planning/
+
+# FE-008: Prevent git internals from being tracked in frontend/
+frontend/hooks/
+frontend/objects/
+frontend/refs/
+frontend/HEAD
+frontend/packed-refs
+frontend/index
+frontend/logs/

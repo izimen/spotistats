@@ -64,8 +64,13 @@ app.use(cors({
             );
         }
 
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
+        // SEC-006: Reject requests with no origin in production
+        // Null origin can be exploited via file:// URLs or sandboxed iframes
+        if (!origin) {
+            // In development, allow no-origin for curl/Postman testing
+            if (!env.isProduction) return callback(null, true);
+            return callback(new Error('Not allowed by CORS'));
+        }
 
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
@@ -85,8 +90,9 @@ app.use(generalLimiter);
 // Body Parsing (must be before CSRF)
 // ===================
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// SEC-008: Reduced from 10MB to 1MB to prevent memory exhaustion on 512MB Cloud Run
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
 // ===================
@@ -107,11 +113,11 @@ app.use(csrfProtection);
 // Health Check & Metrics
 // ===================
 
+// SEC-013: Don't expose environment info in health check
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
-        timestamp: new Date().toISOString(),
-        env: env.nodeEnv
+        timestamp: new Date().toISOString()
     });
 });
 
