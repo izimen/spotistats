@@ -204,7 +204,10 @@ const Index = () => {
                 />
               ))
             ) : (
-              <p className="text-muted-foreground text-center py-4">Brak danych</p>
+              <div className="text-center py-8 space-y-2">
+                <p className="text-muted-foreground">Brak danych do wyswietlenia</p>
+                <p className="text-sm text-muted-foreground/70">Zacznij sluchac muzyki na Spotify, a statystyki pojawia sie tutaj automatycznie</p>
+              </div>
             )}
           </div>
         </div>
@@ -234,7 +237,10 @@ const Index = () => {
                 />
               ))
             ) : (
-              <p className="text-muted-foreground text-center py-4">Brak danych</p>
+              <div className="text-center py-8 space-y-2">
+                <p className="text-muted-foreground">Brak danych do wyswietlenia</p>
+                <p className="text-sm text-muted-foreground/70">Zacznij sluchac muzyki na Spotify, a statystyki pojawia sie tutaj automatycznie</p>
+              </div>
             )}
           </div>
         </div>

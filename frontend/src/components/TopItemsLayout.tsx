@@ -83,7 +83,8 @@ const TopItemsLayout = ({
                             <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
                                 <GridIcon className="w-6 h-6 text-muted-foreground/50" />
                             </div>
-                            <p className="text-muted-foreground">Brak danych</p>
+                            <p className="text-muted-foreground">Brak danych do wyswietlenia</p>
+                            <p className="text-sm text-muted-foreground/70 mt-1">Sluchaj muzyki na Spotify, a Twoje top pojawi sie tutaj</p>
                         </div>
                     ) : (
                         children
