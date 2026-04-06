@@ -1,5 +1,6 @@
-import { type LucideIcon, Loader2 } from "lucide-react";
+import { type LucideIcon, Loader2, ChevronLeft } from "lucide-react";
 import { type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
 
 interface TopItemsLayoutProps {
@@ -40,6 +41,11 @@ const TopItemsLayout = ({
             <section className="opacity-0 animate-fade-in">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
+                        {/* UX-005: Back navigation */}
+                        <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
+                            <ChevronLeft className="w-4 h-4" />
+                            Panel
+                        </Link>
                         <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-1">
                             {title} <span className="text-gradient">{highlightedTitle}</span>
                         </h1>
