@@ -67,9 +67,10 @@ function csrfProtection(req, res, next) {
         return next();
     }
 
-    // Skip specific paths if needed (webhooks, cron endpoints)
+    // Skip specific paths if needed (webhooks, cron endpoints, auth exchange)
     const skipPaths = [
-        '/api/v1/cron/' // Cron routes have their own auth (Bearer secret key)
+        '/api/v1/cron/', // Cron routes have their own auth (Bearer secret key)
+        '/auth/exchange'  // SEC-003: User has no CSRF token during OAuth callback flow
     ];
     if (skipPaths.some(path => req.path.startsWith(path))) {
         return next();
