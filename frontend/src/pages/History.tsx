@@ -61,6 +61,9 @@ interface Badge {
 const History = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
+  // All-time API stats (Music DNA, prediction, peak hours) used to be shown for the
+  // removed "Wszystko" range; "1 Rok" (long_term) is now the widest range.
+  const ALL_TIME_RANGE: TimeRange = "year";
   const [showRouletteModal, setShowRouletteModal] = useState(false);
   const [rouletteTrack, setRouletteTrack] = useState<HistoryTrack | null>(null);
 
@@ -79,8 +82,6 @@ const History = () => {
       case 'year':
         from.setFullYear(now.getFullYear() - 1);
         break;
-      case 'all':
-        return { from: undefined, to: undefined };
     }
 
     return { from, to: now };
@@ -210,7 +211,7 @@ const History = () => {
 
   // Fetch Music DNA from API (Only for 'all' time range)
   useEffect(() => {
-    if (timeRange !== 'all') {
+    if (timeRange !== ALL_TIME_RANGE) {
       setApiMusicDNA(null);
       return;
     }
@@ -231,7 +232,7 @@ const History = () => {
 
   // Fetch Prediction from API (Only for 'all' time range)
   useEffect(() => {
-    if (timeRange !== 'all') {
+    if (timeRange !== ALL_TIME_RANGE) {
       setApiPrediction(null);
       return;
     }
@@ -252,7 +253,7 @@ const History = () => {
 
   // Fetch Heatmap (Peak Hours) from API (Only for 'all' time range)
   useEffect(() => {
-    if (timeRange !== 'all') {
+    if (timeRange !== ALL_TIME_RANGE) {
       setApiHeatmap(null);
       return;
     }
@@ -348,7 +349,8 @@ const History = () => {
       {/* 🔮 Prediction + 🎲 Roulette Row */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
         {/* Prediction */}
-        {(prediction || true) && (
+        {(
+
           <div className="opacity-0 animate-fade-in rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6" style={{ animationDelay: '400ms' }}>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">

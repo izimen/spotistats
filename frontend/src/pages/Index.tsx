@@ -35,7 +35,7 @@ interface RawTrack {
   name: string;
   artists?: { name: string }[];
   artist?: string;
-  album?: { image?: string; releaseDate?: string };
+  album?: { image?: string | null; releaseDate?: string | null };
   duration?: number;
   previewUrl?: string | null;
   spotifyUrl?: string | null;

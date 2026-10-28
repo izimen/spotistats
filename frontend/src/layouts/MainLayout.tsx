@@ -1,12 +1,20 @@
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import Header from "@/components/Header";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import { hasAuthToken } from "@/lib/api";
+import { isPreviewMode } from "@/lib/mockData";
 
 /**
  * MainLayout - Unified layout wrapper for authenticated pages
  * Provides common elements: Header, AnimatedBackground, consistent padding
  */
 const MainLayout = () => {
+    // Anonymous visitors go straight to the login page instead of firing
+    // protected API calls (and a doomed token refresh) first.
+    if (!isPreviewMode() && !hasAuthToken()) {
+        return <Navigate to="/login" replace />;
+    }
+
     return (
         <div className="min-h-screen bg-background relative overflow-hidden">
             {/* A11Y-001: Skip to main content link */}

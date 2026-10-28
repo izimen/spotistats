@@ -19,7 +19,7 @@ describe('genreUtils', () => {
         ];
         const result = calculateTopGenres(artists, 3);
         expect(result.topGenres.length).toBeGreaterThan(0);
-        const genreNames = result.topGenres.map((g: any) => g.name.toLowerCase());
+        const genreNames = result.topGenres.map((g: { name: string }) => g.name.toLowerCase());
         expect(genreNames).toContain('pop');
         expect(genreNames).toContain('rock');
     });
@@ -30,7 +30,7 @@ describe('genreUtils', () => {
             { genres: undefined },
             {},
         ];
-        const result = calculateTopGenres(artists as any, 5);
+        const result = calculateTopGenres(artists as Parameters<typeof calculateTopGenres>[0], 5);
         expect(result.topGenres).toEqual([]);
     });
 });

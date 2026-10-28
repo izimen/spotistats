@@ -22,6 +22,17 @@ if (import.meta.env.DEV) {
 
 const TOKEN_KEY = 'spotify_jwt';
 
+/**
+ * Whether a session token is stored (user has logged in on this device)
+ */
+export function hasAuthToken(): boolean {
+    try {
+        return Boolean(localStorage.getItem(TOKEN_KEY));
+    } catch {
+        return false;
+    }
+}
+
 // Flag to prevent multiple refresh attempts
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
@@ -162,6 +173,12 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             // Don't retry auth endpoints
             if (originalRequest.url?.includes('/auth/')) {
+                return Promise.reject(error);
+            }
+
+            // No stored session: nothing to refresh, just send the user to login
+            if (!hasAuthToken()) {
+                window.location.href = '/login';
                 return Promise.reject(error);
             }
 

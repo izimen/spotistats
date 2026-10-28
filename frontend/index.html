@@ -18,12 +18,9 @@
   <!-- DNS prefetch as fallback -->
   <link rel="dns-prefetch" href="https://spotistats-backend-ox6p5to4qa-lm.a.run.app" />
 
-  <!-- Async font loading (non-render-blocking) -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-    media="print" onload="this.media='all'" />
-  <noscript>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  </noscript>
+  <!-- Font stylesheet (display=swap keeps text visible while loading).
+       No inline onload handler: the CSP (script-src 'self') blocks it. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 
   <meta property="og:title" content="SpotiStats - Twoje statystyki muzyczne" />
   <meta property="og:description" content="Sprawdź swoje statystyki słuchania muzyki" />
