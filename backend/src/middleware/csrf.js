@@ -28,6 +28,14 @@ function generateToken() {
 }
 
 /**
+ * True when the request carries a non-empty `Authorization: Bearer <token>` header
+ */
+function hasBearerToken(req) {
+    const auth = req.get('authorization');
+    return typeof auth === 'string' && /^Bearer\s+\S+/.test(auth);
+}
+
+/**
  * CSRF Token Generation Middleware
  * Should be applied early in the middleware chain
  * Generates token if not present in cookies
@@ -39,10 +47,14 @@ function csrfTokenGenerator(req, res, next) {
     // Generate new token if not present
     if (!token) {
         token = generateToken();
+        // Frontend and backend live on different *.a.run.app hosts (a public suffix,
+        // so they are cross-site): a Strict/Lax cookie would never come back on XHR.
+        // SameSite=None is still safe for double-submit - other origins can neither
+        // read this cookie nor the X-CSRF-Token response header (CORS).
         res.cookie(CSRF_COOKIE_NAME, token, {
             httpOnly: true,
             secure: env.isProduction,
-            sameSite: 'strict',
+            sameSite: env.isProduction ? 'none' : 'lax',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
     }
@@ -76,6 +88,14 @@ function csrfProtection(req, res, next) {
         return next();
     }
 
+    // Header-authenticated requests are not CSRF-able: a browser never attaches an
+    // Authorization header automatically, and a cross-origin page cannot add one
+    // without a CORS preflight, which only env.frontendUrl passes. protect() uses
+    // the Bearer token (not the cookie) whenever this header is present.
+    if (hasBearerToken(req)) {
+        return next();
+    }
+
     // Get tokens
     const cookieToken = req.cookies[CSRF_COOKIE_NAME];
     const headerToken = req.get(CSRF_HEADER_NAME);
@@ -106,5 +126,6 @@ module.exports = {
     csrfTokenGenerator,
     csrfProtection,
     getToken,
+    hasBearerToken,
     CSRF_HEADER_NAME
 };

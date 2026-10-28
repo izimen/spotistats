@@ -14,20 +14,27 @@ const { isDatabaseUnavailableError } = require('./errorHandler');
 const prisma = require('../utils/prismaClient');
 
 /**
+ * Get the JWT: Authorization Bearer header first, then the jwt cookie.
+ * The header wins so that requests exempted from CSRF checks (Bearer present,
+ * see csrf.js) are always authenticated by that header, never by an ambient cookie.
+ * The frontend (cross-site on *.a.run.app) authenticates via the header.
+ */
+function extractToken(req) {
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string') {
+        const match = authHeader.match(/^Bearer\s+(\S+)/);
+        if (match) return match[1];
+    }
+    return req.cookies?.jwt || null;
+}
+
+/**
  * Protect middleware - requires valid JWT
  * Extracts Spotify accessToken and validates token version
  */
 async function protect(req, res, next) {
     try {
-        // Try cookie first, then Authorization header (for cross-origin dev environment)
-        let token = req.cookies.jwt;
-
-        if (!token) {
-            const authHeader = req.headers.authorization;
-            if (authHeader && authHeader.startsWith('Bearer ')) {
-                token = authHeader.split(' ')[1];
-            }
-        }
+        const token = extractToken(req);
 
         if (!token) {
             return res.status(401).json({
@@ -127,15 +134,7 @@ async function protect(req, res, next) {
  */
 async function optionalAuth(req, res, next) {
     try {
-        // Try cookie first, then Authorization header
-        let token = req.cookies.jwt;
-
-        if (!token) {
-            const authHeader = req.headers.authorization;
-            if (authHeader && authHeader.startsWith('Bearer ')) {
-                token = authHeader.split(' ')[1];
-            }
-        }
+        const token = extractToken(req);
 
         if (!token) {
             return next();
