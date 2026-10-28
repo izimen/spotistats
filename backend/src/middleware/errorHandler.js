@@ -30,6 +30,21 @@ function notFoundHandler(req, res, next) {
     next(error);
 }
 
+// Prisma codes for "database cannot be reached / authenticated / pool exhausted"
+const DB_UNAVAILABLE_CODES = new Set(['P1000', 'P1001', 'P1002', 'P1008', 'P1017', 'P2024']);
+
+/**
+ * True when the error means the database is unreachable (e.g. a paused Supabase project),
+ * as opposed to a bug in a query.
+ */
+function isDatabaseUnavailableError(err) {
+    if (!err) return false;
+    if (err.name === 'PrismaClientInitializationError') return true;
+    if (DB_UNAVAILABLE_CODES.has(err.code) || DB_UNAVAILABLE_CODES.has(err.errorCode)) return true;
+    return typeof err.message === 'string' &&
+        /Can't reach database server|tenant\/user .* not found|Error querying the database: FATAL/i.test(err.message);
+}
+
 /**
  * Global error handler
  */
@@ -38,6 +53,23 @@ function errorHandler(err, req, res, next) {
     let statusCode = err.statusCode || 500;
     let errorCode = err.errorCode || 'ServerError';
     let message = err.message || 'An unexpected error occurred';
+    let isOperational = err.isOperational;
+
+    // CORS rejection from the cors() origin callback - a client error, not a server fault
+    if (err.message === 'Not allowed by CORS') {
+        statusCode = 403;
+        errorCode = 'CorsForbidden';
+        message = 'Origin not allowed';
+        isOperational = true;
+    }
+
+    if (isDatabaseUnavailableError(err)) {
+        statusCode = 503;
+        errorCode = 'DatabaseUnavailable';
+        message = 'Database temporarily unavailable. Please try again later.';
+        isOperational = true;
+        res.set('Retry-After', '60');
+    }
 
     // Log error in development
     if (!env.isProduction) {
@@ -103,7 +135,7 @@ function errorHandler(err, req, res, next) {
         title: errorCode.replace(/([A-Z])/g, ' $1').trim(), // CamelCase -> Title Case
         status: statusCode,
         // SECURITY FIX: In production, hide internal error details for non-operational errors
-        detail: env.isProduction && !err.isOperational
+        detail: env.isProduction && !isOperational
             ? 'An unexpected error occurred'
             : message,
         instance: req.originalUrl,
@@ -114,5 +146,6 @@ function errorHandler(err, req, res, next) {
 module.exports = {
     AppError,
     notFoundHandler,
-    errorHandler
+    errorHandler,
+    isDatabaseUnavailableError
 };

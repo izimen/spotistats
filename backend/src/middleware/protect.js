@@ -10,6 +10,7 @@
  */
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
+const { isDatabaseUnavailableError } = require('./errorHandler');
 const prisma = require('../utils/prismaClient');
 
 /**
@@ -106,6 +107,11 @@ async function protect(req, res, next) {
 
         next();
     } catch (error) {
+        // DB outage (e.g. paused Supabase) is not an auth failure: keep the session
+        // cookie and let the error handler answer 503 instead of logging the user out.
+        if (isDatabaseUnavailableError(error)) {
+            return next(error);
+        }
         console.error('Auth middleware error:', error);
         res.clearCookie('jwt');
         return res.status(500).json({
