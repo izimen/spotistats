@@ -5,18 +5,6 @@ dist/
 .git/
 .gitignore
 
-# Git internals (accidentally in frontend/)
-hooks/
-objects/
-refs/
-HEAD
-packed-refs
-index
-info/
-logs/
-config
-description
-
 # Build artifacts
 bun.lockb
 *.log
