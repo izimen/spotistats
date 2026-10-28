@@ -213,13 +213,15 @@ async function getUserProfile(accessToken) {
         const spotifyApi = createSpotifyApi({ accessToken });
         const response = await spotifyApi.getMe();
 
+        // Feb 2026 dev-mode changes removed email, country and product from GET /me
+        // for restricted apps - they may be missing, so normalise to null.
         return {
             spotifyId: response.body.id,
-            email: response.body.email,
-            displayName: response.body.display_name,
+            email: response.body.email || null,
+            displayName: response.body.display_name || null,
             avatarUrl: response.body.images?.[0]?.url || null,
-            country: response.body.country,
-            product: response.body.product
+            country: response.body.country || null,
+            product: response.body.product || null
         };
     });
 }
@@ -412,25 +414,98 @@ async function getTopAlbums(accessToken, userId, options = {}) {
     return { body: result, fromCache: false };
 }
 
+// ============================================
+// RESTRICTED / DEPRECATED ENDPOINTS
+// ============================================
+
+// Spotify restricted several endpoints for apps without extended quota
+// (Nov 2024: audio-features, recommendations, ...; Feb/Mar 2026 dev-mode changes).
+// They answer 403 (or 404/410). Such failures are permanent for this app, so we
+// remember them for a while instead of hammering a dead endpoint on every request.
+const UNAVAILABLE_RECHECK_MS = 6 * 60 * 60 * 1000; // re-probe every 6h
+const unavailableEndpoints = new Map(); // name -> timestamp when marked
+
 /**
- * Get audio features for multiple tracks
+ * True when a Spotify error means "this endpoint is not available to this app"
+ * (as opposed to an expired token, rate limit or outage).
+ */
+function isEndpointRestrictedError(error) {
+    const status = error?.statusCode || error?.response?.status;
+    return status === 403 || status === 404 || status === 410;
+}
+
+function isEndpointMarkedUnavailable(name) {
+    const markedAt = unavailableEndpoints.get(name);
+    if (!markedAt) return false;
+    if (Date.now() - markedAt > UNAVAILABLE_RECHECK_MS) {
+        unavailableEndpoints.delete(name);
+        return false;
+    }
+    return true;
+}
+
+function markEndpointUnavailable(name, error) {
+    if (!unavailableEndpoints.has(name)) {
+        const status = error?.statusCode || error?.response?.status;
+        console.warn(`[Spotify] Endpoint "${name}" unavailable for this app (HTTP ${status}) - feature degraded`);
+    }
+    unavailableEndpoints.set(name, Date.now());
+}
+
+/**
+ * Get audio features for multiple tracks.
+ * Spotify restricted GET /audio-features for new / dev-mode apps (Nov 2024).
+ * When restricted, resolves with an empty list and `unavailable: true` instead of throwing.
  * @param {string} accessToken - Spotify access token
  * @param {string[]} trackIds - Array of Spotify track IDs (max 100)
- * @returns {object} Audio features for each track
+ * @returns {object} { body: { audio_features }, unavailable? }
  */
 async function getAudioFeatures(accessToken, trackIds) {
     if (!trackIds || trackIds.length === 0) {
         return { body: { audio_features: [] } };
     }
 
+    if (isEndpointMarkedUnavailable('audio-features')) {
+        return { body: { audio_features: [] }, unavailable: true };
+    }
+
     // Spotify API allows max 100 tracks per request
     const limitedIds = trackIds.slice(0, 100);
 
-    return withRateLimitHandling(async () => {
-        const spotifyApi = createSpotifyApi({ accessToken });
-        const response = await spotifyApi.getAudioFeaturesForTracks(limitedIds);
-        return response;
-    });
+    try {
+        return await withRateLimitHandling(async () => {
+            const spotifyApi = createSpotifyApi({ accessToken });
+            const response = await spotifyApi.getAudioFeaturesForTracks(limitedIds);
+            return response;
+        });
+    } catch (error) {
+        if (isEndpointRestrictedError(error)) {
+            markEndpointUnavailable('audio-features', error);
+            return { body: { audio_features: [] }, unavailable: true };
+        }
+        throw error;
+    }
+}
+
+/**
+ * Get recommendations. Spotify restricted GET /recommendations for new / dev-mode apps (Nov 2024).
+ * Resolves with `null` when the endpoint is unavailable instead of throwing.
+ */
+async function getRecommendations(accessToken, options) {
+    if (isEndpointMarkedUnavailable('recommendations')) return null;
+
+    try {
+        return await withRateLimitHandling(async () => {
+            const spotifyApi = createSpotifyApi({ accessToken });
+            return spotifyApi.getRecommendations(options);
+        });
+    } catch (error) {
+        if (isEndpointRestrictedError(error)) {
+            markEndpointUnavailable('recommendations', error);
+            return null;
+        }
+        throw error;
+    }
 }
 
 /**
@@ -452,6 +527,8 @@ module.exports = {
     getTopTracks,
     getTopAlbums,
     getAudioFeatures,
+    getRecommendations,
+    isEndpointRestrictedError,
     getRecentlyPlayed,
     clearCache,
     withRateLimitHandling,

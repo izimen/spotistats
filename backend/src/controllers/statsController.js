@@ -628,6 +628,9 @@ async function getAudioFeatures(req, res, next) {
 
         res.json({
             success: true,
+            // false when Spotify restricts GET /audio-features for this app (Nov 2024 policy)
+            available: !result.unavailable,
+            ...(result.unavailable ? { message: 'Spotify nie udostepnia juz cech audio dla tej aplikacji' } : {}),
             trackCount: trackIds.length,
             featuresCount: validFeatures.length,
             averages,
@@ -654,15 +657,6 @@ async function getAudioFeatures(req, res, next) {
             body: error.body || error.response?.data,
             userId: req.user?.id
         });
-
-        // If Spotify returns 403, it might be a scope issue
-        if (error.statusCode === 403 || error.response?.status === 403) {
-            return res.status(403).json({
-                success: false,
-                error: 'Spotify API access denied. This may be a scope issue - user-read-recently-played scope might be missing.',
-                details: error.body || error.message
-            });
-        }
 
         next(error);
     }
@@ -726,6 +720,14 @@ async function getDiscoveryRoulette(req, res, next) {
         const accessToken = await getAccessToken(req, req.user);
 
         const track = await discoveryService.getDiscoveryTrack(userId, accessToken);
+
+        if (!track) {
+            return res.json({
+                success: true,
+                data: null,
+                message: 'Brak propozycji - za malo historii sluchania lub Spotify nie udostepnia rekomendacji'
+            });
+        }
 
         res.json({
             success: true,
