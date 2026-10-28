@@ -41,17 +41,18 @@ export interface SpotifyArtist {
     popularity?: number;
 }
 
+// Shape returned by GET /api/v1/stats/top-tracks (backend statsController.getTopTracks)
 export interface SpotifyTrack {
-    rank: number;
-    title: string;
-    artist: string;
-    album: string;
-    image: string | null;
-    duration: string;
-    durationMs: number;
-    previewUrl: string | null;
-    spotifyUrl: string | null;
-    trackId: string;
+    rank?: number;
+    id: string;
+    name: string;
+    artists?: { id?: string; name: string }[];
+    artist?: string;
+    album?: { id?: string; name?: string; image?: string | null; releaseDate?: string | null };
+    duration?: number;
+    popularity?: number;
+    previewUrl?: string | null;
+    spotifyUrl?: string | null;
 }
 
 export interface SpotifyAlbum {

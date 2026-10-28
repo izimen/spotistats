@@ -128,7 +128,7 @@ const TopTrackCard = React.memo(({
     setIsHovered(false);
   }, []);
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = (e: React.SyntheticEvent) => {
     e.stopPropagation();
 
     // If no preview available, go directly to Spotify
@@ -196,7 +196,7 @@ const TopTrackCard = React.memo(({
         onClick={handleCardClick}
         tabIndex={0}
         role="link"
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(e); } }}
       >
         {/* Hidden audio element */}
         {previewUrl && (

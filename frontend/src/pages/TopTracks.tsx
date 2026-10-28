@@ -5,19 +5,9 @@ import TopTrackCard from "@/components/TopTrackCard";
 import StatsCard from "@/components/StatsCard";
 import TopItemsLayout from "@/components/TopItemsLayout";
 import { type TimeRange } from "@/components/TimeRangeFilter";
-import { useUser, useTopTracks, mapTimeRange } from "@/hooks/useSpotifyData";
+import { useUser, useTopTracks, mapTimeRange, type SpotifyTrack } from "@/hooks/useSpotifyData";
 import { AxiosError } from "axios";
 
-interface SpotifyTrack {
-  id: string;
-  name: string;
-  artists?: { name: string }[];
-  artist?: string;
-  album?: { image?: string };
-  duration?: number;
-  previewUrl?: string | null;
-  spotifyUrl?: string | null;
-}
 
 const TopTracks = () => {
   const navigate = useNavigate();

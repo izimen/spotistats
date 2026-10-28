@@ -65,11 +65,11 @@ describe('TypeScript interfaces', () => {
 
     it('SpotifyTrack interface should be usable', () => {
         const track: SpotifyTrack = {
-            rank: 1, title: 'Song', artist: 'Artist', album: 'Album',
-            image: null, duration: '3:30', durationMs: 210000,
-            previewUrl: null, spotifyUrl: null, trackId: 'abc'
+            rank: 1, id: 'abc', name: 'Song', artists: [{ name: 'Artist' }],
+            album: { name: 'Album', image: null, releaseDate: '2020-01-01' },
+            duration: 210000, previewUrl: null, spotifyUrl: null
         };
-        expect(track.durationMs).toBe(210000);
+        expect(track.duration).toBe(210000);
     });
 
     it('HistoryPlay interface should be usable', () => {
