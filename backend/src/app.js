@@ -116,6 +116,22 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Readiness: also verifies the database (a paused Supabase project shows up here,
+// while /health stays green so Cloud Run keeps the container alive).
+app.get('/health/ready', async (req, res) => {
+    const prisma = require('./utils/prismaClient');
+    try {
+        await Promise.race([
+            prisma.$queryRaw`SELECT 1`,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('DB check timeout')), 5000))
+        ]);
+        res.json({ status: 'ok', database: 'ok', timestamp: new Date().toISOString() });
+    } catch (error) {
+        console.error('[Health] Database check failed:', error.message);
+        res.status(503).json({ status: 'degraded', database: 'unavailable', timestamp: new Date().toISOString() });
+    }
+});
+
 // Prometheus metrics endpoint (no auth for scraping)
 app.get('/metrics', metricsEndpoint);
 

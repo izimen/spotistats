@@ -14,7 +14,7 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   spotifyId    String   @unique
-  email        String   @unique
+  email        String?  @unique // Spotify may omit email for dev-mode apps (Feb 2026)
   displayName  String?
   avatarUrl    String?
   country      String?

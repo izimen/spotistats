@@ -32,6 +32,24 @@ async function getKnownTrackIds(userId) {
 }
 
 /**
+ * Fallback when /recommendations is unavailable: search tracks by the seed artists' genres.
+ * Search `limit` is capped at 10 for dev-mode apps (Feb 2026).
+ */
+async function searchTracksByGenres(spotifyApi, genres) {
+    const tracks = [];
+    for (const genre of genres.slice(0, 3)) {
+        try {
+            const offset = Math.floor(Math.random() * 40);
+            const result = await spotifyApi.searchTracks(`genre:"${genre.replace(/"/g, '')}"`, { limit: 10, offset });
+            tracks.push(...(result.body?.tracks?.items || []));
+        } catch (err) {
+            console.warn(`[Discovery] Genre search failed for "${genre}": ${err.message}`);
+        }
+    }
+    return tracks;
+}
+
+/**
  * Get discovery track recommendation for user
  * @param {string} userId - User ID
  * @param {string} accessToken - Spotify access token
@@ -51,16 +69,21 @@ async function getDiscoveryTrack(userId, accessToken) {
         });
 
         if (topArtists.length === 0) {
-            throw new Error('No listening history to generate recommendations');
+            return null; // no listening history yet
         }
 
         // 2. Search for Spotify Artist IDs
         const seedArtistIds = [];
+        const seedGenres = [];
         for (const artist of topArtists.slice(0, 3)) {
             try {
                 const result = await spotifyApi.searchArtists(artist.artistName, { limit: 1 });
-                if (result.body?.artists?.items?.[0]) {
-                    seedArtistIds.push(result.body.artists.items[0].id);
+                const found = result.body?.artists?.items?.[0];
+                if (found) {
+                    seedArtistIds.push(found.id);
+                    for (const g of found.genres || []) {
+                        if (!seedGenres.includes(g)) seedGenres.push(g);
+                    }
                 }
             } catch (err) {
                 console.warn(`[Discovery] Failed to find artist: ${artist.artistName}`);
@@ -68,21 +91,27 @@ async function getDiscoveryTrack(userId, accessToken) {
         }
 
         if (seedArtistIds.length === 0) {
-            throw new Error('Could not find seed artists');
+            return null; // seed artists not found on Spotify
         }
 
         console.log(`[Discovery] Using ${seedArtistIds.length} seed artists`);
 
-        // 3. Get recommendations from Spotify
-        const recommendations = await spotifyApi.getRecommendations({
+        // 3. Get recommendations from Spotify.
+        // GET /recommendations is restricted for new / dev-mode apps (Nov 2024) -
+        // getRecommendations() resolves null then, and we fall back to genre search.
+        const recommendations = await spotifyService.getRecommendations(accessToken, {
             seed_artists: seedArtistIds.slice(0, 5), // Max 5 seeds total
             limit: 30
         });
 
-        const tracks = recommendations.body?.tracks || [];
+        let tracks = recommendations?.body?.tracks || [];
 
         if (tracks.length === 0) {
-            throw new Error('No recommendations returned from Spotify');
+            tracks = await searchTracksByGenres(spotifyApi, seedGenres);
+        }
+
+        if (tracks.length === 0) {
+            return null;
         }
 
         // 4. Filter out known tracks

@@ -23,6 +23,10 @@ const prisma = require('../utils/prismaClient');
 // SEC-003: Auth code TTL
 const AUTH_CODE_TTL = 60 * 1000; // 60 seconds
 
+// /auth/me profile self-heal throttle (per instance)
+const PROFILE_HEAL_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const profileHealAttempts = new Map(); // userId -> last attempt timestamp
+
 // Cookie options for JWT
 const getCookieOptions = () => ({
     httpOnly: true,
@@ -124,15 +128,18 @@ async function callback(req, res) {
         // SEC-004: Store Spotify access token encrypted in DB (not in JWT)
         const encryptedAccessToken = encrypt(tokens.accessToken);
 
+        // Spotify may omit email/country/product (Feb 2026 dev-mode changes):
+        // only overwrite stored values with fields Spotify actually returned.
+        const profileUpdate = {};
+        for (const key of ['email', 'displayName', 'avatarUrl', 'country', 'product']) {
+            if (profile[key]) profileUpdate[key] = profile[key];
+        }
+
         // Upsert user with new token family (invalidates old sessions)
         const user = await prisma.user.upsert({
             where: { spotifyId: profile.spotifyId },
             update: {
-                email: profile.email,
-                displayName: profile.displayName,
-                avatarUrl: profile.avatarUrl,
-                country: profile.country,
-                product: profile.product,
+                ...profileUpdate,
                 refreshToken: encryptedRefreshToken,
                 spotifyAccessToken: encryptedAccessToken,
                 spotifyAccessTokenExpiry: tokenExpiry,
@@ -336,8 +343,12 @@ async function logout(req, res, next) {
 async function me(req, res) {
     let user = req.user;
 
-    // Self-healing: Update product/subscription if missing
-    if (!user.product) {
+    // Self-healing: Update product/subscription if missing.
+    // Spotify no longer returns `product` for dev-mode apps (Feb 2026), so throttle the
+    // attempt per user instead of calling GET /me on every /auth/me request.
+    const lastAttempt = profileHealAttempts.get(user.id) || 0;
+    if (!user.product && Date.now() - lastAttempt > PROFILE_HEAL_INTERVAL_MS) {
+        profileHealAttempts.set(user.id, Date.now());
         try {
             // SEC-004: Read access token from DB (not JWT)
             const userTokens = await prisma.user.findUnique({
