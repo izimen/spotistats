@@ -75,7 +75,9 @@ app.use(cors({
     },
     credentials: true, // Allow cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+    // Let the SPA read the CSRF token (double-submit) and Retry-After (429/503)
+    exposedHeaders: ['X-CSRF-Token', 'Retry-After']
 }));
 
 // Rate limiting
