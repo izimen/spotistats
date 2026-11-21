@@ -89,11 +89,13 @@ gcloud scheduler jobs update http spotistats-sync-history --schedule="0 * * * *"
 
 ## Alerts (Cloud Monitoring, free tier)
 
-Log-based alert policies (notification channel: e-mail):
+Setup: `OWNER_EMAIL=... bash docs/monitoring/setup-alerts.sh` (policies in `docs/monitoring/`).
+Alert policies (notification channel: e-mail):
 
 | Alert | Filter / condition |
 |---|---|
 | Sync errors | `resource.type="cloud_run_revision" AND jsonPayload.component="spotify-sync" AND severity>=ERROR` |
 | Grant revoked | `resource.type="cloud_run_revision" AND jsonPayload.message="spotify_grant_revoked"` |
 | No sync for 3 h (dead-man switch) | log-based counter metric on `jsonPayload.message="Cron collection completed"`, alert when absent for 3 h |
+| Scheduler run failed | `resource.type="cloud_scheduler_job" AND resource.labels.job_id="spotistats-sync-history" AND severity>=ERROR` |
 

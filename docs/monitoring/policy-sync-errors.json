@@ -1,0 +1,12 @@
+{
+  "displayName": "SpotiStats: sync errors",
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "spotify-sync ERROR log",
+    "conditionMatchedLog": {
+      "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.component=\"spotify-sync\" AND severity>=ERROR"
+    }
+  }],
+  "alertStrategy": { "notificationRateLimit": { "period": "3600s" }, "autoClose": "86400s" },
+  "notificationChannels": ["__CHANNEL__"]
+}

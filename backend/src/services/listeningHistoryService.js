@@ -20,8 +20,9 @@ const RECENTLY_PLAYED_LIMIT = 50;
  * Recompute the estimated msPlayed of API rows from `from` onwards.
  * Spotify's played_at is the END of playback (verified on production data), so the time
  * actually listened is at most the gap to the previous play: min(durationMs, gap).
- * The previous play may already be in the DB (or be an IMPORT row) - the window starts
- * one row before `from`. No previous play -> full duration.
+ * The previous play may already be in the DB - the window starts one row before `from`.
+ * Only API rows count as "previous": an overlapping GDPR import holds the same plays ~1 s
+ * apart and would zero them. No previous play -> full duration.
  */
 async function recomputeMsPlayed(userId, from) {
     return prisma.$executeRaw`
@@ -29,9 +30,10 @@ async function recomputeMsPlayed(userId, from) {
             SELECT "id", "source", "durationMs", "playedAt",
                    EXTRACT(EPOCH FROM ("playedAt" - LAG("playedAt") OVER (ORDER BY "playedAt"))) * 1000 AS gap_ms
             FROM "StreamingHistory"
-            WHERE "userId" = ${userId}
+            WHERE "userId" = ${userId} AND "source" = 'API'
               AND "playedAt" >= COALESCE(
-                  (SELECT MAX("playedAt") FROM "StreamingHistory" WHERE "userId" = ${userId} AND "playedAt" < ${from}),
+                  (SELECT MAX("playedAt") FROM "StreamingHistory"
+                   WHERE "userId" = ${userId} AND "source" = 'API' AND "playedAt" < ${from}),
                   ${from})
         )
         UPDATE "StreamingHistory" s

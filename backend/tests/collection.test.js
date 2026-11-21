@@ -240,3 +240,21 @@ describe('cron sync', () => {
         expect(mockSpotify.refreshAccessToken).not.toHaveBeenCalled(); // stored token reused
     });
 });
+
+describe('Spotify rate limit wrapper', () => {
+    it('fails fast on a long Retry-After instead of sleeping (QUOTA_EXCEEDED)', async () => {
+        const real = jest.requireActual('../src/services/spotifyService');
+        global.setTimeout.mockRestore?.();
+        const err = Object.assign(new Error('Too Many Requests'), {
+            statusCode: 429, headers: { 'retry-after': '3600' }, body: { error: { reason: 'QUOTA_EXCEEDED' } },
+        });
+        const call = jest.fn().mockRejectedValue(err);
+
+        const started = Date.now();
+        await expect(real.withRateLimitHandling(call)).rejects.toMatchObject({ statusCode: 429, retryAfter: 3600 });
+        expect(call).toHaveBeenCalledTimes(1);
+        // later calls on this instance fail fast too (no hour-long sleep)
+        await expect(real.withRateLimitHandling(jest.fn())).rejects.toMatchObject({ statusCode: 429 });
+        expect(Date.now() - started).toBeLessThan(1000);
+    });
+});
