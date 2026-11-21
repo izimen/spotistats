@@ -38,8 +38,10 @@ async function recomputeMsPlayed(userId, from) {
         )
         UPDATE "StreamingHistory" s
         SET "msPlayed" = CASE
-                WHEN win.gap_ms IS NULL THEN win."durationMs"
-                ELSE LEAST(win."durationMs", GREATEST(0, win.gap_ms))::int
+                -- no previous play / same timestamp (order unknown) -> full length;
+                -- always >= 1 ms (CHECK "msPlayed" > 0)
+                WHEN win.gap_ms IS NULL OR win.gap_ms < 1 THEN GREATEST(1, win."durationMs")
+                ELSE GREATEST(1, LEAST(win."durationMs", ROUND(win.gap_ms)))::int
             END
         FROM win
         WHERE s."id" = win."id" AND win."source" = 'API' AND win."durationMs" IS NOT NULL

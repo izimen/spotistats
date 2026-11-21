@@ -23,9 +23,11 @@ WITH ordered AS (
     WHERE "source" = 'API'
 )
 UPDATE "StreamingHistory" s
+-- No previous play, or the same timestamp (order unknown) -> full length.
+-- Always >= 1 ms: the table has CHECK ("msPlayed" > 0).
 SET "msPlayed" = CASE
-        WHEN o.gap_ms IS NULL THEN o."durationMs"
-        ELSE LEAST(o."durationMs", GREATEST(0, o.gap_ms))::int
+        WHEN o.gap_ms IS NULL OR o.gap_ms < 1 THEN GREATEST(1, o."durationMs")
+        ELSE GREATEST(1, LEAST(o."durationMs", ROUND(o.gap_ms)))::int
     END
 FROM ordered o
 WHERE s."id" = o."id" AND o."source" = 'API' AND o."durationMs" IS NOT NULL;
