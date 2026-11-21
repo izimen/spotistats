@@ -7,6 +7,7 @@ const router = express.Router();
 const { protect } = require('../middleware/protect');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const statsController = require('../controllers/statsController');
+const insightsController = require('../controllers/insightsController');
 
 // All stats routes require authentication
 router.use(protect);
@@ -48,6 +49,9 @@ router.get('/listening-history/chart', statsController.getListeningChart);
 // Get hourly heatmap (Peak Hours)
 router.get('/listening-history/heatmap', statsController.getListeningHeatmap);
 
+// Export whole history as CSV (streamed)
+router.get('/listening-history/export', insightsController.exportHistory);
+
 // Manually trigger sync
 router.post('/listening-history/sync', statsController.syncListeningHistory);
 
@@ -63,5 +67,16 @@ router.get('/prediction', statsController.getPredictionData);
 
 // Discovery Roulette - New music recommendations
 router.get('/discovery/roulette', statsController.getDiscoveryRoulette);
+
+// ============================================
+// Insights from our own history (independent of Spotify API limits)
+// ============================================
+
+// Summary for any local date range: totals, change vs previous period, top lists,
+// new artists, streak, listener profile. ?from=YYYY-MM-DD&to=YYYY-MM-DD (to exclusive)
+router.get('/insights/summary', insightsController.getSummary);
+
+// Daily listening calendar + current/longest streak. ?days=365
+router.get('/insights/calendar', insightsController.getCalendar);
 
 module.exports = router;

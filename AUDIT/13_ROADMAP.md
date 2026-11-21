@@ -1,6 +1,6 @@
 # AUDIT: Roadmap
 
-**Ostatnia aktualizacja:** 2026-04-07 (po 11 PR-ach)
+**Ostatnia aktualizacja:** 2026-11-21 (przeglad wydajnosci + Spotify API 2026, patrz [15_REVIEW_2026-11-21.md](15_REVIEW_2026-11-21.md))
 
 ---
 
@@ -22,6 +22,19 @@ Wszystkie P0/P1 items zrealizowane. Pelna lista w [11_APPLIED_FIXES_CHANGELOG.md
 | - | Code review fixes (frontend + backend) | #40, #41 | ✅ DONE |
 
 ---
+
+## PRZEGLAD 2026-11-21 — ZROBIONE (galaz `perf/review-2026-11-21`)
+
+Wydajnosc backendu i frontendu, strefa czasowa, Node 22, npm audit, 30 nieuzywanych zaleznosci usunietych.
+Potem: DATA-301 (sync co godzine, juz na produkcji), UX-301 (Profil sluchacza zamiast falszywego DNA), F1-F7 (strona `/summary`).
+Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md#przeglad-2026-11-21--galaz-perfreview-2026-11-21).
+
+## NOWE — do decyzji (2026-11-21)
+
+| ID | Opis | Effort | Priorytet |
+|----|------|--------|-----------|
+| DATA-302 | Realny `msPlayed` dla danych z API (roznica `played_at`) — wstrzymane: nie wiadomo, czy `played_at` to poczatek czy koniec odtworzenia | 2 h | MEDIUM |
+| DEP-301 | Majory: Prisma 7, Express 5, React 19, react-router 7, Vite 7, Tailwind 4, stream-json 3 | osobne PR-y | MEDIUM |
 
 ## POZOSTALE — BACKLOG
 

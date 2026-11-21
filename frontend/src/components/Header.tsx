@@ -8,6 +8,7 @@ const navItems = [
   { label: "Top Artyści", href: "/top-artists" },
   { label: "Top Utwory", href: "/top-tracks" },
   { label: "Historia", href: "/history" },
+  { label: "Podsumowanie", href: "/summary" },
 ];
 
 const Header = () => {

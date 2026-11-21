@@ -128,29 +128,38 @@ export function useUser() {
     });
 }
 
+// PERF: top lists are always fetched at Spotify's max (50) under one cache key per time range
+// and sliced client-side with `select`. Dashboard (20 artists / 50 tracks) and the Top pages
+// (20) used to be separate queries; now switching pages reuses the cached response.
+// Spotify data changes at most daily and the backend caches it for 24h, so 15 min is safe.
+const TOP_ITEMS_FETCH_LIMIT = 50;
+const TOP_ITEMS_STALE_TIME = 1000 * 60 * 15;
+
 // Fetch top artists
 export function useTopArtists(timeRange: TimeRange = 'medium_term', limit = 20) {
-    return useQuery<SpotifyArtist[]>({
-        queryKey: ['topArtists', timeRange, limit],
+    return useQuery<SpotifyArtist[], Error, SpotifyArtist[]>({
+        queryKey: ['topArtists', timeRange],
         queryFn: async () => {
-            if (preview) return mockDelay(MOCK_TOP_ARTISTS.slice(0, limit));
-            const response = await statsAPI.getTopArtists(timeRange, limit);
+            if (preview) return mockDelay(MOCK_TOP_ARTISTS);
+            const response = await statsAPI.getTopArtists(timeRange, TOP_ITEMS_FETCH_LIMIT);
             return response.data.artists;
         },
-        staleTime: preview ? Infinity : 1000 * 60 * 5,
+        select: (artists) => artists.slice(0, limit),
+        staleTime: preview ? Infinity : TOP_ITEMS_STALE_TIME,
     });
 }
 
 // Fetch top tracks
 export function useTopTracks(timeRange: TimeRange = 'medium_term', limit = 20) {
-    return useQuery<SpotifyTrack[]>({
-        queryKey: ['topTracks', timeRange, limit],
+    return useQuery<SpotifyTrack[], Error, SpotifyTrack[]>({
+        queryKey: ['topTracks', timeRange],
         queryFn: async () => {
-            if (preview) return mockDelay(MOCK_TOP_TRACKS.slice(0, limit));
-            const response = await statsAPI.getTopTracks(timeRange, limit);
+            if (preview) return mockDelay(MOCK_TOP_TRACKS);
+            const response = await statsAPI.getTopTracks(timeRange, TOP_ITEMS_FETCH_LIMIT);
             return response.data.tracks;
         },
-        staleTime: preview ? Infinity : 1000 * 60 * 5,
+        select: (tracks) => tracks.slice(0, limit),
+        staleTime: preview ? Infinity : TOP_ITEMS_STALE_TIME,
     });
 }
 
@@ -200,6 +209,8 @@ export function useListeningHistory(options: {
         stats?: {
             mostLooped: { trackName: string; artistName: string; albumImage?: string; count: number } | null;
             topHours: { hour: number; count: number }[];
+            /** 24 entries (hour 0-23, app timezone) for the whole selected range */
+            hourCounts?: number[];
             uniqueTracks: number;
             repeatRatio: number;
         };
@@ -317,5 +328,53 @@ export function useAudioFeatures(trackIds: string[]) {
         },
         enabled: trackIds.length > 0,
         staleTime: preview ? Infinity : 1000 * 60 * 60,
+    });
+}
+
+// ============================================
+// History page insights (server-side, cached by React Query)
+// ============================================
+
+export interface ListeningPrediction {
+    artist: string;
+    time: string;
+    confidence: number;
+    factors?: { totalTracks?: number; uniqueDays?: number; isWeekend?: boolean };
+}
+
+export interface HeatmapHour {
+    hour: number;
+    count: number;
+    intensity: number;
+}
+
+const INSIGHTS_STALE_TIME = 1000 * 60 * 30;
+
+export function usePrediction(enabled = true) {
+    return useQuery<ListeningPrediction | null>({
+        queryKey: ['prediction'],
+        queryFn: async () => {
+            if (preview) return null;
+            const response = await statsAPI.getPrediction();
+            return response.data?.data ?? null;
+        },
+        enabled,
+        staleTime: INSIGHTS_STALE_TIME,
+        retry: false,
+    });
+}
+
+export function useListeningHeatmap(enabled = true) {
+    return useQuery<HeatmapHour[] | null>({
+        queryKey: ['listeningHeatmap'],
+        queryFn: async () => {
+            if (preview) return null;
+            const response = await statsAPI.getListeningHeatmap();
+            const data = response.data?.data;
+            return Array.isArray(data) && data.length > 0 ? data : null;
+        },
+        enabled,
+        staleTime: INSIGHTS_STALE_TIME,
+        retry: false,
     });
 }

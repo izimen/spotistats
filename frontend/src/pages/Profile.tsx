@@ -68,9 +68,10 @@ const Profile = () => {
               <h1 className="text-3xl font-bold text-foreground mb-2">
                 {user?.displayName || 'Użytkownik'}
               </h1>
-              <p className="text-lg text-muted-foreground mb-4 font-light">
-                {user?.email || 'brak adresu email'}
-              </p>
+              {/* Spotify stopped returning email/country/product for dev-mode apps (Feb 2026) */}
+              {user?.email && (
+                <p className="text-lg text-muted-foreground mb-4 font-light">{user.email}</p>
+              )}
 
               <div className="flex flex-wrap justify-center md:justify-start gap-3">
 
@@ -137,41 +138,53 @@ const Profile = () => {
             Szczegóły konta
           </h2>
           <div className="space-y-4">
-            <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:border-primary/20 transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Adres Email</p>
-                  <p className="font-medium text-foreground">{user?.email || '-'}</p>
+            {user?.email && (
+              <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:border-primary/20 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Adres Email</p>
+                    <p className="font-medium text-foreground">{user.email}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:border-primary/20 transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Subskrypcja</p>
-                  <p className="font-medium text-foreground capitalize">{user?.product || '-'}</p>
+            {user?.product && (
+              <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:border-primary/20 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Subskrypcja</p>
+                    <p className="font-medium text-foreground capitalize">{user.product}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:border-primary/20 transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Kraj</p>
-                  <p className="font-medium text-foreground">{user?.country || '-'}</p>
+            {user?.country && (
+              <div className="p-5 rounded-xl bg-card border border-border/50 shadow-sm hover:border-primary/20 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Kraj</p>
+                    <p className="font-medium text-foreground">{user.country}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {!user?.email && !user?.product && !user?.country && (
+              <p className="text-sm text-muted-foreground">
+                Spotify nie udostępnia już e-maila, kraju ani planu subskrypcji aplikacjom w trybie deweloperskim.
+              </p>
+            )}
           </div>
         </section>
       </div>

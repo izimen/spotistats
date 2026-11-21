@@ -9,7 +9,7 @@ const ListeningChart = lazy(() => import("@/components/ListeningChart"));
 const GenreChart = lazy(() => import("@/components/GenreChart"));
 import RecentlyPlayed from "@/components/RecentlyPlayed";
 import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
-import { useUser, useTopArtists, useTopTracks, useRecentlyPlayed, mapTimeRange } from "@/hooks/useSpotifyData";
+import { useUser, useTopArtists, useTopTracks, mapTimeRange } from "@/hooks/useSpotifyData";
 import { calculateTopGenres } from "@/lib/genreUtils";
 import { calculateListeningAge, getAgeDescription } from "@/lib/listeningAge";
 import { AxiosError } from "axios";
@@ -54,7 +54,8 @@ const Index = () => {
   const { data: user, isLoading: userLoading, error: userError } = useUser();
   const { data: allArtists, isLoading: artistsLoading } = useTopArtists(apiTimeRange, 20);
   const { data: allTracks, isLoading: tracksLoading } = useTopTracks(apiTimeRange, 50);
-  const { data: recentTracks, isLoading: recentLoading } = useRecentlyPlayed(50);
+  // Recently played is fetched by <RecentlyPlayed/> itself; a second useRecentlyPlayed(50) here
+  // used a different cache key, doubled the Spotify calls and held back the whole dashboard.
 
   useEffect(() => {
     if (userError && (userError as AxiosError)?.response?.status === 401) {
@@ -83,7 +84,7 @@ const Index = () => {
   const listeningAge = calculateListeningAge(allTracks || []);
   const ageDescription = getAgeDescription(listeningAge);
   const { topGenreName: topGenre } = calculateTopGenres(allArtists);
-  const isLoading = userLoading || artistsLoading || tracksLoading || recentLoading;
+  const isLoading = userLoading || artistsLoading || tracksLoading;
 
   const getTimeLabel = () => {
     return timeRange === "week" ? "4 Tygodnie" : timeRange === "month" ? "6 Miesięcy" : "1 Rok";

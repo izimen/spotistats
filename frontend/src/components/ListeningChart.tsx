@@ -58,6 +58,9 @@ const ListeningChart = () => {
   const shortenDayName = (day: string): string => {
     const shortNames: Record<string, string> = {
       'Poniedziałek': 'Pn',
+      'Poniedzialek': 'Pn', // older backend builds sent names without diacritics
+      'Sroda': 'Śr',
+      'Piatek': 'Pt',
       'Wtorek': 'Wt',
       'Środa': 'Śr',
       'Czwartek': 'Cz',

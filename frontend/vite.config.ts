@@ -33,8 +33,10 @@ export default defineConfig(({ mode }) => ({
           // Split vendor chunks for better caching
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-query': ['@tanstack/react-query', 'axios'],
-          'vendor-charts': ['recharts'],
-          'vendor-ui': ['lucide-react', '@radix-ui/react-tooltip', '@radix-ui/react-slot', '@radix-ui/react-dialog', '@radix-ui/react-separator', '@radix-ui/react-toggle'],
+          // recharts is intentionally NOT a manual chunk: as one, it pulled shared helpers
+          // (clsx, ...) into vendor-charts, so the 375 kB chunk was preloaded on every page
+          // including /login. Left alone, Rollup keeps it with the lazy chart components.
+          'vendor-ui': ['@radix-ui/react-tooltip', '@radix-ui/react-slot', '@radix-ui/react-dialog', '@radix-ui/react-separator', '@radix-ui/react-toggle'],
         },
       },
     },

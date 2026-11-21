@@ -58,10 +58,28 @@ function validateParams(req) {
 const refreshLocks = new Map(); // userId -> Promise<string>
 
 /**
+ * PERF: per-instance cache of decrypted Spotify access tokens.
+ * Saves a DB round trip (Cloud Run europe-central2 -> Supabase eu-west-1) and an
+ * AES decrypt on every API call. Entries are dropped 5 min before Spotify expiry.
+ */
+const accessTokenCache = new Map(); // userId -> { token, expiresAt }
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+function rememberAccessToken(userId, token, expiresAt) {
+    accessTokenCache.set(userId, { token, expiresAt });
+}
+
+/**
  * SEC-004: Get access token from DB (no longer in JWT)
  * Checks DB for valid encrypted token, refreshes if expired (with mutex)
  */
 async function getAccessToken(req, user) {
+    const cachedToken = accessTokenCache.get(user.id);
+    if (cachedToken && cachedToken.expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
+        return cachedToken.token;
+    }
+    accessTokenCache.delete(user.id);
+
     // Read encrypted access token from DB
     const userTokens = await prisma.user.findUnique({
         where: { id: user.id },
@@ -71,10 +89,10 @@ async function getAccessToken(req, user) {
     // If DB token exists and hasn't expired (with 5 min buffer)
     if (userTokens?.spotifyAccessToken && userTokens?.spotifyAccessTokenExpiry) {
         const expiryTime = new Date(userTokens.spotifyAccessTokenExpiry).getTime();
-        const bufferMs = 5 * 60 * 1000;
-
-        if (expiryTime > Date.now() + bufferMs) {
-            return encryptionService.decrypt(userTokens.spotifyAccessToken);
+        if (expiryTime > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
+            const token = encryptionService.decrypt(userTokens.spotifyAccessToken);
+            rememberAccessToken(user.id, token, expiryTime);
+            return token;
         }
     }
 
@@ -128,9 +146,11 @@ async function doRefreshToken(user) {
                 spotifyAccessTokenExpiry: tokenExpiry
             }
         });
+        rememberAccessToken(user.id, tokens.accessToken, tokenExpiry.getTime());
 
         return tokens.accessToken;
     } catch (err) {
+        accessTokenCache.delete(user.id);
         if (err.message?.includes('invalid_grant') ||
             err.message?.includes('revoked') ||
             err.body?.error === 'invalid_grant') {
@@ -291,13 +311,16 @@ async function getRecentlyPlayed(req, res, next) {
         // API-002: Use req.user directly instead of re-fetching from DB
         const accessToken = await getAccessToken(req, req.user);
 
-        const result = await spotifyService.getRecentlyPlayed(accessToken, { limit });
+        // PERF: always fetch the max (50) once and reuse it for history collection,
+        // instead of a second identical Spotify call inside collectFromAPI()
+        const result = await spotifyService.getRecentlyPlayed(accessToken, { limit: 50 });
+        const allItems = result.body.items || [];
 
-        // Trigger history collection in background (non-blocking)
-        listeningHistoryService.collectFromAPI(userId, accessToken)
+        // Store plays in background (non-blocking)
+        listeningHistoryService.collectFromAPI(userId, accessToken, allItems)
             .catch(err => console.error('[StatsController] History collection failed:', err.message));
 
-        const tracks = (result.body.items || []).map((item, index) => ({
+        const tracks = allItems.slice(0, limit).map((item) => ({
             playedAt: item.played_at,
             track: {
                 id: item.track?.id,
@@ -330,34 +353,30 @@ async function getOverview(req, res, next) {
     try {
         const userId = req.user.id;
 
-        // Get imported stats from AggregatedStats
-        const aggregatedStats = await prisma.aggregatedStats.aggregate({
+        // PERF: the four queries are independent - run them in parallel
+        const [aggregatedStats, topTrack, topArtistAgg, importStats] = await Promise.all([
+        prisma.aggregatedStats.aggregate({
             where: { userId },
             _sum: { playCount: true, totalMsPlayed: true },
             _count: { trackUri: true }
-        });
-
-        // Get top track from aggregated data
-        const topTrack = await prisma.aggregatedStats.findFirst({
+        }),
+        prisma.aggregatedStats.findFirst({
             where: { userId },
             orderBy: { playCount: 'desc' }
-        });
-
-        // Get top artist from aggregated data
-        const topArtistAgg = await prisma.aggregatedStats.groupBy({
+        }),
+        prisma.aggregatedStats.groupBy({
             by: ['artistName'],
             where: { userId },
             _sum: { playCount: true, totalMsPlayed: true },
             orderBy: { _sum: { playCount: 'desc' } },
             take: 1
-        });
-
-        // Get import stats
-        const importStats = await prisma.import.aggregate({
+        }),
+        prisma.import.aggregate({
             where: { userId, status: 'COMPLETED' },
             _count: { id: true },
             _sum: { imported: true }
-        });
+        })
+        ]);
 
         // Calculate listening time
         const totalMsPlayed = Number(aggregatedStats._sum.totalMsPlayed || 0);
@@ -432,12 +451,11 @@ async function getListeningChart(req, res, next) {
         const { days = 7 } = req.query;
         const userId = req.user.id;
 
-        const data = await listeningHistoryService.getListeningByDay(
-            userId,
-            parseInt(days, 10)
-        );
-
-        const stats = await listeningHistoryService.getCollectionStats(userId);
+        const dayCount = Math.min(Math.max(parseInt(days, 10) || 7, 1), 365);
+        const [data, stats] = await Promise.all([
+            listeningHistoryService.getListeningByDay(userId, dayCount),
+            listeningHistoryService.getCollectionStats(userId),
+        ]);
 
         res.json({
             success: true,

@@ -168,7 +168,7 @@ spotistats/
 | Frontend dev | `frontend/src/main.tsx` | Vite dev server na porcie 8080 |
 | Frontend prod | `frontend/nginx.conf` | Nginx serwuje SPA z `dist/` |
 | CI/CD deploy | `.github/workflows/deploy.yml` | Push to main -> Cloud Run |
-| Cron sync | `POST /api/v1/cron/sync-listening-history` | GCP Cloud Scheduler co 6h |
+| Cron sync | `POST /api/v1/cron/sync-listening-history` | GCP Cloud Scheduler co 1 h (od 2026-11-21) |
 
 ## Krytyczne Flow Uzytkownika
 

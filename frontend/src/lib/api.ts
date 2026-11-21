@@ -282,6 +282,24 @@ export const statsAPI = {
         return api.get(`/api/v1/stats/listening-history?${params.toString()}`);
     },
 
+    getListeningHeatmap: () =>
+        api.get('/api/v1/stats/listening-history/heatmap'),
+
+    getPrediction: () => api.get('/api/v1/stats/prediction'),
+
+    getDiscoveryRoulette: () => api.get('/api/v1/stats/discovery/roulette'),
+
+    // Insights from our own history (local dates YYYY-MM-DD, `to` exclusive)
+    getInsightsSummary: (from: string, to: string) =>
+        api.get(`/api/v1/stats/insights/summary?from=${from}&to=${to}`),
+
+    getInsightsCalendar: (days = 365) =>
+        api.get(`/api/v1/stats/insights/calendar?days=${days}`),
+
+    // Whole history as CSV. Goes through axios (Bearer auth), so it is fetched as a blob.
+    exportHistoryCsv: () =>
+        api.get<Blob>('/api/v1/stats/listening-history/export', { responseType: 'blob', timeout: 120000 }),
+
     // Audio Features (real music analytics from Spotify)
     getAudioFeatures: (trackIds: string[]) =>
         api.get(`/api/v1/stats/audio-features?ids=${trackIds.join(',')}`),
