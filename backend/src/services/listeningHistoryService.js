@@ -8,58 +8,126 @@ const prisma = require('../utils/prismaClient');
 const { Prisma } = require('@prisma/client');
 const spotifyService = require('./spotifyService');
 const env = require('../config/env');
+const tokenService = require('./tokenService');
 
 // playedAt is a UTC TIMESTAMP without zone - convert to local time before taking hour/weekday,
 // otherwise "peak hours" are shifted by 1-2h for Polish users.
 const localPlayedAt = () => Prisma.sql`("playedAt" AT TIME ZONE 'UTC' AT TIME ZONE ${env.appTimezone})`;
 
+const RECENTLY_PLAYED_LIMIT = 50;
+
 /**
- * Collect recent plays from Spotify API and save to database
- * Uses skipDuplicates to avoid inserting existing plays
+ * Recompute the estimated msPlayed of API rows from `from` onwards.
+ * Spotify's played_at is the END of playback (verified on production data), so the time
+ * actually listened is at most the gap to the previous play: min(durationMs, gap).
+ * The previous play may already be in the DB - the window starts one row before `from`.
+ * Only API rows count as "previous": an overlapping GDPR import holds the same plays ~1 s
+ * apart and would zero them. No previous play -> full duration.
+ */
+async function recomputeMsPlayed(userId, from) {
+    return prisma.$executeRaw`
+        WITH win AS (
+            SELECT "id", "source", "durationMs", "playedAt",
+                   EXTRACT(EPOCH FROM ("playedAt" - LAG("playedAt") OVER (ORDER BY "playedAt"))) * 1000 AS gap_ms
+            FROM "StreamingHistory"
+            WHERE "userId" = ${userId} AND "source" = 'API'
+              AND "playedAt" >= COALESCE(
+                  (SELECT MAX("playedAt") FROM "StreamingHistory"
+                   WHERE "userId" = ${userId} AND "source" = 'API' AND "playedAt" < ${from}),
+                  ${from})
+        )
+        UPDATE "StreamingHistory" s
+        SET "msPlayed" = CASE
+                WHEN win.gap_ms IS NULL THEN win."durationMs"
+                ELSE LEAST(win."durationMs", GREATEST(0, win.gap_ms))::int
+            END
+        FROM win
+        WHERE s."id" = win."id" AND win."source" = 'API' AND win."durationMs" IS NOT NULL
+          AND win."playedAt" >= ${from}
+    `;
+}
+
+/**
+ * Store recently-played items (throws on failure).
+ * - skipDuplicates (ON CONFLICT DO NOTHING) - offline plays arriving late are fine
+ * - gap detection: a full page of 50 plays all newer than the latest stored play means
+ *   plays between the two syncs were lost
+ * - msPlayed estimated from the gap to the previous play
+ *
+ * @returns {Promise<{collected: number, skipped: number, gapDetected: boolean}>}
+ */
+async function storeRecentPlays(userId, items) {
+    if (!items || items.length === 0) {
+        return { collected: 0, skipped: 0, gapDetected: false };
+    }
+
+    const historyEntries = items.map(item => ({
+        userId,
+        trackId: item.track?.id || null,
+        trackName: item.track?.name || 'Unknown',
+        artistName: item.track?.artists?.[0]?.name || 'Unknown',
+        albumName: item.track?.album?.name || null,
+        albumImage: item.track?.album?.images?.[2]?.url || item.track?.album?.images?.[1]?.url || item.track?.album?.images?.[0]?.url || null,
+        spotifyUri: item.track?.uri || null,
+        msPlayed: item.track?.duration_ms || 0, // replaced by the estimate below
+        durationMs: item.track?.duration_ms || 0,
+        playedAt: new Date(item.played_at),
+        source: 'API',
+        platform: 'spotify-api',
+    }));
+
+    const oldest = historyEntries.reduce((min, e) => (e.playedAt < min ? e.playedAt : min), historyEntries[0].playedAt);
+
+    const latestStored = await prisma.streamingHistory.findFirst({
+        where: { userId, source: 'API' },
+        orderBy: { playedAt: 'desc' },
+        select: { playedAt: true },
+    });
+    const gapDetected = Boolean(
+        latestStored && items.length >= RECENTLY_PLAYED_LIMIT && oldest > latestStored.playedAt
+    );
+
+    const { count: collected } = await prisma.streamingHistory.createMany({
+        data: historyEntries,
+        skipDuplicates: true,
+    });
+
+    if (collected > 0) {
+        await recomputeMsPlayed(userId, oldest);
+    }
+
+    if (gapDetected) {
+        await prisma.user.update({ where: { id: userId }, data: { lastGapDetectedAt: new Date() } });
+        console.warn(JSON.stringify({
+            severity: 'WARNING',
+            message: 'sync_gap_detected',
+            component: 'spotify-sync',
+            userId: userId.substring(0, 8),
+            lastStored: latestStored.playedAt.toISOString(),
+            oldestFetched: oldest.toISOString(),
+        }));
+    }
+
+    const skipped = items.length - collected;
+    console.log(`[ListeningHistory] User ${userId.substring(0, 8)}: collected=${collected}, skipped=${skipped}`);
+    return { collected, skipped, gapDetected };
+}
+
+/**
+ * Collect recent plays from Spotify API and save to database (never throws -
+ * for fire-and-forget use, e.g. GET /stats/recent).
  *
  * @param {string} userId - User ID
  * @param {string} accessToken - Spotify access token
  * @param {Array} [prefetchedItems] - recently-played items already fetched by the caller
- *        (saves a second identical Spotify call)
- * @returns {Promise<{collected: number, skipped: number, error?: string}>}
+ * @returns {Promise<{collected: number, skipped: number, gapDetected?: boolean, error?: string}>}
  */
 async function collectFromAPI(userId, accessToken, prefetchedItems) {
     try {
-        // Fetch last 50 plays from Spotify (unless the caller already has them)
         const items = prefetchedItems
-            || (await spotifyService.getRecentlyPlayed(accessToken, { limit: 50 })).body?.items
+            || (await spotifyService.getRecentlyPlayed(accessToken, { limit: RECENTLY_PLAYED_LIMIT })).body?.items
             || [];
-
-        if (items.length === 0) {
-            return { collected: 0, skipped: 0 };
-        }
-
-        // Transform Spotify data to our schema
-        const historyEntries = items.map(item => ({
-            userId,
-            trackId: item.track?.id || null,
-            trackName: item.track?.name || 'Unknown',
-            artistName: item.track?.artists?.[0]?.name || 'Unknown',
-            albumName: item.track?.album?.name || null,
-            albumImage: item.track?.album?.images?.[2]?.url || item.track?.album?.images?.[1]?.url || item.track?.album?.images?.[0]?.url || null,
-            spotifyUri: item.track?.uri || null,
-            msPlayed: item.track?.duration_ms || 0, // Full track duration as approximation
-            playedAt: new Date(item.played_at),
-            source: 'API',
-            platform: 'spotify-api',
-        }));
-
-        // Insert with skipDuplicates (ON CONFLICT DO NOTHING); count = rows actually inserted
-        const { count: collected } = await prisma.streamingHistory.createMany({
-            data: historyEntries,
-            skipDuplicates: true,
-        });
-
-        const skipped = items.length - collected;
-
-        console.log(`[ListeningHistory] User ${userId}: collected=${collected}, skipped=${skipped}`);
-
-        return { collected, skipped };
+        return await storeRecentPlays(userId, items);
     } catch (error) {
         console.error('[ListeningHistory] Collection failed:', error.message);
         return { collected: 0, skipped: 0, error: error.message };
@@ -341,15 +409,10 @@ async function collectForAllActiveUsers() {
         component: 'spotify-sync'
     }));
 
-    // Get all users with valid refresh tokens
+    // Users with a Spotify grant who didn't switch collection off
     const users = await prisma.user.findMany({
-        where: { refreshToken: { not: null } },
-        select: {
-            id: true,
-            spotifyId: true,
-            displayName: true,
-            refreshToken: true
-        }
+        where: { refreshToken: { not: null }, collectionEnabled: true },
+        select: { id: true }
     });
 
     if (users.length === 0) {
@@ -359,7 +422,7 @@ async function collectForAllActiveUsers() {
             timestamp,
             component: 'spotify-sync'
         }));
-        return { processed: 0, failed: 0, skipped: 0, duration: Date.now() - startTime, details: [] };
+        return { processed: 0, failed: 0, skipped: 0, total: 0, quotaExceeded: false, duration: Date.now() - startTime, details: [] };
     }
 
     console.log(JSON.stringify({
@@ -370,11 +433,12 @@ async function collectForAllActiveUsers() {
         userCount: users.length
     }));
 
-    const encryptionService = require('./encryptionService');
     const results = {
         processed: 0,
         failed: 0,
         skipped: 0,
+        total: users.length,
+        quotaExceeded: false,
         details: []
     };
 
@@ -394,28 +458,22 @@ async function collectForAllActiveUsers() {
         }
 
         const user = users[i];
-        // SEC-015: Log userId instead of displayName for privacy
+        // SEC-015: Log userId prefix instead of displayName for privacy
         const userLabel = user.id.substring(0, 8);
+        const attemptAt = new Date();
 
         try {
-            // 1. Decrypt and refresh token
-            const decryptedToken = encryptionService.decrypt(user.refreshToken);
-            const tokens = await spotifyService.refreshAccessToken(decryptedToken);
+            // 1. Valid access token (stored one reused; refresh persists rotated refresh token)
+            const accessToken = await tokenService.getValidAccessToken(user.id);
 
-            if (!tokens?.accessToken) {
-                console.log(`[Cron] User ${userLabel}: Failed to get access token, skipping`);
-                results.skipped++;
-                results.details.push({ userId: user.id, status: 'skipped', reason: 'no_access_token' });
-                continue;
-            }
+            // 2. Fetch + store (throws on failure, so a failed sync is never counted as success)
+            const response = await spotifyService.getRecentlyPlayed(accessToken, { limit: RECENTLY_PLAYED_LIMIT });
+            const result = await storeRecentPlays(user.id, response.body?.items || []);
 
-            // 2. Collect history
-            const result = await collectFromAPI(user.id, tokens.accessToken);
-
-            // 3. Update lastSyncAt timestamp
+            // 3. Health: lastSyncAt only on success
             await prisma.user.update({
                 where: { id: user.id },
-                data: { lastSyncAt: new Date() }
+                data: { lastSyncAt: attemptAt, lastSyncAttemptAt: attemptAt, lastSyncError: null, syncFailureCount: 0 }
             });
 
             results.processed++;
@@ -423,29 +481,42 @@ async function collectForAllActiveUsers() {
                 userId: user.id,
                 status: 'success',
                 collected: result.collected,
-                skipped: result.skipped
+                skipped: result.skipped,
+                gapDetected: result.gapDetected
             });
-
-            if (result.collected > 0) {
-                console.log(`[Cron] User ${userLabel}: collected=${result.collected}, skipped=${result.skipped}`);
-            }
-
         } catch (error) {
-            console.error(`[Cron] User ${userLabel}: Error - ${error.message}`);
-
-            // If token is revoked/invalid, clear it from DB
-            if (error.message?.includes('invalid_grant') ||
-                error.message?.includes('revoked') ||
-                error.body?.error === 'invalid_grant') {
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { refreshToken: null }
-                });
-                results.details.push({ userId: user.id, status: 'failed', reason: 'token_revoked' });
-            } else {
-                results.details.push({ userId: user.id, status: 'failed', reason: error.message });
-            }
             results.failed++;
+            const quota = tokenService.isQuotaOrRateLimit(error);
+            const revoked = error.code === 'REFRESH_TOKEN_REVOKED' || error.code === 'NO_REFRESH_TOKEN';
+            const reason = quota ? 'rate_limited' : revoked ? 'token_revoked' : error.message;
+
+            console.error(JSON.stringify({
+                severity: 'ERROR',
+                message: 'User sync failed',
+                timestamp: new Date().toISOString(),
+                component: 'spotify-sync',
+                userId: userLabel,
+                reason,
+                reasonDetail: error.body?.error?.reason || error.body?.error_description || undefined
+            }));
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    lastSyncAttemptAt: attemptAt,
+                    lastSyncError: String(reason).slice(0, 500),
+                    syncFailureCount: { increment: 1 }
+                }
+            }).catch(() => { /* health bookkeeping must not mask the real error */ });
+
+            results.details.push({ userId: user.id, status: 'failed', reason });
+
+            // Quota is per developer account: every further call would fail too
+            if (quota) {
+                results.quotaExceeded = true;
+                results.skipped = users.length - results.processed - results.failed;
+                break;
+            }
         }
 
         // Rate limiting: 1 second delay between users
@@ -485,6 +556,8 @@ async function collectForAllActiveUsers() {
 
 module.exports = {
     collectFromAPI,
+    storeRecentPlays,
+    recomputeMsPlayed,
     getUserHistory,
     getListeningByDay,
     getListeningByHour,

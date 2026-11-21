@@ -16,8 +16,9 @@ const crypto = require('crypto');
 const env = require('../config/env');
 const { SCOPES_STRING } = require('../config/spotify');
 const { createPKCEState, extractVerifierFromState } = require('../services/pkceService');
-const { exchangeCodeForTokens, getUserProfile, refreshAccessToken } = require('../services/spotifyService');
+const { exchangeCodeForTokens, getUserProfile } = require('../services/spotifyService');
 const { encrypt, decrypt } = require('../services/encryptionService');
+const tokenService = require('../services/tokenService');
 const prisma = require('../utils/prismaClient');
 
 // SEC-003: Auth code TTL
@@ -145,7 +146,10 @@ async function callback(req, res) {
                 spotifyAccessTokenExpiry: tokenExpiry,
                 tokenExpiry: tokenExpiry,
                 tokenFamily: tokenFamily,
-                tokenVersion: { increment: 1 }
+                tokenVersion: { increment: 1 },
+                // Logging in (again) re-enables background collection
+                collectionEnabled: true,
+                spotifyGrantRevokedAt: null
             },
             create: {
                 spotifyId: profile.spotifyId,
@@ -200,8 +204,9 @@ async function refresh(req, res, next) {
             // Token reuse detected! Invalidate all sessions
             await prisma.user.update({
                 where: { id: user.id },
+                // App sessions only - the Spotify grant (refreshToken) is never in the JWT,
+                // so a stolen JWT can't reach it; keep collecting listening history.
                 data: {
-                    refreshToken: null,
                     tokenFamily: null,
                     tokenVersion: { increment: 1 }
                 }
@@ -219,8 +224,9 @@ async function refresh(req, res, next) {
             // Old token family used after rotation - potential theft
             await prisma.user.update({
                 where: { id: user.id },
+                // App sessions only - the Spotify grant (refreshToken) is never in the JWT,
+                // so a stolen JWT can't reach it; keep collecting listening history.
                 data: {
-                    refreshToken: null,
                     tokenFamily: null,
                     tokenVersion: { increment: 1 }
                 }
@@ -233,49 +239,41 @@ async function refresh(req, res, next) {
             });
         }
 
-        // SEC-004: Check if Spotify token needs refresh (read expiry from DB)
-        const userExpiry = await prisma.user.findUnique({
+        // Spotify token still valid -> nothing to rotate
+        const current = await prisma.user.findUnique({
             where: { id: user.id },
             select: { spotifyAccessTokenExpiry: true }
         });
-        const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
-        if (userExpiry?.spotifyAccessTokenExpiry && userExpiry.spotifyAccessTokenExpiry > fiveMinutesFromNow) {
+        if (current?.spotifyAccessTokenExpiry &&
+            new Date(current.spotifyAccessTokenExpiry).getTime() > Date.now() + tokenService.TOKEN_EXPIRY_BUFFER_MS) {
             return res.json({
                 message: 'Token is still valid',
-                expiresAt: userExpiry.spotifyAccessTokenExpiry
+                expiresAt: current.spotifyAccessTokenExpiry
             });
         }
 
-        // Fetch refreshToken from DB (protect middleware strips it from req.user for safety)
-        const userWithToken = await prisma.user.findUnique({
+        // Refresh via tokenService (persists Spotify's rotated refresh token)
+        try {
+            await tokenService.getValidAccessToken(user.id);
+        } catch (err) {
+            if (err.statusCode === 401) {
+                return res.status(401).json({
+                    error: 'NoRefreshToken',
+                    message: 'Session expired. Please log in again.'
+                });
+            }
+            throw err;
+        }
+        const { spotifyAccessTokenExpiry: tokenExpiry } = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { refreshToken: true }
+            select: { spotifyAccessTokenExpiry: true }
         });
 
-        if (!userWithToken?.refreshToken) {
-            return res.status(401).json({
-                error: 'NoRefreshToken',
-                message: 'Session expired. Please log in again.'
-            });
-        }
-
-        const decryptedRefreshToken = decrypt(userWithToken.refreshToken);
-        const newTokens = await refreshAccessToken(decryptedRefreshToken);
-        const tokenExpiry = new Date(Date.now() + newTokens.expiresIn * 1000);
-
-        // ROTATION: Always generate new token family on refresh
+        // ROTATION: new app token family on every refresh
         const newTokenFamily = generateTokenFamily();
-        const encryptedNewRefresh = encrypt(newTokens.refreshToken || decryptedRefreshToken);
-        // SEC-004: Store new access token encrypted in DB
-        const encryptedNewAccess = encrypt(newTokens.accessToken);
-
         await prisma.user.update({
             where: { id: user.id },
             data: {
-                refreshToken: encryptedNewRefresh,
-                spotifyAccessToken: encryptedNewAccess,
-                spotifyAccessTokenExpiry: tokenExpiry,
-                tokenExpiry: tokenExpiry,
                 tokenFamily: newTokenFamily,
                 tokenVersion: { increment: 1 }
             }
@@ -305,7 +303,7 @@ async function refresh(req, res, next) {
 
 /**
  * POST /auth/logout
- * Server-side logout: clears cookie AND invalidates refresh token in DB
+ * Server-side logout: clears cookie and invalidates app sessions (collection continues)
  */
 async function logout(req, res, next) {
     try {
@@ -316,12 +314,14 @@ async function logout(req, res, next) {
             sameSite: 'Lax'
         });
 
-        // If user is authenticated, invalidate their refresh token
+        // Invalidate app sessions only. The Spotify grant stays so hourly collection keeps
+        // running - use POST /auth/disconnect to stop collecting.
         if (req.user?.id) {
             await prisma.user.update({
                 where: { id: req.user.id },
+                // App sessions only - the Spotify grant (refreshToken) is never in the JWT,
+                // so a stolen JWT can't reach it; keep collecting listening history.
                 data: {
-                    refreshToken: null,
                     tokenFamily: null,
                     tokenVersion: { increment: 1 }
                 }
@@ -333,6 +333,32 @@ async function logout(req, res, next) {
         // Even if DB update fails, cookie is cleared - log error but respond success
         console.error('Logout DB error:', error.message);
         res.json({ message: 'Logged out successfully' });
+    }
+}
+
+/**
+ * POST /auth/disconnect
+ * Stop background collection: forget the Spotify grant and log out everywhere.
+ * Stored history is kept (DELETE /auth/me removes everything).
+ */
+async function disconnect(req, res, next) {
+    try {
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                refreshToken: null,
+                spotifyAccessToken: null,
+                spotifyAccessTokenExpiry: null,
+                collectionEnabled: false,
+                tokenFamily: null,
+                tokenVersion: { increment: 1 }
+            }
+        });
+        tokenService.forget(req.user.id);
+        res.clearCookie('jwt', getCookieOptions());
+        res.json({ message: 'Spotify disconnected, collection stopped' });
+    } catch (error) {
+        next(error);
     }
 }
 
@@ -481,6 +507,7 @@ module.exports = {
     callback,
     refresh,
     logout,
+    disconnect,
     me,
     deleteAccount,
     exchange

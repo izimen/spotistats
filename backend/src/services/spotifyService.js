@@ -89,12 +89,26 @@ function recordCircuitResult(success) {
     }
 }
 
+// Longer Retry-After values are not waited out (cron / requests would time out)
+const MAX_RETRY_AFTER_WAIT_MS = 10 * 1000;
+
+function rateLimitError(retryAfter) {
+    const error = new Error(`Spotify rate limited (retry after ${retryAfter}s)`);
+    error.statusCode = 429;
+    error.retryAfter = retryAfter;
+    return error;
+}
+
 /**
- * Wait for rate limit to reset if needed
+ * Wait for rate limit to reset if needed (short waits only)
  */
 async function waitForRateLimit() {
     if (rateLimitReset && Date.now() < rateLimitReset) {
         const waitTime = rateLimitReset - Date.now() + 100;
+        if (waitTime > MAX_RETRY_AFTER_WAIT_MS) {
+            // Long block (e.g. QUOTA_EXCEEDED): fail fast instead of hanging requests/cron
+            throw rateLimitError(Math.ceil(waitTime / 1000));
+        }
         console.log(`Spotify rate limited. Waiting ${waitTime}ms...`);
         await sleep(waitTime);
     }
@@ -110,8 +124,9 @@ async function withRateLimitHandling(apiCall, maxRetries = 3) {
     }
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        // Outside try: a long block must surface as-is, not be re-handled as a fresh 429
+        await waitForRateLimit();
         try {
-            await waitForRateLimit();
             const result = await apiCall();
             recordCircuitResult(true);
             return result;
@@ -127,6 +142,13 @@ async function withRateLimitHandling(apiCall, maxRetries = 3) {
                 );
                 rateLimitReset = Date.now() + (retryAfter * 1000);
                 console.warn(`Spotify 429: Rate limited. Retry-After: ${retryAfter}s`);
+
+                // Retry-After can be hours on QUOTA_EXCEEDED - never sleep that long
+                if (retryAfter * 1000 > MAX_RETRY_AFTER_WAIT_MS) {
+                    error.statusCode = 429;
+                    error.retryAfter = retryAfter;
+                    throw error;
+                }
 
                 if (attempt < maxRetries) {
                     // Add jitter to retry delay

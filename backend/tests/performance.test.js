@@ -17,12 +17,15 @@ const mockPrisma = {
     streamingHistory: {
         createMany: jest.fn(),
         count: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
     },
     user: {
         findUnique: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     $queryRaw: jest.fn(),
+    $executeRaw: jest.fn().mockResolvedValue(0),
 };
 jest.mock('../src/utils/prismaClient', () => mockPrisma);
 
@@ -79,7 +82,7 @@ describe('collectFromAPI', () => {
 
         expect(mockSpotify.getRecentlyPlayed).not.toHaveBeenCalled();
         expect(mockPrisma.streamingHistory.count).not.toHaveBeenCalled();
-        expect(result).toEqual({ collected: 1, skipped: 1 });
+        expect(result).toEqual({ collected: 1, skipped: 1, gapDetected: false });
         expect(mockPrisma.streamingHistory.createMany).toHaveBeenCalledWith(
             expect.objectContaining({ skipDuplicates: true })
         );

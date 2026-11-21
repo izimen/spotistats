@@ -74,6 +74,10 @@ async function protect(req, res, next) {
                 tokenFamily: true,
                 tokenExpiry: true,
                 refreshToken: true, // needed for existence check only
+                collectionEnabled: true,
+                lastSyncAt: true,
+                lastGapDetectedAt: true,
+                syncFailureCount: true,
                 createdAt: true,
                 updatedAt: true
             }
@@ -97,7 +101,8 @@ async function protect(req, res, next) {
         }
 
         // Token version check - detect invalidated sessions
-        if (decoded.tokenVersion !== undefined && user.tokenVersion !== decoded.tokenVersion) {
+        // Strict: a JWT without tokenVersion can't be invalidated, so it is rejected
+        if (user.tokenVersion !== decoded.tokenVersion) {
             res.clearCookie('jwt');
             return res.status(401).json({
                 error: 'SessionInvalidated',

@@ -31,6 +31,19 @@ const Profile = () => {
     }
   };
 
+  // Stop background collection (logout alone keeps collecting)
+  const handleDisconnect = async () => {
+    if (!window.confirm('Zatrzymać zbieranie historii słuchania? Zapisane dane zostaną, ale nowe odtworzenia nie będą już zapisywane, dopóki nie zalogujesz się ponownie.')) {
+      return;
+    }
+    try {
+      await authAPI.disconnect();
+    } catch (error) {
+      console.error('Disconnect failed:', error);
+    }
+    navigate('/login');
+  };
+
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -82,8 +95,8 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Logout Action */}
-            <div>
+            {/* Logout / stop collecting */}
+            <div className="flex flex-col items-center md:items-end gap-2">
               <Button
                 variant="destructive"
                 className="rounded-xl shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all font-medium px-6"
@@ -92,6 +105,16 @@ const Profile = () => {
                 <LogOut className="w-4 h-4 mr-2" />
                 Wyloguj się
               </Button>
+              <p className="text-xs text-muted-foreground max-w-[220px] text-center md:text-right">
+                Wylogowanie nie zatrzymuje zbierania historii.
+              </p>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="text-xs text-muted-foreground underline hover:text-destructive transition-colors"
+              >
+                Zatrzymaj zbieranie i odłącz Spotify
+              </button>
             </div>
           </div>
         </div>

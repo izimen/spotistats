@@ -1,0 +1,12 @@
+{
+  "displayName": "SpotiStats: Cloud Scheduler run failed",
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "scheduler job error",
+    "conditionMatchedLog": {
+      "filter": "resource.type=\"cloud_scheduler_job\" AND resource.labels.job_id=\"spotistats-sync-history\" AND severity>=ERROR"
+    }
+  }],
+  "alertStrategy": { "notificationRateLimit": { "period": "3600s" }, "autoClose": "86400s" },
+  "notificationChannels": ["__CHANNEL__"]
+}

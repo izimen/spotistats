@@ -1,0 +1,12 @@
+{
+  "displayName": "SpotiStats: Spotify access revoked for a user",
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "spotify_grant_revoked",
+    "conditionMatchedLog": {
+      "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"spotify_grant_revoked\""
+    }
+  }],
+  "alertStrategy": { "notificationRateLimit": { "period": "3600s" }, "autoClose": "86400s" },
+  "notificationChannels": ["__CHANNEL__"]
+}

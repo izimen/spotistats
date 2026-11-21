@@ -1,0 +1,13 @@
+{
+  "displayName": "SpotiStats: no completed sync for 3 h",
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "sync completed metric absent",
+    "conditionAbsent": {
+      "filter": "resource.type=\"cloud_run_revision\" AND metric.type=\"logging.googleapis.com/user/spotistats_sync_completed\"",
+      "aggregations": [{ "alignmentPeriod": "3600s", "perSeriesAligner": "ALIGN_SUM" }],
+      "duration": "10800s"
+    }
+  }],
+  "notificationChannels": ["__CHANNEL__"]
+}

@@ -74,3 +74,28 @@ gcloud scheduler jobs update http spotistats-sync-history --schedule="0 * * * *"
   (max 5) must be added in the Spotify dashboard → *User Management*. Redirect URI must be exactly
   `https://spotistats-backend-ox6p5to4qa-lm.a.run.app/auth/callback`.
 - **gcloud**: always pass `--project spotistats-prod-482419`.
+
+## Data collection
+
+- Logout does **not** stop hourly collection; `POST /auth/disconnect` (Profile → "Zatrzymaj zbieranie") does.
+- A user stops being collected only when Spotify answers `invalid_grant` (log `spotify_grant_revoked`,
+  `User.spotifyGrantRevokedAt` set) — they must log in again.
+- Health per user: `lastSyncAt` (last success), `lastSyncAttemptAt`, `lastSyncError`, `syncFailureCount`,
+  `lastGapDetectedAt` (more than 50 plays between two syncs). Summary: `GET /api/cron/status`.
+- The sync endpoint answers 500 when no user synced or Spotify rate-limited the run, so the Scheduler job
+  shows the run as failed.
+- API `msPlayed` = min(track length, time since previous play) — `played_at` is the end of playback.
+  Full length is kept in `durationMs`.
+
+## Alerts (Cloud Monitoring, free tier)
+
+Setup: `OWNER_EMAIL=... bash docs/monitoring/setup-alerts.sh` (policies in `docs/monitoring/`).
+Alert policies (notification channel: e-mail):
+
+| Alert | Filter / condition |
+|---|---|
+| Sync errors | `resource.type="cloud_run_revision" AND jsonPayload.component="spotify-sync" AND severity>=ERROR` |
+| Grant revoked | `resource.type="cloud_run_revision" AND jsonPayload.message="spotify_grant_revoked"` |
+| No sync for 3 h (dead-man switch) | log-based counter metric on `jsonPayload.message="Cron collection completed"`, alert when absent for 3 h |
+| Scheduler run failed | `resource.type="cloud_scheduler_job" AND resource.labels.job_id="spotistats-sync-history" AND severity>=ERROR` |
+
