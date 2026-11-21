@@ -23,12 +23,6 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
         return Math.round(formattedTracks.reduce((acc, track) => acc + track.durationMs, 0) / 60000);
     }, [formattedTracks, serverTotalMinutes]);
 
-    // FIX #12: Removed fake "vs yesterday" comparison
-    // Previous implementation used hardcoded 0.85 multiplier — always showing +18% growth
-    // Without real previous-period data from the DB, we set diff to 0 (honest)
-    const minutesDiff = 0;
-    const minutesDiffPercent = 0;
-
     // Find most looped track (most repeated)
     const mostLooped = useMemo(() => {
         const trackCounts: { [key: string]: { count: number; title: string; artist: string; image: string } } = {};
@@ -271,51 +265,6 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
         };
     }, [formattedTracks]);
 
-    // 🧬 Music DNA
-    const musicDNA = useMemo(() => {
-        if (formattedTracks.length === 0) {
-            return { energy: 50, danceability: 50, acoustic: 50, nostalgia: 50, loudness: 50 };
-        }
-
-        const total = formattedTracks.length;
-
-        // Night ratio (higher = more acoustic, calmer)
-        const nightRatio = formattedTracks.filter(t => {
-            const h = t.playedAtDate.getHours();
-            return h >= 22 || h < 6;
-        }).length / total;
-
-        // Repeat ratio (higher = more nostalgic)
-        const repeatRatio = mostLooped ? mostLooped.count / total : 0;
-
-        // Unique artists ratio (higher = more exploratory = more energy)
-        const uniqueArtists = new Set(formattedTracks.map(t => t.artist)).size;
-        const artistVariety = uniqueArtists / total;
-
-        // Short tracks ratio (higher = more energetic/danceable)
-        const shortTrackRatio = formattedTracks.filter(t => t.durationMs < 200000).length / total;
-
-        // Weekend ratio (higher = more party = more danceable)
-        const weekendRatio = formattedTracks.filter(t => {
-            const d = t.playedAtDate.getDay();
-            return d === 0 || d === 6;
-        }).length / total;
-
-        // Evening ratio (party time indicator)
-        const eveningRatio = formattedTracks.filter(t => {
-            const h = t.playedAtDate.getHours();
-            return h >= 18 && h < 24;
-        }).length / total;
-
-        return {
-            energy: Math.min(100, Math.round(40 + artistVariety * 30 + shortTrackRatio * 20 + (1 - nightRatio) * 10)),
-            danceability: Math.min(100, Math.round(35 + weekendRatio * 25 + eveningRatio * 20 + shortTrackRatio * 20)),
-            acoustic: Math.min(100, Math.round(20 + nightRatio * 50 + (1 - shortTrackRatio) * 20)),
-            nostalgia: Math.min(100, Math.round(30 + repeatRatio * 60 + (1 - artistVariety) * 10)),
-            loudness: Math.min(100, Math.round(50 + (1 - nightRatio) * 30 + shortTrackRatio * 15)),
-        };
-    }, [formattedTracks, mostLooped]);
-
     // Heatmap Data
     const heatmapData = useMemo(() => {
         const hours: { [hour: number]: number } = {};
@@ -339,12 +288,9 @@ export function useHistoryStats(formattedTracks: HistoryTrack[], serverTotalMinu
 
     return {
         totalMinutes,
-        minutesDiff,
-        minutesDiffPercent,
         mostLooped,
         listeningMode,
         prediction,
-        musicDNA,
         heatmapData
     };
 }

@@ -21,12 +21,16 @@ function formatTrack(track) {
 }
 
 /**
- * Get set of known track IDs for user
+ * Get set of known track IDs for user.
+ * PERF: when candidate IDs are given, only those are looked up (the old version loaded
+ * every play the user ever had - tens of thousands of rows after a GDPR import).
  */
-async function getKnownTrackIds(userId) {
+async function getKnownTrackIds(userId, candidateIds) {
+    const where = { userId, trackId: candidateIds ? { in: candidateIds } : { not: null } };
     const history = await prisma.streamingHistory.findMany({
-        where: { userId, trackId: { not: null } },
-        select: { trackId: true }
+        where,
+        select: { trackId: true },
+        distinct: ['trackId']
     });
     return new Set(history.map(h => h.trackId));
 }
@@ -36,17 +40,17 @@ async function getKnownTrackIds(userId) {
  * Search `limit` is capped at 10 for dev-mode apps (Feb 2026).
  */
 async function searchTracksByGenres(spotifyApi, genres) {
-    const tracks = [];
-    for (const genre of genres.slice(0, 3)) {
+    const results = await Promise.all(genres.slice(0, 3).map(async (genre) => {
         try {
             const offset = Math.floor(Math.random() * 40);
             const result = await spotifyApi.searchTracks(`genre:"${genre.replace(/"/g, '')}"`, { limit: 10, offset });
-            tracks.push(...(result.body?.tracks?.items || []));
+            return result.body?.tracks?.items || [];
         } catch (err) {
             console.warn(`[Discovery] Genre search failed for "${genre}": ${err.message}`);
+            return [];
         }
-    }
-    return tracks;
+    }));
+    return results.flat();
 }
 
 /**
@@ -73,20 +77,22 @@ async function getDiscoveryTrack(userId, accessToken) {
         }
 
         // 2. Search for Spotify Artist IDs
+        // PERF: the three artist searches are independent - run them in parallel
         const seedArtistIds = [];
         const seedGenres = [];
-        for (const artist of topArtists.slice(0, 3)) {
-            try {
-                const result = await spotifyApi.searchArtists(artist.artistName, { limit: 1 });
-                const found = result.body?.artists?.items?.[0];
-                if (found) {
-                    seedArtistIds.push(found.id);
-                    for (const g of found.genres || []) {
-                        if (!seedGenres.includes(g)) seedGenres.push(g);
-                    }
-                }
-            } catch (err) {
-                console.warn(`[Discovery] Failed to find artist: ${artist.artistName}`);
+        const searches = await Promise.all(topArtists.slice(0, 3).map(artist =>
+            spotifyApi.searchArtists(artist.artistName, { limit: 1 })
+                .then(result => result.body?.artists?.items?.[0] || null)
+                .catch(() => {
+                    console.warn(`[Discovery] Failed to find artist: ${artist.artistName}`);
+                    return null;
+                })
+        ));
+        for (const found of searches) {
+            if (!found) continue;
+            seedArtistIds.push(found.id);
+            for (const g of found.genres || []) {
+                if (!seedGenres.includes(g)) seedGenres.push(g);
             }
         }
 
@@ -115,7 +121,7 @@ async function getDiscoveryTrack(userId, accessToken) {
         }
 
         // 4. Filter out known tracks
-        const knownIds = await getKnownTrackIds(userId);
+        const knownIds = await getKnownTrackIds(userId, tracks.map(t => t.id).filter(Boolean));
         const newTracks = tracks.filter(t => !knownIds.has(t.id));
 
         console.log(`[Discovery] ${newTracks.length}/${tracks.length} tracks are new`);

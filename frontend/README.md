@@ -9,7 +9,7 @@ Projekt frontendowy dla aplikacji SpotiStats, zbudowany przy użyciu:
 
 ## Uruchomienie lokalne
 
-Wymagany Node.js & npm.
+Wymagany Node.js 22+ i npm. Bez backendu mozna podejrzec UI w trybie preview (`VITE_PREVIEW_MODE=true npm run dev`, dane testowe z `src/lib/mockData.ts`).
 
 ```sh
 # Instalacja zależności

@@ -11,8 +11,11 @@ Live state and how to keep it running. Secrets are never written here — they l
 | GCP project | `spotistats-prod-482419`, region `europe-central2` |
 | Billing account | `01F7FF-EE2A00-817F1D` (the old `015E78-5F4016-A73C41` is closed) |
 | Database | Supabase project `fcidlslrrzgpahtbtrrw` (eu-west-1), Postgres 17 |
-| Sync | Cloud Scheduler, every 6 h (also keeps Supabase from pausing) |
+| Sync | Cloud Scheduler job `spotistats-sync-history`, every hour (`0 * * * *`, Europe/Warsaw; also keeps Supabase from pausing) |
 | Deploy | GitHub Actions on merge to `main` (`main` requires a PR) |
+
+Runtime: Node 22 (Node 20 is EOL since 2026-04-30). Backend image sets `TZ=Europe/Warsaw`; SQL
+hour/weekday stats use `APP_TIMEZONE` (default `Europe/Warsaw`) because `playedAt` is stored in UTC.
 
 Health: `GET /health` (process up), `GET /health/ready` (database reachable; 503 + `Retry-After` when not).
 
@@ -39,6 +42,26 @@ The app was down since spring:
    `Authorization: Bearer …` now skip the CSRF check; the csrf cookie is `SameSite=None; Secure` (PR #50).
 5. **Frontend** — anonymous visitors go straight to `/login`, CSP-blocked inline `onload` removed,
    typecheck/lint clean, stray copy of another git repo removed from `frontend/` (PR #49).
+
+## Spotify API limits (Development Mode, state 2026-11)
+
+Full research with sources: [AUDIT/15_REVIEW_2026-11-21.md](../AUDIT/15_REVIEW_2026-11-21.md#2-research-spotify-web-api-w-2026-tryb-development).
+
+- Still available: `GET /me/top/{type}`, `GET /me/player/recently-played`, `GET /search` (max `limit` 10).
+- Removed fields: `popularity` (artist/track/album), artist `followers`, `/me` `email`/`country`/`product`.
+- Removed endpoints: batch `GET /tracks|/artists|/albums`, `audio-features`, `recommendations` — do not add code that needs them.
+- Quota is counted per developer account (July 2026); exceeding it returns 429 with `"reason": "QUOTA_EXCEEDED"`.
+- Owner needs Premium; max 5 users per dev-mode app.
+
+## History collection gap
+
+`recently-played` returns at most the last 50 tracks (~2–3 h of music). Since 2026-11-21 the sync job runs
+**every hour** (was every 6 h, which lost plays on long listening days). The dashboard also syncs whenever it is open.
+
+```bash
+gcloud scheduler jobs list --project spotistats-prod-482419 --location europe-central2
+gcloud scheduler jobs update http spotistats-sync-history --schedule="0 * * * *" --project spotistats-prod-482419 --location europe-central2
+```
 
 ## If it breaks again
 

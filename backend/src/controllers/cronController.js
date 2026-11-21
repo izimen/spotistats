@@ -7,7 +7,7 @@ const listeningHistoryService = require('../services/listeningHistoryService');
 
 /**
  * POST /api/cron/sync-listening-history
- * Called by GCP Cloud Scheduler every 6 hours
+ * Called by GCP Cloud Scheduler every hour (recently-played only returns the last 50 plays)
  */
 async function syncListeningHistory(req, res, next) {
     try {
@@ -71,8 +71,8 @@ async function getStatus(req, res, next) {
         res.json({
             success: true,
             status: {
-                schedule: '0 */6 * * *',
-                scheduleDescription: 'Every 6 hours',
+                schedule: '0 * * * *',
+                scheduleDescription: 'Every hour',
                 timezone: 'Europe/Warsaw',
                 totalUsers,
                 usersWithValidToken: usersWithToken,

@@ -1,4 +1,4 @@
-import { Calendar, Dna, Shuffle, Target, Flame, Star, Moon, Zap, Repeat, Play, X, Info } from "lucide-react";
+import { Calendar, Shuffle, Target, Flame, Star, Moon, Zap, Repeat, Play, X, Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -8,13 +8,16 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
-import { useUser, useListeningHistory } from "@/hooks/useSpotifyData";
+import { useUser, useListeningHistory, usePrediction, useListeningHeatmap } from "@/hooks/useSpotifyData";
+import { usePeriodSummary } from "@/hooks/useInsights";
+import ListenerProfile from "@/components/ListenerProfile";
+import { toLocalDateString, plural } from "@/lib/period";
 import { useHistoryStats } from "@/hooks/useHistoryStats";
 import HistoryList from "@/components/HistoryList";
 import StatisticsGrid from "@/components/StatisticsGrid";
 import { isValidImageUrl } from "@/lib/utils";
 import { AxiosError } from "axios";
-import api from "@/lib/api";
+import { statsAPI } from "@/lib/api";
 
 interface HistoryItem {
   trackId?: string;
@@ -72,12 +75,13 @@ const History = () => {
     const now = new Date();
     const from = new Date();
 
+    // Must match the filter labels ("4 Tygodnie" / "6 Miesięcy" / "1 Rok") - it used to take 7 / 30 days
     switch (timeRange) {
       case 'week':
-        from.setDate(now.getDate() - 7);
+        from.setDate(now.getDate() - 28);
         break;
       case 'month':
-        from.setDate(now.getDate() - 30);
+        from.setMonth(now.getMonth() - 6);
         break;
       case 'year':
         from.setFullYear(now.getFullYear() - 1);
@@ -95,7 +99,16 @@ const History = () => {
     limit: 100,
   });
 
-  const recentTracks = historyData?.plays || [];
+  // Listener profile for the selected range, computed server-side from all plays (local dates, `to` exclusive)
+  const profileRange = useMemo(() => {
+    const tomorrow = new Date(dateRange.to);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return { from: toLocalDateString(dateRange.from), to: toLocalDateString(tomorrow) };
+  }, [dateRange]);
+  const { data: rangeSummary, isLoading: rangeSummaryLoading } = usePeriodSummary(profileRange.from, profileRange.to);
+
+  // Memoized: a fresh `[]` on every render made formattedTracks and every derived stat recompute
+  const recentTracks = useMemo(() => historyData?.plays || [], [historyData?.plays]);
 
   // Redirect on 401
   useEffect(() => {
@@ -167,11 +180,8 @@ const History = () => {
 
   const {
     totalMinutes,
-    minutesDiff,
-    minutesDiffPercent,
     mostLooped: localMostLooped,
     listeningMode,
-    musicDNA: localMusicDNA,
     prediction: localPrediction,
     heatmapData: localHeatmapData
   } = useHistoryStats(formattedTracks, serverTotalMinutes);
@@ -181,100 +191,25 @@ const History = () => {
     ? { title: serverMostLooped.trackName, artist: serverMostLooped.artistName, image: serverMostLooped.albumImage, count: serverMostLooped.count }
     : localMostLooped;
 
-  // API-based Music DNA (real Spotify Audio Features)
-  const [apiMusicDNA, setApiMusicDNA] = useState<{
-    energy: number;
-    danceability: number;
-    acoustic: number;
-    nostalgia: number;
-    loudness: number;
-  } | null>(null);
+  // Server-side all-time insights (only for the widest range). React Query caches them,
+  // so going back to this page no longer refetches everything.
+  const isAllTime = timeRange === ALL_TIME_RANGE;
+  const { data: apiPrediction } = usePrediction(isAllTime);
+  const { data: apiHeatmapAllTime } = useListeningHeatmap(isAllTime);
 
-  // API-based Prediction (30-day history analysis)
-  const [apiPrediction, setApiPrediction] = useState<{
-    artist: string;
-    time: string;
-    confidence: number;
-    factors?: {
-      totalTracks?: number;
-      uniqueDays?: number;
-      isWeekend?: boolean;
-    };
-  } | null>(null);
-
-  // API-based Heatmap (Full History)
-  const [apiHeatmap, setApiHeatmap] = useState<{
-    hour: number;
-    count: number;
-    intensity: number;
-  }[] | null>(null);
-
-  // Fetch Music DNA from API (Only for 'all' time range)
-  useEffect(() => {
-    if (timeRange !== ALL_TIME_RANGE) {
-      setApiMusicDNA(null);
-      return;
-    }
-
-    const fetchMusicDNA = async () => {
-      try {
-        const response = await api.get('/api/v1/stats/dna');
-        const data = response.data;
-        if (data.success && data.data) {
-          setApiMusicDNA(data.data);
-        }
-      } catch (error) {
-        console.error('[History] Failed to fetch Music DNA:', error);
-      }
-    };
-    fetchMusicDNA();
-  }, [timeRange]);
-
-  // Fetch Prediction from API (Only for 'all' time range)
-  useEffect(() => {
-    if (timeRange !== ALL_TIME_RANGE) {
-      setApiPrediction(null);
-      return;
-    }
-
-    const fetchPrediction = async () => {
-      try {
-        const response = await api.get('/api/v1/stats/prediction');
-        const data = response.data;
-        if (data.success && data.data) {
-          setApiPrediction(data.data);
-        }
-      } catch (error) {
-        console.error('[History] Failed to fetch Prediction:', error);
-      }
-    };
-    fetchPrediction();
-  }, [timeRange]);
-
-  // Fetch Heatmap (Peak Hours) from API (Only for 'all' time range)
-  useEffect(() => {
-    if (timeRange !== ALL_TIME_RANGE) {
-      setApiHeatmap(null);
-      return;
-    }
-
-    const fetchHeatmap = async () => {
-      try {
-        const response = await api.get('/api/v1/stats/listening-history/heatmap');
-        const data = response.data;
-        if (data.success && data.data && data.data.length > 0) {
-          setApiHeatmap(data.data);
-        }
-      } catch (error) {
-        console.error('[History] Failed to fetch Heatmap:', error);
-      }
-    };
-    fetchHeatmap();
-  }, [timeRange]);
+  // Heatmap for the selected range from the server's full hour distribution
+  // (the local fallback only sees the 100 plays loaded on this page)
+  const serverHourCounts = historyData?.stats?.hourCounts;
+  const apiHeatmapRange = useMemo(() => {
+    if (!serverHourCounts || serverHourCounts.length !== 24) return null;
+    const max = Math.max(...serverHourCounts, 1);
+    if (serverHourCounts.every((c) => c === 0)) return null;
+    return serverHourCounts.map((count, hour) => ({ hour, count, intensity: count / max }));
+  }, [serverHourCounts]);
+  const apiHeatmap = isAllTime ? (apiHeatmapAllTime ?? apiHeatmapRange) : apiHeatmapRange;
 
   // Use API data if available, fallback to local calculation
-  const musicDNA = apiMusicDNA || localMusicDNA;
-  const prediction = apiPrediction || localPrediction;
+  const prediction = (isAllTime && apiPrediction) || localPrediction;
   const heatmapData = apiHeatmap || localHeatmapData;
 
   // 🎲 Discovery Roulette - get new music recommendation from API
@@ -283,7 +218,7 @@ const History = () => {
   const spinRoulette = async () => {
     setIsSpinning(true);
     try {
-      const response = await api.get('/api/v1/stats/discovery/roulette');
+      const response = await statsAPI.getDiscoveryRoulette();
       const data = response.data;
 
       if (data.success && data.data) {
@@ -340,8 +275,6 @@ const History = () => {
       {/* Stats Grid */}
       <StatisticsGrid
         totalMinutes={totalMinutes}
-        minutesDiff={minutesDiff}
-        minutesDiffPercent={minutesDiffPercent}
         mostLooped={mostLooped}
         listeningMode={listeningMode}
       />
@@ -372,7 +305,7 @@ const History = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {prediction?.factors?.totalTracks
-                    ? `Na podstawie ${prediction.factors.totalTracks} odtworzeń z ${prediction.factors.uniqueDays || '?'} dni`
+                    ? `Na podstawie ${prediction.factors.totalTracks} ${plural(prediction.factors.totalTracks, 'odtworzenia', 'odtworzeń', 'odtworzeń')} z ${prediction.factors.uniqueDays ? `${prediction.factors.uniqueDays} ${plural(prediction.factors.uniqueDays, 'dnia', 'dni', 'dni')}` : '? dni'}`
                     : 'Na podstawie wzorców'}
                 </p>
               </div>
@@ -430,53 +363,16 @@ const History = () => {
       </section>
 
 
-      {/* 🧬 Music DNA + Złote Godziny Grid */}
+      {/* Profil słuchacza + Złote Godziny Grid */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Music DNA */}
-        <div className="opacity-0 animate-fade-in rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6" style={{ animationDelay: '550ms' }}>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <Dna className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground text-lg">Twoje Muzyczne DNA</h3>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs text-xs">
-                      Dla trybu 'Wszystko': pobieramy Audio Features z Spotify API dla Twoich top utworów. Dla innych trybów: obliczamy na podstawie godzin słuchania, powtórzeń utworów, różnorodności artystów i długości tracków.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <p className="text-sm text-muted-foreground">Profil soniczny</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { label: "Energia", value: musicDNA.energy, color: "bg-red-500" },
-              { label: "Taneczność", value: musicDNA.danceability, color: "bg-pink-500" },
-              { label: "Akustyka", value: musicDNA.acoustic, color: "bg-primary" },
-              { label: "Nostalgia", value: musicDNA.nostalgia, color: "bg-purple-500" },
-              { label: "Głośność", value: musicDNA.loudness, color: "bg-orange-500" },
-            ].map(attr => (
-              <div key={attr.label} className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground w-24 font-medium">{attr.label}</span>
-                <div className="flex-1 h-3 bg-secondary/30 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${attr.color} rounded-full transition-all duration-1000`}
-                    style={{ width: `${attr.value}%` }}
-                  />
-                </div>
-                <span className="text-sm font-medium text-foreground w-12 text-right">{attr.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Listener profile - real shares of plays in the selected range (replaced the guessed "Music DNA") */}
+        <ListenerProfile
+          className="opacity-0 animate-fade-in"
+          style={{ animationDelay: '550ms' }}
+          profile={rangeSummary?.profile}
+          plays={rangeSummary?.totals.plays ?? 0}
+          isLoading={rangeSummaryLoading}
+        />
 
         {/* 🌙 Złote Godziny */}
         <div className="opacity-0 animate-fade-in relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-6" style={{ animationDelay: '600ms' }}>

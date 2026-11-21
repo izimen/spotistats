@@ -26,6 +26,7 @@
 | 12 | [Recommended Patches](12_RECOMMENDED_PATCHES.md) | 5 patches wymagajacych recznej decyzji |
 | 13 | [Roadmap](13_ROADMAP.md) | 48 items DONE, 11 remaining (ETAP 3) |
 | 14 | [Tech Stack Research](14_TECH_STACK_RESEARCH.md) | Zbiorczy raport: co upgradowac, co trzymac |
+| 15 | [Przeglad 2026-11-21](15_REVIEW_2026-11-21.md) | Wydajnosc, strefa czasowa, Spotify API 2026 (dev mode), audit zaleznosci, propozycje nowych funkcji |
 
 ---
 

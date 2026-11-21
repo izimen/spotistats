@@ -13,6 +13,7 @@ const Callback = lazy(() => import("./pages/Callback"));
 const TopArtists = lazy(() => import("./pages/TopArtists"));
 const TopTracks = lazy(() => import("./pages/TopTracks"));
 const History = lazy(() => import("./pages/History"));
+const Summary = lazy(() => import("./pages/Summary"));
 const Profile = lazy(() => import("./pages/Profile"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/top-artists" element={<TopArtists />} />
               <Route path="/top-tracks" element={<TopTracks />} />
               <Route path="/history" element={<History />} />
+              <Route path="/summary" element={<Summary />} />
               <Route path="/profile" element={<Profile />} />
 
             </Route>

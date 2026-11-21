@@ -194,3 +194,22 @@ Przeszukano cala historie git — prawdziwe wartosci sekretow **nigdy nie zostal
 |--------|------|-----|
 | Frontend review agent | Escape key -> window listener, typy renamed | #40 |
 | Backend review agent | req.spotifyTokenExpiry fix, exchange try-catch+next, mutex lock leak | #41 |
+
+---
+
+## Przeglad 2026-11-21 — galaz `perf/review-2026-11-21`
+
+Szczegoly i uzasadnienia: [15_REVIEW_2026-11-21.md](15_REVIEW_2026-11-21.md).
+
+| ID | Opis |
+|----|------|
+| PERF-101..106 | Jedno wywolanie `recently-played` zamiast dwoch, `createMany.count` zamiast 2x COUNT, cache tokenu Spotify w pamieci, `Promise.all` w overview/chart, `COUNT DISTINCT` w SQL, szybsza Discovery Roulette |
+| BUG-101..103 | Godziny/dni w strefie `Europe/Warsaw` zamiast UTC, poprawny "najczesciej zapetlany", polskie nazwy dni na wykresie |
+| PERF-201..205 | Recharts nie jest juz preloadowany na kazdej stronie (-43% JS przy pierwszym ladowaniu), bez zdublowanego recently-played, wspolny cache top list, React Query dla insightow historii, memo |
+| BUG-201, UX-201 | Heatmapa z pelnego zakresu (`stats.hourCounts`), profil ukrywa pola usuniete przez Spotify |
+| OPS-101, SEC-101, DEP-201 | Node 22, `npm audit fix` (m.in. critical `proxy-addr`), usuniete 30 nieuzywanych zaleznosci frontendu |
+| DATA-301 | Cloud Scheduler `spotistats-sync-history` co godzine (`0 * * * *`) zamiast co 6 h — zmienione na produkcji |
+| UX-301 | Falszywe "Muzyczne DNA" na Historii zastapione karta "Profil sluchacza" (prawdziwe proporcje z calego zakresu, liczone na serwerze) |
+| BUG-104 | Filtry Historii "4 Tygodnie / 6 Miesiecy" pobieraly 7 i 30 dni — zakresy zgodne z etykietami |
+| F1-F7 | Nowa strona `/summary`: podsumowanie dowolnego miesiaca/roku z porownaniem do poprzedniego okresu, top 10, odkrycia, rekordy, kalendarz + passy, karta PNG, eksport CSV. Endpointy `/stats/insights/summary`, `/stats/insights/calendar`, `/stats/listening-history/export` |
+| TEST | Backend 91 (+20 wzgledem 71), frontend 33 (+11 wzgledem 22) |

@@ -51,6 +51,9 @@ module.exports = {
   // Frontend
   frontendUrl: process.env.FRONTEND_URL,
 
+  // Timezone used to bucket plays into hours / weekdays (playedAt is stored in UTC)
+  appTimezone: process.env.APP_TIMEZONE || 'Europe/Warsaw',
+
   // Cron / Cloud Scheduler
   cronSecretKey: process.env.CRON_SECRET_KEY || null,
 

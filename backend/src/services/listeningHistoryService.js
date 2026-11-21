@@ -7,6 +7,11 @@
 const prisma = require('../utils/prismaClient');
 const { Prisma } = require('@prisma/client');
 const spotifyService = require('./spotifyService');
+const env = require('../config/env');
+
+// playedAt is a UTC TIMESTAMP without zone - convert to local time before taking hour/weekday,
+// otherwise "peak hours" are shifted by 1-2h for Polish users.
+const localPlayedAt = () => Prisma.sql`("playedAt" AT TIME ZONE 'UTC' AT TIME ZONE ${env.appTimezone})`;
 
 /**
  * Collect recent plays from Spotify API and save to database
@@ -14,13 +19,16 @@ const spotifyService = require('./spotifyService');
  *
  * @param {string} userId - User ID
  * @param {string} accessToken - Spotify access token
+ * @param {Array} [prefetchedItems] - recently-played items already fetched by the caller
+ *        (saves a second identical Spotify call)
  * @returns {Promise<{collected: number, skipped: number, error?: string}>}
  */
-async function collectFromAPI(userId, accessToken) {
+async function collectFromAPI(userId, accessToken, prefetchedItems) {
     try {
-        // Fetch last 50 plays from Spotify
-        const result = await spotifyService.getRecentlyPlayed(accessToken, { limit: 50 });
-        const items = result.body?.items || [];
+        // Fetch last 50 plays from Spotify (unless the caller already has them)
+        const items = prefetchedItems
+            || (await spotifyService.getRecentlyPlayed(accessToken, { limit: 50 })).body?.items
+            || [];
 
         if (items.length === 0) {
             return { collected: 0, skipped: 0 };
@@ -41,21 +49,12 @@ async function collectFromAPI(userId, accessToken) {
             platform: 'spotify-api',
         }));
 
-        // Insert with skipDuplicates (ON CONFLICT DO NOTHING)
-        const beforeCount = await prisma.streamingHistory.count({
-            where: { userId, source: 'API' }
-        });
-
-        await prisma.streamingHistory.createMany({
+        // Insert with skipDuplicates (ON CONFLICT DO NOTHING); count = rows actually inserted
+        const { count: collected } = await prisma.streamingHistory.createMany({
             data: historyEntries,
             skipDuplicates: true,
         });
 
-        const afterCount = await prisma.streamingHistory.count({
-            where: { userId, source: 'API' }
-        });
-
-        const collected = afterCount - beforeCount;
         const skipped = items.length - collected;
 
         console.log(`[ListeningHistory] User ${userId}: collected=${collected}, skipped=${skipped}`);
@@ -107,29 +106,40 @@ async function getUserHistory(userId, options = {}) {
                 where,
                 _sum: { msPlayed: true }
             }),
-            // Most looped track (groupBy)
-            prisma.streamingHistory.groupBy({
-                by: ['trackName', 'artistName', 'albumImage'],
-                where,
-                _count: { id: true },
-                orderBy: { _count: { id: 'desc' } },
-                take: 1
-            }),
+            // Most looped track. Grouped by track+artist only (grouping by albumImage split
+            // the same song into API rows with a cover and IMPORT rows without one).
+            prisma.$queryRaw`
+                SELECT "trackName", "artistName", MAX("albumImage") as "albumImage", COUNT(*)::int as count
+                FROM "StreamingHistory"
+                WHERE "userId" = ${userId}
+                ${from ? Prisma.sql`AND "playedAt" >= ${from}` : Prisma.empty}
+                ${to ? Prisma.sql`AND "playedAt" <= ${to}` : Prisma.empty}
+                GROUP BY "trackName", "artistName"
+                ORDER BY count DESC
+                LIMIT 1
+            `,
             // PERFORMANCE FIX: Aggregate hours in SQL instead of loading all records into memory
             prisma.$queryRaw`
-                SELECT EXTRACT(HOUR FROM "playedAt")::int as hour, COUNT(*)::int as count
+                SELECT EXTRACT(HOUR FROM ${localPlayedAt()})::int as hour, COUNT(*)::int as count
                 FROM "StreamingHistory"
                 WHERE "userId" = ${userId}
                 ${from ? Prisma.sql`AND "playedAt" >= ${from}` : Prisma.empty}
                 ${to ? Prisma.sql`AND "playedAt" <= ${to}` : Prisma.empty}
                 GROUP BY hour ORDER BY hour
             `,
-            // Unique tracks count for listening mode
-            prisma.streamingHistory.groupBy({
-                by: ['trackName', 'artistName'],
-                where,
-            })
+            // Unique tracks count - COUNT(DISTINCT) in SQL instead of loading every group into memory
+            prisma.$queryRaw`
+                SELECT COUNT(*)::int as count FROM (
+                    SELECT 1 FROM "StreamingHistory"
+                    WHERE "userId" = ${userId}
+                    ${from ? Prisma.sql`AND "playedAt" >= ${from}` : Prisma.empty}
+                    ${to ? Prisma.sql`AND "playedAt" <= ${to}` : Prisma.empty}
+                    GROUP BY "trackName", "artistName"
+                ) t
+            `
         ]);
+
+        const uniqueTracks = uniqueTracksResult[0]?.count || 0;
 
         // Build hourCounts from SQL result
         const hourCounts = {};
@@ -160,11 +170,14 @@ async function getUserHistory(userId, options = {}) {
                     trackName: mostLoopedResult[0].trackName,
                     artistName: mostLoopedResult[0].artistName,
                     albumImage: mostLoopedResult[0].albumImage,
-                    count: mostLoopedResult[0]._count.id
+                    count: mostLoopedResult[0].count
                 } : null,
                 topHours,
-                uniqueTracks: uniqueTracksResult.length,
-                repeatRatio: total > 0 ? 1 - (uniqueTracksResult.length / total) : 0
+                // Full 24h distribution for the selected range (local time) - lets the
+                // frontend draw the heatmap from all plays, not just the loaded page
+                hourCounts: Object.values(hourCounts),
+                uniqueTracks,
+                repeatRatio: total > 0 ? 1 - (uniqueTracks / total) : 0
             }
         };
     } catch (error) {
@@ -197,7 +210,7 @@ async function getListeningByDay(userId, days = 7) {
     // PERF-001: SQL aggregation instead of loading all records into memory
     // EXTRACT(DOW) returns 0=Sunday, 1=Monday, ..., 6=Saturday (same as JS getDay())
     const dayData = await prisma.$queryRaw`
-        SELECT EXTRACT(DOW FROM "playedAt")::int as dow, COUNT(*)::int as count
+        SELECT EXTRACT(DOW FROM ${localPlayedAt()})::int as dow, COUNT(*)::int as count
         FROM "StreamingHistory"
         WHERE "userId" = ${userId} AND "playedAt" >= ${startDate}
         GROUP BY dow ORDER BY dow
@@ -207,7 +220,7 @@ async function getListeningByDay(userId, days = 7) {
     const dayCounts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     dayData.forEach(row => { dayCounts[row.dow] = row.count; });
 
-    const dayNames = ['Niedziela', 'Poniedzialek', 'Wtorek', 'Sroda', 'Czwartek', 'Piatek', 'Sobota'];
+    const dayNames = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
 
     // Return in Monday-first order (matching ListeningChart)
     return [
@@ -231,7 +244,7 @@ async function getListeningByDay(userId, days = 7) {
 async function getListeningByHour(userId) {
     // PERFORMANCE FIX: Aggregate in SQL instead of loading all records into memory
     const hourData = await prisma.$queryRaw`
-        SELECT EXTRACT(HOUR FROM "playedAt")::int as hour, COUNT(*)::int as count
+        SELECT EXTRACT(HOUR FROM ${localPlayedAt()})::int as hour, COUNT(*)::int as count
         FROM "StreamingHistory"
         WHERE "userId" = ${userId}
         GROUP BY hour ORDER BY hour

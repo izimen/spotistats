@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install OpenSSL for Prisma compatibility
 RUN apk add --no-cache openssl
@@ -17,7 +17,7 @@ RUN npm ci --only=production
 RUN npx prisma generate
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install OpenSSL for Prisma compatibility
 RUN apk add --no-cache openssl
@@ -40,6 +40,10 @@ USER nodejs
 
 # OPS-009: Limit Node heap to 400MB (Cloud Run gives 512Mi, leave room for OS)
 ENV NODE_OPTIONS="--max-old-space-size=400"
+
+# Bucket plays into hours/weekdays in Polish time (predictionService uses Date#getHours).
+# Node ships full ICU, so no tzdata package is needed.
+ENV TZ=Europe/Warsaw
 
 # Expose port
 EXPOSE 5000
