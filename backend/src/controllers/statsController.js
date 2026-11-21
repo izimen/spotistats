@@ -4,7 +4,7 @@
  */
 const prisma = require('../utils/prismaClient');
 const spotifyService = require('../services/spotifyService');
-const encryptionService = require('../services/encryptionService');
+const tokenService = require('../services/tokenService');
 const listeningHistoryService = require('../services/listeningHistoryService');
 const musicDNAService = require('../services/musicDNAService');
 const predictionService = require('../services/predictionService');
@@ -51,122 +51,11 @@ function validateParams(req) {
 }
 
 /**
- * API-004: Per-user mutex to prevent concurrent token refreshes.
- * Without this, 5 simultaneous requests with expired JWT each trigger
- * refreshAccessToken() independently, causing Spotify token reuse detection.
- */
-const refreshLocks = new Map(); // userId -> Promise<string>
-
-/**
- * PERF: per-instance cache of decrypted Spotify access tokens.
- * Saves a DB round trip (Cloud Run europe-central2 -> Supabase eu-west-1) and an
- * AES decrypt on every API call. Entries are dropped 5 min before Spotify expiry.
- */
-const accessTokenCache = new Map(); // userId -> { token, expiresAt }
-const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
-
-function rememberAccessToken(userId, token, expiresAt) {
-    accessTokenCache.set(userId, { token, expiresAt });
-}
-
-/**
- * SEC-004: Get access token from DB (no longer in JWT)
- * Checks DB for valid encrypted token, refreshes if expired (with mutex)
+ * Valid Spotify access token for the user: stored token, else refresh (with per-user
+ * lock and refresh-token rotation persisted) - see services/tokenService.js
  */
 async function getAccessToken(req, user) {
-    const cachedToken = accessTokenCache.get(user.id);
-    if (cachedToken && cachedToken.expiresAt > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
-        return cachedToken.token;
-    }
-    accessTokenCache.delete(user.id);
-
-    // Read encrypted access token from DB
-    const userTokens = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { spotifyAccessToken: true, spotifyAccessTokenExpiry: true }
-    });
-
-    // If DB token exists and hasn't expired (with 5 min buffer)
-    if (userTokens?.spotifyAccessToken && userTokens?.spotifyAccessTokenExpiry) {
-        const expiryTime = new Date(userTokens.spotifyAccessTokenExpiry).getTime();
-        if (expiryTime > Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
-            const token = encryptionService.decrypt(userTokens.spotifyAccessToken);
-            rememberAccessToken(user.id, token, expiryTime);
-            return token;
-        }
-    }
-
-    // API-004: If another request is already refreshing for this user, wait for it
-    if (refreshLocks.has(user.id)) {
-        try {
-            return await refreshLocks.get(user.id);
-        } catch (err) {
-            // Lock holder failed — clean up so next request can retry
-            refreshLocks.delete(user.id);
-            throw err;
-        }
-    }
-
-    const refreshPromise = doRefreshToken(user);
-    refreshLocks.set(user.id, refreshPromise);
-
-    try {
-        return await refreshPromise;
-    } finally {
-        refreshLocks.delete(user.id);
-    }
-}
-
-/**
- * Internal: actually refresh the Spotify token
- */
-async function doRefreshToken(user) {
-    const userWithToken = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { refreshToken: true }
-    });
-
-    if (!userWithToken?.refreshToken) {
-        const error = new Error('No refresh token available. Please log in again.');
-        error.code = 'NO_REFRESH_TOKEN';
-        error.statusCode = 401;
-        throw error;
-    }
-
-    try {
-        const decryptedRefreshToken = encryptionService.decrypt(userWithToken.refreshToken);
-        const tokens = await spotifyService.refreshAccessToken(decryptedRefreshToken);
-
-        // SEC-004: Store refreshed access token encrypted in DB
-        const tokenExpiry = new Date(Date.now() + (tokens.expiresIn || 3600) * 1000);
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
-                spotifyAccessToken: encryptionService.encrypt(tokens.accessToken),
-                spotifyAccessTokenExpiry: tokenExpiry
-            }
-        });
-        rememberAccessToken(user.id, tokens.accessToken, tokenExpiry.getTime());
-
-        return tokens.accessToken;
-    } catch (err) {
-        accessTokenCache.delete(user.id);
-        if (err.message?.includes('invalid_grant') ||
-            err.message?.includes('revoked') ||
-            err.body?.error === 'invalid_grant') {
-
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { refreshToken: null }
-            });
-
-            const error = new Error('Session expired. Please log in again.');
-            error.code = 'REFRESH_TOKEN_REVOKED';
-            error.statusCode = 401;
-            throw error;
-        }
-        throw err;
-    }
+    return tokenService.getValidAccessToken(user.id);
 }
 
 

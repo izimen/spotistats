@@ -31,11 +31,27 @@ async function syncListeningHistory(req, res, next) {
             duration: result.duration
         }));
 
-        res.json({
-            success: true,
+        // Non-2xx makes Cloud Scheduler record the run as failed (alertable):
+        // quota exhausted, or there were users to sync and none succeeded.
+        const runFailed = result.quotaExceeded || (result.total > 0 && result.processed === 0);
+        if (runFailed) {
+            console.error(JSON.stringify({
+                severity: 'ERROR',
+                message: result.quotaExceeded ? 'Cron sync stopped: Spotify rate limit / quota' : 'Cron sync: no user synced',
+                timestamp: new Date().toISOString(),
+                component: 'spotify-sync',
+                processed: result.processed,
+                failed: result.failed,
+                total: result.total
+            }));
+        }
+
+        res.status(runFailed ? 500 : 200).json({
+            success: !runFailed,
             processed: result.processed,
             failed: result.failed,
             skipped: result.skipped,
+            quotaExceeded: result.quotaExceeded,
             duration: `${result.duration}ms`
         });
     } catch (error) {
@@ -57,7 +73,7 @@ async function syncListeningHistory(req, res, next) {
  */
 async function getStatus(req, res, next) {
     try {
-        const [stats, totalUsers, usersWithToken] = await Promise.all([
+        const [stats, totalUsers, usersWithToken, usersCollecting, usersFailing, gaps] = await Promise.all([
             prisma.user.aggregate({
                 where: { lastSyncAt: { not: null } },
                 _count: true,
@@ -65,7 +81,10 @@ async function getStatus(req, res, next) {
                 _min: { lastSyncAt: true }
             }),
             prisma.user.count(),
-            prisma.user.count({ where: { refreshToken: { not: null } } })
+            prisma.user.count({ where: { refreshToken: { not: null } } }),
+            prisma.user.count({ where: { refreshToken: { not: null }, collectionEnabled: true } }),
+            prisma.user.count({ where: { syncFailureCount: { gt: 0 } } }),
+            prisma.user.aggregate({ _max: { lastGapDetectedAt: true } })
         ]);
 
         res.json({
@@ -76,6 +95,9 @@ async function getStatus(req, res, next) {
                 timezone: 'Europe/Warsaw',
                 totalUsers,
                 usersWithValidToken: usersWithToken,
+                usersCollecting,
+                usersFailing,
+                lastGapDetected: gaps._max?.lastGapDetectedAt || null,
                 usersSynced: stats._count,
                 lastSync: stats._max?.lastSyncAt || null,
                 oldestSync: stats._min?.lastSyncAt || null
@@ -111,16 +133,9 @@ async function cleanupOldData(req, res, next) {
             }
         });
 
-        // Delete orphaned aggregated stats (users without valid token for 30+ days)
-        // This is optional and conservative
-        const deletedStats = await prisma.aggregatedStats.deleteMany({
-            where: {
-                user: {
-                    refreshToken: null,
-                    updatedAt: { lt: thirtyDaysAgo }
-                }
-            }
-        });
+        // AggregatedStats are user data (all-time stats from the GDPR import) - never
+        // deleted here. They used to be wiped for every user without a Spotify token.
+        const deletedStats = { count: 0 };
 
         const duration = Date.now() - startTime;
 

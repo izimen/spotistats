@@ -17,6 +17,7 @@ router.post('/exchange', authLimiter, authController.exchange);
 // Protected routes
 router.post('/refresh', protect, authController.refresh);
 router.post('/logout', optionalAuth, authController.logout); // optionalAuth to handle missing token gracefully
+router.post('/disconnect', protect, authController.disconnect); // stop background collection
 router.get('/me', apiLimiter, protect, authController.me); // SEC-010: rate limit
 
 // GDPR: Delete account

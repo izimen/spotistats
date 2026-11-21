@@ -34,7 +34,15 @@ model User {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  lastSyncAt   DateTime? // Last automatic cron sync timestamp
+  lastSyncAt   DateTime? // Last SUCCESSFUL automatic cron sync
+
+  // Background collection (independent of app sessions: logout keeps collecting)
+  collectionEnabled     Boolean   @default(true) // false after POST /auth/disconnect
+  spotifyGrantRevokedAt DateTime? // Spotify answered invalid_grant - user must log in again
+  lastSyncAttemptAt     DateTime?
+  lastSyncError         String?
+  syncFailureCount      Int       @default(0) // consecutive failed cron syncs
+  lastGapDetectedAt     DateTime? // >50 plays between syncs - some plays were lost
 
   // Relations
   streamingHistory  StreamingHistory[]
@@ -100,7 +108,8 @@ model StreamingHistory {
   spotifyUri String?
 
   // Listening data
-  msPlayed   Int
+  msPlayed   Int      // IMPORT: real ms_played. API: estimated min(durationMs, gap to previous play)
+  durationMs Int?     // Full track length (API rows) - kept so msPlayed can be recomputed
   playedAt   DateTime
 
   // Source tracking: "API" (live collection) or "IMPORT" (GDPR export)

@@ -243,6 +243,11 @@ export const authAPI = {
     logout: () => {
         localStorage.removeItem(TOKEN_KEY);
         return api.post('/auth/logout');
+    },
+    /** Stop hourly history collection and forget the Spotify grant (also logs out) */
+    disconnect: () => {
+        localStorage.removeItem(TOKEN_KEY);
+        return api.post('/auth/disconnect');
     }
 };
 

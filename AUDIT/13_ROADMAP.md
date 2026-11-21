@@ -33,7 +33,8 @@ Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md#przeglad-20
 
 | ID | Opis | Effort | Priorytet |
 |----|------|--------|-----------|
-| DATA-302 | Realny `msPlayed` dla danych z API (roznica `played_at`) — wstrzymane: nie wiadomo, czy `played_at` to poczatek czy koniec odtworzenia | 2 h | MEDIUM |
+| IMP-01 | Import RODO: deduplikacja z danymi z API (±5 s, import wygrywa) + przebudowa `AggregatedStats` przy imporcie (ponowny import podwaja liczniki) | 0,5 d | HIGH (przed pierwszym importem) |
+| COL-10 | Flaga `isCountedPlay` (< 30 s), znaczek "dane niepelne" przy `lastGapDetectedAt`, klucz unikalny `(userId, playedAt)` dla API | 0,5 d | LOW |
 | DEP-301 | Majory: Prisma 7, Express 5, React 19, react-router 7, Vite 7, Tailwind 4, stream-json 3 | osobne PR-y | MEDIUM |
 
 ## POZOSTALE — BACKLOG

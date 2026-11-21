@@ -213,3 +213,14 @@ Szczegoly i uzasadnienia: [15_REVIEW_2026-11-21.md](15_REVIEW_2026-11-21.md).
 | BUG-104 | Filtry Historii "4 Tygodnie / 6 Miesiecy" pobieraly 7 i 30 dni — zakresy zgodne z etykietami |
 | F1-F7 | Nowa strona `/summary`: podsumowanie dowolnego miesiaca/roku z porownaniem do poprzedniego okresu, top 10, odkrycia, rekordy, kalendarz + passy, karta PNG, eksport CSV. Endpointy `/stats/insights/summary`, `/stats/insights/calendar`, `/stats/listening-history/export` |
 | TEST | Backend 91 (+20 wzgledem 71), frontend 33 (+11 wzgledem 22) |
+
+## Dokladnosc zbierania danych 2026-11-22 — galaz `fix/data-collection-accuracy`
+
+Szczegoly: [16_DATA_COLLECTION_2026-11-22.md](16_DATA_COLLECTION_2026-11-22.md).
+
+| ID | Opis |
+|----|------|
+| COL-01..03 | Wylogowanie nie kasuje tokenu Spotify (`/auth/disconnect` do zatrzymania zbierania), zapisywanie zrotowanego refresh tokenu (`tokenService`), kasowanie tylko przy `invalid_grant` |
+| COL-04..06 | Nieudana synchronizacja = blad (500 dla Schedulera), 429 przerywa przebieg, cleanup nie kasuje `AggregatedStats` |
+| COL-07..09 | Realny `msPlayed` (koniec odtworzenia − poprzednie, max dlugosc utworu) + migracja z przeliczeniem, wykrywanie utraconych odtworzen, stan synchronizacji per uzytkownik |
+| TEST | Backend 104 (+13) |
