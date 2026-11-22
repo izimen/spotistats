@@ -224,3 +224,17 @@ Szczegoly: [16_DATA_COLLECTION_2026-11-22.md](16_DATA_COLLECTION_2026-11-22.md).
 | COL-04..06 | Nieudana synchronizacja = blad (500 dla Schedulera), 429 przerywa przebieg, cleanup nie kasuje `AggregatedStats` |
 | COL-07..09 | Realny `msPlayed` (koniec odtworzenia − poprzednie, max dlugosc utworu) + migracja z przeliczeniem, wykrywanie utraconych odtworzen, stan synchronizacji per uzytkownik |
 | TEST | Backend 104 (+13) |
+
+## Redesign, logowanie, logo 2026-11-22 — PR #56–#59
+
+Szczegoly: [17_REDESIGN_2026-11-22.md](17_REDESIGN_2026-11-22.md). Stary wyglad: branch `archive/old-look`.
+
+| ID | Opis |
+|----|------|
+| UI-401 | Nowy system wizualny „gig poster” (Archivo, sliwkowe tlo, akcent z okladki artysty nr 1), pasek boczny / dolne zakladki, strony Teraz, Topki (`/top`), Historia, Podsumowanie, Konto (`/konto`); stare adresy przekierowuja (#56) |
+| UI-402 | Recharts usuniety, wykresy w HTML/CSS; karta PNG jako plakat; `imageLarge` w top listach (#56) |
+| UI-403 | Ekran logowania z winylem: cykl 20 s gra / 3 s przerwa, nuty, 3 rotujace hasla co 10 s, ograniczenie ruchu respektowane (#57) |
+| BRAND-01 | Nowe logo (okladka + winyl), favicon SVG/PNG, apple-touch-icon, ikony 192/512, `site.webmanifest`, `og:image`; logo w pasku, logowaniu i na karcie PNG (#58) |
+| DOC-401 | README (baner, zrzuty, aktualne funkcje i stack), `UI_DESIGN_SYSTEM.md` od nowa, opis i tematy repo na GitHubie (#58) |
+| OPS-401 | nginx: `immutable` tylko dla plikow z hashem w `/assets/`, pliki z `public/` 1 dzien + revalidate; `?v=2` na ikonach (#59) |
+| TEST | Frontend 33, backend 105 |

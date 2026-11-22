@@ -1,6 +1,6 @@
 # AUDIT: Roadmap
 
-**Ostatnia aktualizacja:** 2026-11-21 (przeglad wydajnosci + Spotify API 2026, patrz [15_REVIEW_2026-11-21.md](15_REVIEW_2026-11-21.md))
+**Ostatnia aktualizacja:** 2026-11-22 (zbieranie danych [16](16_DATA_COLLECTION_2026-11-22.md), redesign i logo [17](17_REDESIGN_2026-11-22.md))
 
 ---
 
@@ -29,13 +29,27 @@ Wydajnosc backendu i frontendu, strefa czasowa, Node 22, npm audit, 30 nieuzywan
 Potem: DATA-301 (sync co godzine, juz na produkcji), UX-301 (Profil sluchacza zamiast falszywego DNA), F1-F7 (strona `/summary`).
 Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md#przeglad-2026-11-21--galaz-perfreview-2026-11-21).
 
-## NOWE — do decyzji (2026-11-21)
+## 2026-11-22 — ZROBIONE
+
+Zbieranie danych (#54, #55), redesign „gig poster” (#56), logowanie z winylem (#57), logo i README (#58), cache faviconu (#59).
+Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md). Stary wyglad: branch `archive/old-look`.
+
+## Czeka na wlasciciela
+
+| Co | Gdzie |
+|----|-------|
+| 6 uzytkownikow ma sie raz zalogowac (zbieranie wroci) | — |
+| Zgoda na e-mail do alertow | `OWNER_EMAIL=... bash docs/monitoring/setup-alerts.sh` |
+| Social preview repo | GitHub → Settings → Social preview → `docs/brand/banner.png` |
+
+## NOWE — do decyzji (2026-11-21, uzupelnione 2026-11-22)
 
 | ID | Opis | Effort | Priorytet |
 |----|------|--------|-----------|
 | IMP-01 | Import RODO: deduplikacja z danymi z API (±5 s, import wygrywa) + przebudowa `AggregatedStats` przy imporcie (ponowny import podwaja liczniki) | 0,5 d | HIGH (przed pierwszym importem) |
 | COL-10 | Flaga `isCountedPlay` (< 30 s), znaczek "dane niepelne" przy `lastGapDetectedAt`, klucz unikalny `(userId, playedAt)` dla API | 0,5 d | LOW |
-| DEP-301 | Majory: Prisma 7, Express 5, React 19, react-router 7, Vite 7, Tailwind 4, stream-json 3 | osobne PR-y | MEDIUM |
+| DEP-301 | Majory: Prisma 7, Express 5, React 19, react-router 7, Vite 7, Tailwind 4, stream-json 3. Vite i react-router naprawia czerwony „Security Scan” (czerwony od 2026-06) | osobne PR-y | MEDIUM |
+| ONB-01 | Ekran powitalny po pierwszym logowaniu + widoczny import pliku RODO w Koncie (pelna historia od razu, jak w stats.fm) | 1 d | MEDIUM (po IMP-01) |
 
 ## POZOSTALE — BACKLOG
 
@@ -52,9 +66,7 @@ Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md#przeglad-20
 
 | ID | Opis | Effort | Priorytet |
 |----|------|--------|-----------|
-| UX-004 | Precyzyjne time range labels ("4 Tygodnie" nie "Tydzien") | 30min | LOW |
 | UX-005 | Breadcrumbs/back nav na subpages | 1h | LOW |
-| UX-006 | Statystyki na profilu (total plays, hours) | 2h | LOW |
 | SEC-007 | httpOnly cookie only (usunac localStorage JWT) | 2h | LOW — wymaga custom domain |
 
 ### Architektura
@@ -69,7 +81,6 @@ Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md#przeglad-20
 | ID | Opis | Effort |
 |----|------|--------|
 | FE-006 | i18n (react-i18next) | 2d |
-| FE-012 | Sync settings z backendem | 4h |
 | PERF-006 | Lepsza Vite chunk strategy | 30min |
 | PERF-008 | Connection pooling config w DATABASE_URL | 15min |
 
@@ -79,12 +90,12 @@ Lista: [11_APPLIED_FIXES_CHANGELOG.md](11_APPLIED_FIXES_CHANGELOG.md#przeglad-20
 
 | Metryka | Wartosc |
 |---------|---------|
-| PRy zmergowane | 11 (#31-#41) |
+| PRy zmergowane | 11 (#31-#41) w ETAPIE 2/3, potem #42-#59 |
 | Poprawki kodu | ~55 |
 | Sekrety zrotowane | 6 |
 | Migracje DB | 2 |
-| Testy backend | 53 pass |
-| Testy frontend | 22 pass |
+| Testy backend | 105 pass (2026-11-22) |
+| Testy frontend | 33 pass (2026-11-22) |
 | Pliki usuniete | 40+ (shadcn/ui, junk) |
 | Linie usuniete | ~4,000+ |
 | Vulnerabilities HIGH | 0 (npm audit clean) |

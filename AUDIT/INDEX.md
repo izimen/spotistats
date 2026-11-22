@@ -28,6 +28,7 @@
 | 14 | [Tech Stack Research](14_TECH_STACK_RESEARCH.md) | Zbiorczy raport: co upgradowac, co trzymac |
 | 15 | [Przeglad 2026-11-21](15_REVIEW_2026-11-21.md) | Wydajnosc, strefa czasowa, Spotify API 2026 (dev mode), audit zaleznosci, propozycje nowych funkcji |
 | 16 | [Zbieranie danych 2026-11-22](16_DATA_COLLECTION_2026-11-22.md) | Dlaczego dane przepadaly (wylogowanie, rotacja tokenu), realny czas sluchania, wykrywanie dziur, stan synchronizacji |
+| 17 | [Redesign 2026-11-22](17_REDESIGN_2026-11-22.md) | Wyglad „gig poster”, ekran logowania z winylem, nowe logo, incydent z cache faviconu, jak cofnac (`archive/old-look`), lekcje |
 
 ---
 
@@ -64,7 +65,9 @@
 | [SECURITY.md](../SECURITY.md) | Polityka bezpieczenstwa |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Przewodnik kontrybutora |
 | [GCP_DEPLOYMENT.md](../GCP_DEPLOYMENT.md) | Instrukcja deploy na Cloud Run |
-| [UI_DESIGN_SYSTEM.md](../UI_DESIGN_SYSTEM.md) | Design tokens, komponenty, kolory |
+| [UI_DESIGN_SYSTEM.md](../UI_DESIGN_SYSTEM.md) | System „gig poster”: logo, kolory, Archivo, uklad, ruch, teksty |
+| [docs/OPERATIONS.md](../docs/OPERATIONS.md) | Gdzie dziala, koszty, Spotify dev mode, zbieranie danych, alerty, deploy i cache |
+| [docs/brand/](../docs/brand) | Logo (SVG, PNG), baner README |
 | [docs/INCIDENT_RESPONSE.md](../docs/INCIDENT_RESPONSE.md) | Plan reagowania na incydenty |
 | [docs/SECRETS_MANAGEMENT.md](../docs/SECRETS_MANAGEMENT.md) | Zarzadzanie sekretami |
 | [docs/SECURITY_TRAINING.md](../docs/SECURITY_TRAINING.md) | Szkolenie z bezpieczenstwa |
@@ -77,7 +80,7 @@
 |---------|---------|
 | Pliki zrodlowe przeanalizowane | 70+ |
 | Linie kodu przeanalizowane | ~8,400 |
-| Dokumenty audytu (AUDIT/) | 16 |
+| Dokumenty audytu (AUDIT/) | 18 |
 | Dokumenty codebase (.planning/) | 11 |
 | **Lacznie dokumentow** | **27** |
 | **Lacznie linii dokumentacji** | **~6,200** |
