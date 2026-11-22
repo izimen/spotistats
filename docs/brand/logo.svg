@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>SpotiStats</title>
+  <rect width="64" height="64" rx="14" fill="#16111D"/>
+  <circle cx="45" cy="32" r="17" fill="#3A3046" stroke="#7A6A8E" stroke-width="1.5"/>
+  <circle cx="45" cy="32" r="12.5" fill="none" stroke="#54476A" stroke-width="1"/>
+  <circle cx="45" cy="32" r="6" fill="#F2C94C"/>
+  <circle cx="45" cy="32" r="1.4" fill="#16111D"/>
+  <rect x="6" y="16" width="32" height="32" rx="2" fill="#F2C94C"/>
+  <rect x="11" y="34" width="5" height="8" fill="#16111D"/>
+  <rect x="18.5" y="29" width="5" height="13" fill="#16111D"/>
+  <rect x="26" y="24" width="5" height="18" fill="#16111D"/>
+</svg>

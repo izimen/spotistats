@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import Logo from "@/components/Logo";
 import { Disc3, ListOrdered, History, CalendarRange, UserRound, type LucideIcon } from "lucide-react";
 
 const tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] = [
@@ -23,9 +24,9 @@ const AppNav = () => (
             <NavLink
                 to="/"
                 aria-label="SpotiStats — strona główna"
-                className="flex h-20 items-center justify-center type-poster text-[28px] text-primary"
+                className="flex h-20 items-center justify-center"
             >
-                SS
+                <Logo className="h-9 w-12" />
             </NavLink>
             <ul className="flex flex-1 flex-col gap-1 pt-2">
                 {tabs.map(({ to, label, icon: Icon, end }) => (

@@ -16,6 +16,21 @@ const LINE = '#3A3046';
 const FAMILY = '"Archivo", system-ui, sans-serif';
 
 /** Spotify CDN thumbnails (64/160/300 px) -> 640 px version of the same image */
+/** The SpotiStats mark (docs/brand/logo.svg, viewBox 6 10 58 44) drawn at height h. */
+function drawMark(ctx: CanvasRenderingContext2D, x: number, y: number, h: number, accent: string) {
+    const k = h / 44;
+    const X = (v: number) => x + (v - 6) * k;
+    const Y = (v: number) => y + (v - 10) * k;
+    const disc = (r: number) => { ctx.beginPath(); ctx.arc(X(45), Y(32), r * k, 0, Math.PI * 2); };
+    disc(17); ctx.fillStyle = '#3A3046'; ctx.fill(); ctx.lineWidth = 1.5 * k; ctx.strokeStyle = '#7A6A8E'; ctx.stroke();
+    disc(12.5); ctx.lineWidth = k; ctx.strokeStyle = '#54476A'; ctx.stroke();
+    disc(6); ctx.fillStyle = accent; ctx.fill();
+    disc(1.4); ctx.fillStyle = INK; ctx.fill();
+    ctx.fillStyle = accent; ctx.fillRect(X(6), Y(16), 32 * k, 32 * k);
+    ctx.fillStyle = INK;
+    for (const [bx, by, bh] of [[11, 34, 8], [18.5, 29, 13], [26, 24, 18]]) ctx.fillRect(X(bx), Y(by), 5 * k, bh * k);
+}
+
 export function largerSpotifyImage(url: string | null | undefined): string | null {
     if (!url) return null;
     return url
@@ -95,10 +110,11 @@ export async function drawShareCard(canvas: HTMLCanvasElement, summary: PeriodSu
     ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = 'alphabetic';
 
-    // masthead
+    // masthead: mark + wordmark
+    drawMark(ctx, PAD, PAD - 8, 46, accent);
     ctx.fillStyle = accent;
     ctx.font = font(900, 40, true);
-    ctx.fillText('SpotiStats', PAD, PAD + 30);
+    ctx.fillText('SpotiStats', PAD + 72, PAD + 30);
     if (userName) {
         ctx.fillStyle = MUTED;
         ctx.font = font(500, 30);
