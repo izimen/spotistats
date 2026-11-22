@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import "./login.css";
 
 export interface LoginVariantProps {
@@ -18,14 +18,14 @@ const SpotifyMark = () => (
     </svg>
 );
 
-export const LoginButton = ({ onLogin }: { onLogin: () => void }) => (
+export const LoginButton = ({ onLogin, label }: { onLogin: () => void; label?: string }) => (
     <button
         type="button"
         onClick={onLogin}
         className="login-cta touch-target inline-flex items-center gap-3 rounded-full bg-spotify px-7 py-3 text-base font-bold text-ink transition-[filter,transform] hover:brightness-110 active:scale-[.98]"
     >
         <SpotifyMark />
-        Zaloguj się przez Spotify
+        {label ?? "Zaloguj się przez Spotify"}
     </button>
 );
 
@@ -105,61 +105,92 @@ export const EqualizerLogin = ({ error, onLogin }: LoginVariantProps) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* 2. Vinyl — a record spins; hovering the button drops the needle     */
+/* 2. Vinyl — the record slides out of a poster sleeve and spins up;   */
+/*    hovering the button lowers the needle, clicking plays it         */
 /* ------------------------------------------------------------------ */
 const LABEL_TEXT = "SpotiStats  ✦  Twoja muzyka w liczbach  ✦  ";
 
-export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => (
-    <main className="vinyl-stage relative flex min-h-[100svh] flex-col overflow-hidden bg-background px-5 py-8 sm:px-10 lg:px-16">
-        <p className="relative z-10 text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
+export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
+    const [playing, setPlaying] = useState(false);
 
-        <div className="relative z-10 grid flex-1 items-center gap-10 py-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            {/* record */}
-            <div className="relative order-first mx-auto w-[min(82vw,420px)] md:order-last md:mx-0 md:w-[min(46vw,620px)] md:justify-self-end">
-                <div className="relative aspect-square">
-                    <div className="vinyl-disc vinyl-spin absolute inset-0 rounded-full">
-                        {/* label */}
-                        <div className="absolute inset-[31%] rounded-full bg-primary">
-                            <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden="true">
-                                <defs>
-                                    <path id="vinyl-label-path" d="M50,50 m-36,0 a36,36 0 1,1 72,0 a36,36 0 1,1 -72,0" />
-                                </defs>
-                                <text className="fill-ink" style={{ fontSize: 8.6, fontWeight: 800, fontVariationSettings: "'wdth' 75", letterSpacing: 0.4 }}>
-                                    <textPath href="#vinyl-label-path">{LABEL_TEXT}</textPath>
-                                </text>
-                            </svg>
-                            <span className="absolute left-1/2 top-1/2 h-[9%] w-[9%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background" />
+    const play = () => {
+        if (playing) return;
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        setPlaying(true);
+        // let the needle land before leaving for Spotify
+        window.setTimeout(onLogin, reduce ? 0 : 750);
+    };
+
+    return (
+        <main data-playing={playing} className="vinyl-stage relative flex min-h-[100svh] flex-col overflow-hidden bg-background px-5 py-8 sm:px-10 lg:px-16">
+            <p className="relative z-10 text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
+
+            <div className="relative grid flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+                {/* sleeve + record + arm share one 155:100 box so the SVG arm lines up with the disc */}
+                <div className="relative order-first w-[min(100%,640px)] lg:order-last lg:justify-self-end">
+                    <div className="relative aspect-[155/100]">
+                        {/* record (behind the sleeve until it slides out) */}
+                        <div className="vinyl-slide absolute left-0 top-[3%] z-0 aspect-square h-[94%]">
+                            <div className="vinyl-disc vinyl-spin absolute inset-0 rounded-full">
+                                <div className="absolute inset-[31%] rounded-full bg-primary">
+                                    <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" aria-hidden="true">
+                                        <defs>
+                                            <path id="vinyl-label-path" d="M50,50 m-36,0 a36,36 0 1,1 72,0 a36,36 0 1,1 -72,0" />
+                                        </defs>
+                                        <text className="fill-ink" style={{ fontSize: 8.6, fontWeight: 800, fontVariationSettings: "'wdth' 75", letterSpacing: 0.4 }}>
+                                            <textPath href="#vinyl-label-path">{LABEL_TEXT}</textPath>
+                                        </text>
+                                    </svg>
+                                    <span className="absolute left-1/2 top-1/2 h-[9%] w-[9%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background" />
+                                </div>
+                            </div>
+                            <div aria-hidden="true" className="vinyl-sheen pointer-events-none absolute inset-0 rounded-full" />
                         </div>
+
+                        {/* sleeve: the app's own gig poster */}
+                        <div aria-hidden="true" className="absolute left-0 top-0 z-10 flex aspect-square h-full flex-col justify-between overflow-hidden bg-primary p-[6%] text-ink">
+                            <span className="pointer-events-none absolute inset-[5%] rounded-full border-[3px] border-ink/[.07]" />
+                            <p className="relative text-[clamp(.7rem,1.6vw,.95rem)] font-bold wdth-75">Strona A</p>
+                            <p className="type-poster relative text-[clamp(3rem,9.5vw,7.5rem)] leading-[0.8]">
+                                Spoti<br />Stats
+                            </p>
+                            <p className="relative max-w-[16ch] text-[clamp(.75rem,1.7vw,1rem)] font-semibold leading-tight text-ink/75">
+                                Twoja muzyka w liczbach
+                            </p>
+                        </div>
+
+                        {/* tonearm, drawn in the box's own coordinates (record centre ends at 105,50) */}
+                        <svg aria-hidden="true" viewBox="0 0 155 100" className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
+                            <circle cx="146" cy="14" r="7.5" className="fill-[hsl(var(--line))]" />
+                            <g className="vinyl-arm">
+                                <rect x="142.5" y="0" width="7" height="8" rx="1.2" className="fill-foreground/60" />
+                                <path d="M146 14 L145 56 L129 73" fill="none" strokeWidth="2.2" strokeLinecap="round" className="stroke-foreground/85" />
+                                <g transform="rotate(42 127 76)">
+                                    <rect x="122" y="72" width="11" height="7" rx="1" className="fill-foreground" />
+                                    <rect x="124.5" y="78.5" width="2" height="2.5" className="fill-primary" />
+                                </g>
+                            </g>
+                            <circle cx="146" cy="14" r="3" className="fill-foreground/80" />
+                        </svg>
                     </div>
-                    <div aria-hidden="true" className="vinyl-sheen pointer-events-none absolute inset-0 rounded-full" />
+                </div>
 
-                    {/* tonearm */}
-                    <svg aria-hidden="true" viewBox="0 0 100 100" className="vinyl-arm pointer-events-none absolute -right-[6%] -top-[8%] h-[70%] w-[70%]">
-                        <circle cx="88" cy="8" r="6" className="fill-[hsl(var(--line))]" />
-                        <circle cx="88" cy="8" r="2.4" className="fill-foreground/70" />
-                        <path d="M88 8 L80 60 L58 84" fill="none" strokeWidth="2.6" strokeLinecap="round" className="stroke-foreground/80" />
-                        <rect x="50" y="80" width="12" height="7" rx="1" transform="rotate(-48 56 84)" className="fill-foreground" />
-                    </svg>
+                <div className="relative z-10">
+                    <h1 className="type-poster text-[clamp(3.5rem,12vw,7.5rem)] leading-[0.85] text-foreground">Puść swoją historię</h1>
+                    <Pitch className="mt-6" />
+                    <div className="mt-8">
+                        {error}
+                        <LoginButton onLogin={play} label={playing ? "Puszczam…" : undefined} />
+                    </div>
                 </div>
             </div>
 
-            <div>
-                <h1 className="type-poster text-[clamp(3.75rem,13vw,9.5rem)] leading-[0.85] text-foreground">
-                    Puść swoją historię
-                </h1>
-                <Pitch className="mt-6" />
-                <div className="mt-8">
-                    {error}
-                    <LoginButton onLogin={onLogin} />
-                </div>
+            <div className="relative z-10">
+                <Fineprint />
             </div>
-        </div>
-
-        <div className="relative z-10">
-            <Fineprint />
-        </div>
-    </main>
-);
+        </main>
+    );
+};
 
 /* ------------------------------------------------------------------ */
 /* 3. Poster wall — rows of what the app shows, flyposted and moving   */
@@ -184,7 +215,7 @@ export const WallLogin = ({ error, onLogin }: LoginVariantProps) => (
                             <div key={half} className="flex shrink-0 items-center">
                                 {run.map((t, i) => (
                                     <span key={i} className="flex items-center">
-                                        <span className={`type-poster whitespace-nowrap px-[2.2vw] text-[clamp(4.25rem,11.5vw,9.5rem)] leading-[0.9] ${toneClass[row.tone]}`}>
+                                        <span className={`type-poster whitespace-nowrap px-[2.2vw] text-[clamp(4.25rem,10vw,8rem)] leading-[0.9] ${toneClass[row.tone]}`}>
                                             {t}
                                         </span>
                                         <span className={`h-[1.6vw] min-h-2 w-[1.6vw] min-w-2 shrink-0 ${r % 2 ? "bg-foreground/30" : "bg-primary"}`} />
@@ -197,16 +228,17 @@ export const WallLogin = ({ error, onLogin }: LoginVariantProps) => (
             })}
         </div>
 
-        <section className="rule border-t border-border px-5 py-8 sm:px-10 lg:px-16">
-            <div className="grid gap-8 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-end">
-                <h1 className="type-poster text-[clamp(3rem,9vw,5.5rem)] leading-[0.85] text-primary">SpotiStats</h1>
-                <Pitch className="md:pb-1" />
+        {/* name and action read as one line; the explanation sits underneath */}
+        <section className="border-t border-border px-5 py-7 sm:px-10 lg:px-16">
+            <div className="flex flex-wrap items-center gap-x-10 gap-y-5">
+                <h1 className="type-poster text-[clamp(3.25rem,8vw,5.5rem)] leading-[0.85] text-primary">SpotiStats</h1>
                 <div>
                     {error}
                     <LoginButton onLogin={onLogin} />
                 </div>
             </div>
-            <div className="mt-8">
+            <div className="mt-6 grid gap-4 md:grid-cols-2 md:gap-12">
+                <Pitch className="!text-base" />
                 <Fineprint />
             </div>
         </section>

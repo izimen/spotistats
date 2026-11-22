@@ -49,17 +49,22 @@
 .vinyl-sheen {
   background: conic-gradient(from 20deg, transparent 0 8%, rgba(243,238,230,.10) 12%, transparent 18% 50%, rgba(243,238,230,.07) 62%, transparent 68%);
 }
-.vinyl-spin { animation: vinyl-spin 1.8s linear infinite; } /* 33⅓ rpm */
-@keyframes vinyl-spin { to { transform: rotate(360deg); } }
+/* 1) slides out of the sleeve, 2) spins up to 33⅓ rpm */
+.vinyl-slide { animation: vinyl-slide 1.1s cubic-bezier(.2,.8,.2,1) .35s both; }
+@keyframes vinyl-slide { from { transform: translateX(0); } to { transform: translateX(62%); } }
+.vinyl-spin { animation: vinyl-spinup 1.4s cubic-bezier(.5,0,1,1) 1.2s 1, vinyl-spin 1.8s linear 2.6s infinite; }
+@keyframes vinyl-spinup { to { transform: rotate(240deg); } }
+@keyframes vinyl-spin { from { transform: rotate(240deg); } to { transform: rotate(600deg); } }
 
 .vinyl-arm {
-  transform-origin: 88% 8%;
-  transform: rotate(-24deg);
+  transform-box: view-box;
+  transform-origin: 146px 14px;
+  transform: rotate(-17deg);
   transition: transform 900ms cubic-bezier(.2,.8,.2,1);
 }
 .vinyl-stage:has(.login-cta:hover) .vinyl-arm,
-.vinyl-stage:has(.login-cta:focus-visible) .vinyl-arm,
-.vinyl-stage[data-playing="true"] .vinyl-arm { transform: rotate(0deg); }
+.vinyl-stage:has(.login-cta:focus-visible) .vinyl-arm { transform: rotate(-2deg); }
+.vinyl-stage[data-playing="true"] .vinyl-arm { transform: rotate(0deg); transition-duration: 600ms; }
 
 /* ---------- 3. Poster wall marquee ---------- */
 .wall-track {
@@ -79,5 +84,6 @@
 @media (prefers-reduced-motion: reduce) {
   .eq-letter::after { clip-path: none; }
   .eq-letter::after, .eq-bar, .vinyl-spin, .wall-track { animation: none !important; }
+  .vinyl-slide { animation: none !important; transform: translateX(62%); }
   .vinyl-arm { transition: none; }
 }
