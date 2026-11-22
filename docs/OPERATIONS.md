@@ -74,10 +74,13 @@ gcloud scheduler jobs update http spotistats-sync-history --schedule="0 * * * *"
   (max 5) must be added in the Spotify dashboard → *User Management*. Redirect URI must be exactly
   `https://spotistats-backend-ox6p5to4qa-lm.a.run.app/auth/callback`.
 - **gcloud**: always pass `--project spotistats-prod-482419`.
+- **Frontend build fails with "Missing: … from lock file"**: the lockfile was written by npm 11. Regenerate with
+  npm 10 (same as the `node:22` image): `npx -y npm@10 install --package-lock-only`, check with `npx -y npm@10 ci`.
+- **Production steps**: check the exit code of each step on its own; `migrate && grep` reports grep's code.
 
 ## Data collection
 
-- Logout does **not** stop hourly collection; `POST /auth/disconnect` (Profile → "Zatrzymaj zbieranie") does.
+- Logout does **not** stop hourly collection; `POST /auth/disconnect` (Konto → "Zatrzymaj") does.
 - A user stops being collected only when Spotify answers `invalid_grant` (log `spotify_grant_revoked`,
   `User.spotifyGrantRevokedAt` set) — they must log in again.
 - Health per user: `lastSyncAt` (last success), `lastSyncAttemptAt`, `lastSyncError`, `syncFailureCount`,
@@ -99,3 +102,17 @@ Alert policies (notification channel: e-mail):
 | No sync for 3 h (dead-man switch) | log-based counter metric on `jsonPayload.message="Cron collection completed"`, alert when absent for 3 h |
 | Scheduler run failed | `resource.type="cloud_scheduler_job" AND resource.labels.job_id="spotistats-sync-history" AND severity>=ERROR` |
 
+## Frontend caching
+
+`frontend/nginx.conf`: files with a content hash in `/assets/` (Vite output) are cached for a year (`immutable`);
+everything else from `public/` (favicon, icons, `og-image.png`) for 1 day with revalidation; `index.html` is not cached.
+When replacing a file in `public/` under the same name, bump the `?v=` in `frontend/index.html`.
+
+## Look and rollback
+
+- Current look: "gig poster" redesign (PR #56–#59, 2026-11-22), see `UI_DESIGN_SYSTEM.md` and `AUDIT/17_REDESIGN_2026-11-22.md`.
+- Previous look is kept on branch `archive/old-look` (= `c2516b3`, already includes the data-collection fixes).
+  To go back: new branch, `git checkout archive/old-look -- frontend`, PR, merge.
+- Logo master: `docs/brand/logo.svg`; PNG icons are rendered from it (Playwright), see the table in `UI_DESIGN_SYSTEM.md`.
+- PR checks: only Snyk gates PRs. "Security Scan" (`npm audit --audit-level=high`) has been red on `main` since 2026-06
+  (vite/esbuild, react-router) and does not block deploys; fixing it is DEP-301 in the roadmap.
