@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import "./login.css";
 
 export interface LoginVariantProps {
@@ -105,31 +105,113 @@ export const EqualizerLogin = ({ error, onLogin }: LoginVariantProps) => {
 };
 
 /* ------------------------------------------------------------------ */
-/* 2. Vinyl — the record slides out of a poster sleeve and spins up;   */
-/*    hovering the button lowers the needle, clicking plays it         */
+/* 2. Vinyl — a loop: the record slides out of the poster sleeve, the  */
+/*    needle drops and notes rise for 20 s, then it rests inside 3 s   */
 /* ------------------------------------------------------------------ */
 const LABEL_TEXT = "SpotiStats  ✦  Twoja muzyka w liczbach  ✦  ";
+const HEADLINES = ["Puść swoją historię", "Odtwórz swój rok", "Zagraj swoje liczby"];
+
+/** in → out (slide) → playing (needle down, notes) → stopping (needle up) → in */
+type Phase = "in" | "out" | "playing" | "stopping";
+const PHASE_MS: Record<Phase, number> = { in: 3000, out: 1100, playing: 20000, stopping: 900 };
+const NEXT: Record<Phase, Phase> = { in: "out", out: "playing", playing: "stopping", stopping: "in" };
+
+const prefersReducedMotion = () =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const NOTES = Array.from({ length: 9 }, (_, i) => ({
+    kind: i % 3,
+    left: 52 + rnd(i, 11) * 34, // % of the box, over the record
+    top: 22 + rnd(i, 13) * 40,
+    dx: Math.round((rnd(i, 17) - 0.3) * 120),
+    rot: Math.round((rnd(i, 19) - 0.5) * 50),
+    size: 7 + rnd(i, 23) * 5, // % of box height
+    delay: (i * 0.47).toFixed(2),
+    accent: i % 2 === 0,
+}));
+
+const Note = ({ kind }: { kind: number }) => (
+    <svg viewBox="0 0 24 24" className="h-full w-full fill-current" aria-hidden="true">
+        {kind === 0 && <path d="M15 3v11.6A3.5 3.5 0 1 0 17 18V7h4V3h-6z" />}
+        {kind === 1 && <path d="M8 4v10.6A3.5 3.5 0 1 0 10 18V8.2l9-2V12.6A3.5 3.5 0 1 0 21 16V2L8 4z" />}
+        {kind === 2 && <path d="M12 3v11.6A3.5 3.5 0 1 0 14 18V7.5c2.5.4 4 1.9 4.5 4 1.5-3.6-1-7.3-6.5-8.5z" />}
+    </svg>
+);
+
+/** Words drop in from above; the old line falls away underneath. */
+const DroppingHeadline = () => {
+    const [index, setIndex] = useState(0);
+    const [prev, setPrev] = useState<number | null>(null);
+    const last = useRef(0);
+
+    useEffect(() => {
+        if (prefersReducedMotion()) return;
+        const id = window.setInterval(() => setIndex(i => (i + 1) % HEADLINES.length), 10000);
+        return () => window.clearInterval(id);
+    }, []);
+
+    // keep the outgoing line on screen just long enough to fall away
+    useEffect(() => {
+        if (index === last.current) return;
+        setPrev(last.current);
+        last.current = index;
+        const id = window.setTimeout(() => setPrev(null), 900);
+        return () => window.clearTimeout(id);
+    }, [index]);
+
+    const line = (text: string, mode: "in" | "out", key: string) => (
+        <span key={key} aria-hidden={mode === "out" || undefined} className="[grid-area:1/1]">
+            {text.split(" ").map((word, w) => (
+                <Fragment key={w}>
+                    {w > 0 && " "}
+                    <span className={`inline-block ${mode === "in" ? "headline-drop-in" : "headline-drop-out"}`} style={{ animationDelay: `${w * 110}ms` }}>
+                        {word}
+                    </span>
+                </Fragment>
+            ))}
+        </span>
+    );
+
+    return (
+        <h1 className="type-poster grid text-[clamp(3.5rem,12vw,7.5rem)] leading-[0.85] text-foreground">
+            {prev !== null && line(HEADLINES[prev], "out", `out-${prev}`)}
+            {line(HEADLINES[index], "in", `in-${index}`)}
+        </h1>
+    );
+};
 
 export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
-    const [playing, setPlaying] = useState(false);
+    const [phase, setPhase] = useState<Phase>(() => (prefersReducedMotion() ? "playing" : "in"));
+    const [clicked, setClicked] = useState(false);
+    const started = useRef(false);
+
+    useEffect(() => {
+        if (prefersReducedMotion() || clicked) return;
+        // the very first "in" is short: the page should start moving almost at once
+        const ms = phase === "in" && !started.current ? 350 : PHASE_MS[phase];
+        const id = window.setTimeout(() => {
+            started.current = true;
+            setPhase(NEXT[phase]);
+        }, ms);
+        return () => window.clearTimeout(id);
+    }, [phase, clicked]);
 
     const play = () => {
-        if (playing) return;
-        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        setPlaying(true);
-        // let the needle land before leaving for Spotify
-        window.setTimeout(onLogin, reduce ? 0 : 750);
+        if (clicked) return;
+        setClicked(true);
+        setPhase(p => (p === "in" ? "out" : "playing"));
+        window.setTimeout(onLogin, prefersReducedMotion() ? 0 : 900);
     };
 
     return (
-        <main data-playing={playing} className="vinyl-stage relative flex min-h-[100svh] flex-col overflow-hidden bg-background px-5 py-8 sm:px-10 lg:px-16">
+        <main data-phase={phase} data-playing={clicked} className="vinyl-stage relative flex min-h-[100svh] flex-col overflow-hidden bg-background px-5 py-8 sm:px-10 lg:px-16">
             <p className="relative z-10 text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
 
             <div className="relative grid flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
                 {/* sleeve + record + arm share one 155:100 box so the SVG arm lines up with the disc */}
                 <div className="relative order-first w-[min(100%,640px)] lg:order-last lg:justify-self-end">
                     <div className="relative aspect-[155/100]">
-                        {/* record (behind the sleeve until it slides out) */}
+                        {/* record (behind the sleeve while it rests) */}
                         <div className="vinyl-slide absolute left-0 top-[3%] z-0 aspect-square h-[94%]">
                             <div className="vinyl-disc vinyl-spin absolute inset-0 rounded-full">
                                 <div className="absolute inset-[31%] rounded-full bg-primary">
@@ -159,6 +241,27 @@ export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
                             </p>
                         </div>
 
+                        {/* notes rise while the record plays */}
+                        <div aria-hidden="true" className="vinyl-notes pointer-events-none absolute inset-0 z-30">
+                            {NOTES.map((n, i) => (
+                                <span
+                                    key={i}
+                                    className={`vinyl-note absolute ${n.accent ? "text-primary" : "text-foreground"}`}
+                                    style={{
+                                        left: `${n.left}%`,
+                                        top: `${n.top}%`,
+                                        height: `${n.size}%`,
+                                        aspectRatio: "1",
+                                        animationDelay: `${n.delay}s`,
+                                        "--dx": `${n.dx}%`,
+                                        "--rot": `${n.rot}deg`,
+                                    } as CSSProperties}
+                                >
+                                    <Note kind={n.kind} />
+                                </span>
+                            ))}
+                        </div>
+
                         {/* tonearm, drawn in the box's own coordinates (record centre ends at 105,50) */}
                         <svg aria-hidden="true" viewBox="0 0 155 100" className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible">
                             <circle cx="146" cy="14" r="7.5" className="fill-[hsl(var(--line))]" />
@@ -176,11 +279,11 @@ export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
                 </div>
 
                 <div className="relative z-10">
-                    <h1 className="type-poster text-[clamp(3.5rem,12vw,7.5rem)] leading-[0.85] text-foreground">Puść swoją historię</h1>
+                    <DroppingHeadline />
                     <Pitch className="mt-6" />
                     <div className="mt-8">
                         {error}
-                        <LoginButton onLogin={play} label={playing ? "Puszczam…" : undefined} />
+                        <LoginButton onLogin={play} label={clicked ? "Puszczam…" : undefined} />
                     </div>
                 </div>
             </div>
