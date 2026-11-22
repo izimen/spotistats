@@ -227,7 +227,7 @@
   animation: marquee-bounce 6s ease infinite;
 }
 
-/* Recharts: accent, paper, muted only; baseline but no grid */
+/* (Recharts removed: all charts are plain HTML/CSS) */
 .recharts-cartesian-grid line {
   stroke: transparent;
 }

@@ -111,7 +111,7 @@ const Account = () => {
                     <Figure label="Zapisane odtworzenia" value={stats?.totalPlays?.toLocaleString("pl-PL") ?? "—"} />
                     <Figure
                         label="Zbieramy od"
-                        value={stats?.firstPlay ? new Date(stats.firstPlay).toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }) : "—"}
+                        value={stats?.firstPlay ? new Date(stats.firstPlay).toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                     />
                     <Figure label="Strefa czasowa" value="Warszawa" note="Godziny i dni liczone w czasie polskim" />
                 </FigureRow>

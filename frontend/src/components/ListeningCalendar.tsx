@@ -1,13 +1,12 @@
 import { useMemo } from "react";
-import { CalendarDays, Flame, Trophy } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/Editorial";
 import { useListeningCalendar } from "@/hooks/useInsights";
 import { formatDayLong, formatDayShort, plural, toLocalDateString } from "@/lib/period";
 
 const MONTH_SHORT = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
 const WEEKDAY_LABELS = ["Pn", "", "Śr", "", "Pt", "", ""];
 // 0 = no plays, 1-4 = quartiles of active days
-const LEVEL_CLASSES = ["bg-muted/40", "bg-primary/25", "bg-primary/50", "bg-primary/75", "bg-primary"];
+const LEVEL_CLASSES = ["bg-foreground/10", "bg-primary/30", "bg-primary/55", "bg-primary/80", "bg-primary"];
 
 interface Cell {
   date: string;
@@ -64,39 +63,28 @@ const ListeningCalendar = () => {
   const longest = data?.streaks.longest;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card/60 p-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-            <CalendarDays className="w-6 h-6 text-primary" />
-          </div>
+    <section className="rule min-w-0 pt-6" aria-labelledby="calendar-title">
+      <div className="mb-6 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 id="calendar-title" className="type-head text-[26px] sm:text-[30px]">Kalendarz słuchania</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data ? `${data.activeDays} ${plural(data.activeDays, "dzień", "dni", "dni")} z muzyką w ostatnich 12 miesiącach` : "Ostatnie 12 miesięcy"}
+          </p>
+        </div>
+        <dl className="flex gap-10">
           <div>
-            <h3 className="font-semibold text-foreground text-lg">Kalendarz słuchania</h3>
-            <p className="text-sm text-muted-foreground">
-              {data ? `${data.activeDays} ${plural(data.activeDays, "dzień", "dni", "dni")} z muzyką w ostatnich 12 miesiącach` : "Ostatnie 12 miesięcy"}
-            </p>
+            <dt className="text-sm text-muted-foreground">Obecna passa</dt>
+            <dd className="type-figure mt-1 text-[36px] text-primary">{current?.length ?? "–"}</dd>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-4 py-2">
-            <Flame className="w-4 h-4 text-orange-400" />
-            <div>
-              <div className="text-lg font-bold leading-tight tabular-nums">{current?.length ?? "–"}</div>
-              <div className="text-xs text-muted-foreground">obecna passa</div>
-            </div>
+          <div title={longest?.from && longest.to ? `${formatDayLong(longest.from)} – ${formatDayLong(longest.to)}` : undefined}>
+            <dt className="text-sm text-muted-foreground">Najdłuższa passa</dt>
+            <dd className="type-figure mt-1 text-[36px]">{longest?.length ?? "–"}</dd>
           </div>
-          <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-4 py-2" title={longest?.from && longest.to ? `${formatDayLong(longest.from)} – ${formatDayLong(longest.to)}` : undefined}>
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <div>
-              <div className="text-lg font-bold leading-tight tabular-nums">{longest?.length ?? "–"}</div>
-              <div className="text-xs text-muted-foreground">najdłuższa passa</div>
-            </div>
-          </div>
-        </div>
+        </dl>
       </div>
 
       {isLoading || !data ? (
-        <Skeleton className="h-[120px] w-full rounded-xl" />
+        <Skeleton className="h-[120px] w-full" />
       ) : (
         <div className="overflow-x-auto pb-2">
           <div className="inline-flex flex-col gap-1 min-w-max">
@@ -136,7 +124,7 @@ const ListeningCalendar = () => {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

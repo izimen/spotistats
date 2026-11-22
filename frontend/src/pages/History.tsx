@@ -1,23 +1,32 @@
-import { Calendar, Shuffle, Target, Flame, Star, Moon, Zap, Repeat, Play, X, Info } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Shuffle } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
 import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
+import { PageHeader, Section, Figure, FigureRow, EmptyNote } from "@/components/Editorial";
 import { useUser, useListeningHistory, usePrediction, useListeningHeatmap } from "@/hooks/useSpotifyData";
 import { usePeriodSummary } from "@/hooks/useInsights";
 import ListenerProfile from "@/components/ListenerProfile";
 import { toLocalDateString, plural } from "@/lib/period";
 import { useHistoryStats } from "@/hooks/useHistoryStats";
 import HistoryList from "@/components/HistoryList";
-import StatisticsGrid from "@/components/StatisticsGrid";
 import { isValidImageUrl } from "@/lib/utils";
-import { AxiosError } from "axios";
 import { statsAPI } from "@/lib/api";
+
+const RANGE_LABEL: Record<TimeRange, string> = {
+  week: "ostatnich 4 tygodni",
+  month: "ostatnich 6 miesięcy",
+  year: "ostatniego roku",
+};
+
+const SECTIONS = [
+  { id: "liczby", label: "Liczby" },
+  { id: "profil", label: "Profil" },
+  { id: "godziny", label: "Złote godziny" },
+  { id: "przewidywanie", label: "Przewidywanie" },
+  { id: "ruletka", label: "Ruletka" },
+  { id: "ostatnie", label: "Ostatnie" },
+];
 
 interface HistoryItem {
   trackId?: string;
@@ -52,14 +61,6 @@ interface HistoryTrack {
   spotifyUrl?: string | null;
 }
 
-interface Badge {
-  id: string;
-  icon: React.ReactNode;
-  name: string;
-  description: string;
-  unlocked: boolean;
-  color: string;
-}
 
 const History = () => {
   const navigate = useNavigate();
@@ -67,7 +68,6 @@ const History = () => {
   // All-time API stats (Music DNA, prediction, peak hours) used to be shown for the
   // removed "Wszystko" range; "1 Rok" (long_term) is now the widest range.
   const ALL_TIME_RANGE: TimeRange = "year";
-  const [showRouletteModal, setShowRouletteModal] = useState(false);
   const [rouletteTrack, setRouletteTrack] = useState<HistoryTrack | null>(null);
 
   // Calculate date range based on timeRange
@@ -181,7 +181,6 @@ const History = () => {
   const {
     totalMinutes,
     mostLooped: localMostLooped,
-    listeningMode,
     prediction: localPrediction,
     heatmapData: localHeatmapData
   } = useHistoryStats(formattedTracks, serverTotalMinutes);
@@ -233,14 +232,12 @@ const History = () => {
           duration: '3:00',
           durationMs: 180000
         });
-        setShowRouletteModal(true);
       } else {
         // Fallback to local selection if API fails
         const fallbackTrack = formattedTracks[Math.floor(Math.random() * formattedTracks.length)];
         if (fallbackTrack) {
           setRouletteTrack(fallbackTrack);
-          setShowRouletteModal(true);
-        }
+          }
       }
     } catch (error) {
       console.error('Roulette API error:', error);
@@ -248,270 +245,149 @@ const History = () => {
       const fallbackTrack = formattedTracks[Math.floor(Math.random() * formattedTracks.length)];
       if (fallbackTrack) {
         setRouletteTrack(fallbackTrack);
-        setShowRouletteModal(true);
       }
     } finally {
       setIsSpinning(false);
     }
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <section className="opacity-0 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-1">
-              <span className="text-gradient">Historia</span> słuchania
-            </h1>
-            <p className="text-muted-foreground">
-              Wszystkie Twoje ostatnio słuchane utwory
-            </p>
-          </div>
-          <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
-        </div>
-      </section>
+  const minutesLabel = totalMinutes >= 60
+    ? `${Math.floor(totalMinutes / 60)} h ${totalMinutes % 60} min`
+    : `${totalMinutes} min`;
+  const playsCount = historyData?.total ?? formattedTracks.length;
+  const hours = Array.from({ length: 24 }, (_, hour) => ({ hour, count: heatmapData.find(h => h.hour === hour)?.count ?? 0 }));
+  const ranked = [...hours].sort((a, b) => b.count - a.count).filter(h => h.count > 0);
+  // sentence, highlight and bars all from the same 24-hour distribution (server topHours only if it's empty)
+  const topHours = (ranked.length > 0 ? ranked.slice(0, 3) : serverTopHours ?? []).filter(h => h.count > 0);
+  const topHourSet = new Set(topHours.map(h => h.hour));
+  const maxHour = Math.max(1, ...hours.map(h => h.count));
+  const hasPrediction = Boolean(prediction?.artist && prediction?.factors?.totalTracks);
+  const predictionNote = hasPrediction
+    ? `Na podstawie ${prediction!.factors!.totalTracks} ${plural(prediction!.factors!.totalTracks, "odtworzenia", "odtworzeń", "odtworzeń")} z ${prediction!.factors!.uniqueDays ? `${prediction!.factors!.uniqueDays} ${plural(prediction!.factors!.uniqueDays, "dnia", "dni", "dni")}` : "? dni"}`
+    : undefined;
 
-      {/* Stats Grid */}
-      <StatisticsGrid
-        totalMinutes={totalMinutes}
-        mostLooped={mostLooped}
-        listeningMode={listeningMode}
+  return (
+    <div>
+      <PageHeader
+        title="Historia"
+        meta={`Wszystko, co zapisaliśmy z ${RANGE_LABEL[timeRange]}. Synchronizacja co godzinę.`}
+        controls={<TimeRangeFilter value={timeRange} onChange={setTimeRange} />}
       />
 
-      {/* 🔮 Prediction + 🎲 Roulette Row */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-        {/* Prediction */}
-        {(
+      <nav aria-label="Sekcje historii" className="sticky top-0 z-30 -mx-5 mb-12 border-b border-border bg-background px-5 sm:-mx-8 sm:px-8 lg:-mx-12 lg:px-12">
+        <ul className="scrollbar-hide flex gap-6 overflow-x-auto py-3 text-sm font-semibold">
+          {SECTIONS.map(s => (
+            <li key={s.id} className="shrink-0">
+              <a href={`#${s.id}`} className="text-muted-foreground hover:text-foreground">{s.label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-          <div className="opacity-0 animate-fade-in rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card p-6" style={{ animationDelay: '400ms' }}>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-2xl">🔮</span>
+      <div className="space-y-16">
+        <section id="liczby" className="scroll-mt-16" aria-label="Liczby">
+          <FigureRow className="lg:grid-cols-3">
+            <Figure
+              label="Czas słuchania"
+              value={isLoading ? "…" : minutesLabel}
+              note={<Link to="/summary" className="underline decoration-primary decoration-2 underline-offset-4 hover:text-foreground">Porównaj z poprzednim miesiącem</Link>}
+              emphasis
+            />
+            <Figure label="Odtworzenia" value={isLoading ? "…" : playsCount.toLocaleString("pl-PL")} />
+            <Figure
+              label="Najczęściej zapętlany"
+              value={mostLooped?.title || "—"}
+              note={mostLooped ? `${mostLooped.count} ${plural(mostLooped.count, "raz", "razy", "razy")}${mostLooped.artist ? `, ${mostLooped.artist}` : ""}` : "Brak powtórek"}
+            />
+          </FigureRow>
+        </section>
+
+        <Section id="profil" title="Profil słuchacza" note="Prawdziwe proporcje z Twoich odtworzeń w tym okresie">
+          <ListenerProfile
+            profile={rangeSummary?.profile}
+            plays={rangeSummary?.totals.plays ?? 0}
+            isLoading={rangeSummaryLoading}
+          />
+        </Section>
+
+        <Section id="godziny" title="Złote godziny" note="Kiedy słuchasz najczęściej (czas polski)">
+          {topHours.length > 0 ? (
+            <>
+              <p className="mb-8 type-head text-[clamp(1.6rem,4vw,2.4rem)]">
+                Najczęściej o <span className="text-primary">{topHours[0].hour}:00</span>
+                {topHours[1] && <>, potem o {topHours[1].hour}:00{topHours[2] && <> i {topHours[2].hour}:00</>}</>}.
+              </p>
+              <ol className="grid h-32 items-end gap-[3px]" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }} aria-label="Odtworzenia według godziny">
+                {hours.map(h => (
+                  <li key={h.hour} className="flex h-full items-end" title={`${h.hour}:00 – ${h.count}`}>
+                    <span
+                      className={`block w-full ${topHourSet.has(h.hour) ? "bg-primary" : "bg-foreground/25"}`}
+                      style={{ height: `${Math.max(2, (h.count / maxHour) * 100)}%` }}
+                      aria-label={`${h.hour}:00: ${h.count}`}
+                    />
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-2 grid border-t border-border pt-2 text-xs text-muted-foreground" style={{ gridTemplateColumns: "repeat(24, minmax(0, 1fr))" }}>
+                {hours.map(h => <span key={h.hour} className="text-center">{h.hour % 6 === 0 ? h.hour : ""}</span>)}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground text-lg">Przewidywanie</h3>
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-xs">
-                        Dla trybu 'Wszystko': analizujemy historię z ostatnich 30 dni i szukamy artystów słuchanych o podobnej porze (±2h). Dla innych trybów: bazujemy na 100 ostatnich utworach.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+            </>
+          ) : (
+            <EmptyNote title="Za mało danych">Godziny pokażemy, gdy zapiszemy więcej odtworzeń.</EmptyNote>
+          )}
+        </Section>
+
+        <Section id="przewidywanie" title="Przewidywanie" note={predictionNote}>
+          {hasPrediction ? (
+            <>
+              <p className="type-head text-[clamp(1.6rem,4vw,2.4rem)]">
+                Dziś {prediction!.time} najpewniej posłuchasz <span className="text-primary">{prediction!.artist}</span>.
+              </p>
+              <div className="mt-5 flex max-w-md items-center gap-4">
+                <div className="h-[3px] flex-1 bg-border" role="meter" aria-label="Pewność" aria-valuenow={prediction!.confidence} aria-valuemin={0} aria-valuemax={100}>
+                  <div className="h-full bg-primary" style={{ width: `${prediction!.confidence}%` }} />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {prediction?.factors?.totalTracks
-                    ? `Na podstawie ${prediction.factors.totalTracks} ${plural(prediction.factors.totalTracks, 'odtworzenia', 'odtworzeń', 'odtworzeń')} z ${prediction.factors.uniqueDays ? `${prediction.factors.uniqueDays} ${plural(prediction.factors.uniqueDays, 'dnia', 'dni', 'dni')}` : '? dni'}`
-                    : 'Na podstawie wzorców'}
-                </p>
+                <span className="tabular-nums text-sm text-muted-foreground">pewność {prediction!.confidence}%</span>
               </div>
-            </div>
-            <p className="text-foreground mb-4 text-base">
-              Dziś {(prediction?.time || "wieczorem")} najpewniej posłuchasz <span className="text-primary font-bold">{(prediction?.artist || "The Weeknd")}</span>
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-3 bg-primary/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${(prediction?.confidence || 85)}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium text-primary">{(prediction?.confidence || 85)}%</span>
-            </div>
-          </div>
-        )}
+            </>
+          ) : (
+            <EmptyNote title="Jeszcze nie wiemy">Przewidywanie pojawi się, gdy zapiszemy kilka dni słuchania.</EmptyNote>
+          )}
+        </Section>
 
-        {/* Discovery Roulette */}
-        <div className="opacity-0 animate-fade-in rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-card to-card p-6" style={{ animationDelay: '450ms' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <span className="text-xl">🎲</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">Muzyczna Ruletka</h3>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs text-xs">
-                      Bazując na Twoich top 3 artystach, Spotify generuje rekomendacje. Filtrujemy utwory już słuchane i preferujemy "hidden gems" (popularność 40-70%).
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+        <Section id="ruletka" title="Ruletka" note="Utwór w klimacie Twoich ulubionych artystów, spoza Twojej historii">
+          {rouletteTrack && (
+            <div className="row-in mb-6 flex items-center gap-5" aria-live="polite">
+              <img src={isValidImageUrl(rouletteTrack.image) ? rouletteTrack.image : "/assets/default-album.svg"} alt="" className="h-24 w-24 shrink-0 rounded-sm object-cover" />
+              <div className="min-w-0">
+                <p className="type-head truncate text-[28px]">{rouletteTrack.title}</p>
+                <p className="truncate text-muted-foreground">{rouletteTrack.artist}</p>
+                <a
+                  href={rouletteTrack.spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(`${rouletteTrack.title} ${rouletteTrack.artist}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-sm font-semibold underline decoration-spotify decoration-2 underline-offset-4"
+                >
+                  Otwórz w Spotify
+                </a>
               </div>
-              <p className="text-xs text-muted-foreground">Odkryj coś nowego</p>
             </div>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Utwór dopasowany do Twojego gustu, którego jeszcze nie słuchałeś
-          </p>
+          )}
           <button
+            type="button"
             onClick={spinRoulette}
             disabled={isSpinning}
-            className="w-full py-3 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+            className="touch-target inline-flex items-center gap-2 bg-primary px-6 font-semibold text-primary-foreground disabled:opacity-60"
           >
-            <Shuffle className={`w-4 h-4 ${isSpinning ? 'animate-spin' : ''}`} />
-            {isSpinning ? 'Szukam...' : 'Zakręć ruletką'}
+            <Shuffle className={`h-4 w-4 ${isSpinning ? "animate-spin" : ""}`} aria-hidden="true" />
+            {isSpinning ? "Szukam…" : rouletteTrack ? "Losuj jeszcze raz" : "Wylosuj utwór"}
           </button>
-        </div>
-      </section>
+        </Section>
 
-
-      {/* Profil słuchacza + Złote Godziny Grid */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Listener profile - real shares of plays in the selected range (replaced the guessed "Music DNA") */}
-        <ListenerProfile
-          className="opacity-0 animate-fade-in"
-          style={{ animationDelay: '550ms' }}
-          profile={rangeSummary?.profile}
-          plays={rangeSummary?.totals.plays ?? 0}
-          isLoading={rangeSummaryLoading}
-        />
-
-        {/* 🌙 Złote Godziny */}
-        <div className="opacity-0 animate-fade-in relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card p-6" style={{ animationDelay: '600ms' }}>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground text-lg">Złote Godziny</h3>
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-3.5 h-3.5 text-muted-foreground/60 hover:text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-xs">
-                        Analizujemy CAŁĄ historię słuchania z bazy danych. Grupujemy odtworzenia wg godziny (0-23) i pokazujemy top 3. Dane zbierane automatycznie co ~1h.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <p className="text-sm text-muted-foreground">Twój rytm muzyczny</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {(() => {
-              // Prefer server-side topHours if available, fallback to local heatmapData
-              const sortedData = serverTopHours && serverTopHours.length > 0
-                ? serverTopHours
-                : [...heatmapData].sort((a, b) => b.count - a.count).slice(0, 3);
-              const top1 = sortedData[0];
-              const rest = sortedData.slice(1);
-
-              const getTimeIcon = (h: number) => {
-                if (h >= 5 && h < 12) return "🌅";
-                if (h >= 12 && h < 17) return "☀️";
-                if (h >= 17 && h < 21) return "🌇";
-                return "🌙";
-              };
-
-              return (
-                <>
-                  {/* #1 Card - Green Gradient */}
-                  {top1 && (
-                    <div className="relative w-full rounded-2xl bg-gradient-to-r from-primary/20 to-primary/5 border border-primary/20 p-5 pl-10">
-                      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-lg">
-                        1
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{getTimeIcon(top1.hour)}</span>
-                          <span className="text-2xl font-bold text-foreground">{top1.hour}:00</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-sm font-medium text-primary">{top1.count}</span>
-                          <span className="text-xs text-muted-foreground ml-1">odtw.</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* #2 & #3 Cards */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {rest.map((item, i) => (
-                      <div key={item.hour} className="relative rounded-xl bg-secondary/20 border border-border/30 p-3 pl-8">
-                        <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-secondary text-foreground flex items-center justify-center font-bold text-xs shadow-md">
-                          {i + 2}
-                        </div>
-
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-lg">{getTimeIcon(item.hour)}</span>
-                            <span className="text-lg font-bold text-foreground">{item.hour}:00</span>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-xs font-medium text-muted-foreground">{item.count}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      </section>
-
-      {/* History List */}
-      <HistoryList tracks={formattedTracks} isLoading={isLoading} />
-
-      {/* 🎲 Roulette Modal */}
-      {showRouletteModal && rouletteTrack && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-sm rounded-2xl border border-orange-500/30 bg-card p-6 shadow-2xl animate-fade-in">
-            <button
-              onClick={() => setShowRouletteModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-secondary/50 flex items-center justify-center hover:bg-secondary transition-all"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center">
-              <span className="text-4xl mb-4 block">🎲</span>
-              <h3 className="text-xl font-bold text-foreground mb-2">Daj szansę!</h3>
-              <p className="text-sm text-muted-foreground mb-6">Ten utwór może Ci się spodobać</p>
-
-              <div className="flex items-center gap-4 bg-secondary/30 rounded-xl p-4 mb-6">
-                <img
-                  src={isValidImageUrl(rouletteTrack.image) ? rouletteTrack.image : "/assets/default-album.svg"}
-                  alt={rouletteTrack.title}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <div className="text-left flex-1 min-w-0">
-                  <h4 className="font-semibold text-foreground truncate">{rouletteTrack.title}</h4>
-                  <p className="text-sm text-muted-foreground truncate">{rouletteTrack.artist}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={spinRoulette}
-                  className="py-3 rounded-xl bg-secondary/50 text-foreground hover:bg-secondary transition-all text-sm font-medium"
-                >
-                  Zakręć znowu
-                </button>
-                <button className="py-3 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all text-sm font-medium flex items-center justify-center gap-2">
-                  <Play className="w-4 h-4 fill-current" />
-                  Odtwórz
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        <Section id="ostatnie" title="Ostatnie odtworzenia" note="Czas słuchania liczony do następnego utworu, więc przewinięte utwory liczą się krócej">
+          <HistoryList tracks={formattedTracks} isLoading={isLoading} />
+        </Section>
+      </div>
     </div>
   );
 };

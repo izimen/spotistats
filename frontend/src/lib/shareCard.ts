@@ -1,142 +1,185 @@
 /**
- * Share card: renders a period summary to a 1080x1350 PNG on a canvas (no backend).
- * Text only - album/artist covers come from Spotify's CDN and would taint the canvas
- * if CORS headers ever changed, so we don't depend on them.
+ * Share card: the period summary as a 1080x1350 gig poster (same look as the app's hero):
+ * duotone photo of the #1 artist, their name in ultra-condensed Archivo, the numbers below.
+ * Spotify's CDN sends CORS headers; if the image can't be loaded the poster is drawn without it.
  */
 import type { PeriodSummary } from '@/hooks/useInsights';
-import { formatMinutes } from './period';
+import { formatMinutes, plural } from './period';
 
 const W = 1080;
 const H = 1350;
-const GREEN = '#1ed760';
-const BG = '#0b0c0e';
-const CARD = '#14161a';
-const TEXT = '#fafafa';
-const MUTED = '#8c8c8c';
+const PAD = 72;
+const INK = '#16111D';
+const PAPER = '#F3EEE6';
+const MUTED = '#A197AD';
+const LINE = '#3A3046';
+const FAMILY = '"Archivo", system-ui, sans-serif';
 
-function fit(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+/** Spotify CDN thumbnails (64/160/300 px) -> 640 px version of the same image */
+export function largerSpotifyImage(url: string | null | undefined): string | null {
+    if (!url) return null;
+    return url
+        .replace('ab67616d00004851', 'ab67616d0000b273')
+        .replace('ab67616d00001e02', 'ab67616d0000b273')
+        .replace('ab6761610000f178', 'ab6761610000e5eb')
+        .replace('ab67616100005174', 'ab6761610000e5eb');
+}
+
+function cssAccent(): string {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+    return v ? `hsl(${v})` : '#F2C94C';
+}
+
+function font(weight: number, size: number, condensed = false) {
+    return `${condensed ? 'ultra-condensed ' : ''}${weight} ${size}px ${FAMILY}`;
+}
+
+function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
     if (ctx.measureText(text).width <= maxWidth) return text;
     let t = text;
     while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
     return `${t}…`;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+function loadImage(url: string | null): Promise<HTMLImageElement | null> {
+    if (!url) return Promise.resolve(null);
+    return new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+        setTimeout(() => resolve(null), 4000);
+    });
 }
 
-export function drawShareCard(canvas: HTMLCanvasElement, summary: PeriodSummary, periodTitle: string, userName?: string) {
+/** Cover-fit an image into a box, as a duotone: ink shadows, accent highlights */
+function drawDuotone(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, accent: string) {
+    const scale = Math.max(w / img.width, h / img.height);
+    const sw = w / scale, sh = h / scale;
+    const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    ctx.fillStyle = accent;
+    ctx.fillRect(x, y, w, h);
+    ctx.filter = 'grayscale(1) contrast(1.25) brightness(0.95)';
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+    ctx.filter = 'none';
+    ctx.globalCompositeOperation = 'lighten';
+    ctx.fillStyle = INK;
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+}
+
+export async function drawShareCard(canvas: HTMLCanvasElement, summary: PeriodSummary, periodTitle: string, userName?: string) {
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas not supported');
-    const font = (weight: number, size: number) => `${weight} ${size}px Inter, "Segoe UI", system-ui, sans-serif`;
 
-    // background + glow
-    ctx.fillStyle = BG;
+    try {
+        await Promise.all([document.fonts.load(font(900, 100, true)), document.fonts.load(font(500, 30))]);
+    } catch {
+        /* system font fallback */
+    }
+
+    const accent = cssAccent();
+    const top = summary.topArtists[0];
+    const photo = await loadImage(largerSpotifyImage(top?.image));
+
+    ctx.fillStyle = INK;
     ctx.fillRect(0, 0, W, H);
-    const glow = ctx.createRadialGradient(W * 0.85, 0, 0, W * 0.85, 0, 900);
-    glow.addColorStop(0, 'rgba(30, 215, 96, 0.35)');
-    glow.addColorStop(1, 'rgba(30, 215, 96, 0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic';
 
-    const pad = 80;
-    let y = pad + 20;
-
-    ctx.fillStyle = GREEN;
-    ctx.font = font(700, 34);
-    ctx.fillText('SpotiStats', pad, y);
-    ctx.fillStyle = MUTED;
-    ctx.font = font(500, 34);
-    ctx.textAlign = 'right';
-    ctx.fillText(userName ? fit(ctx, userName, 500) : '', W - pad, y);
-    ctx.textAlign = 'left';
-
-    y += 110;
-    ctx.fillStyle = TEXT;
-    ctx.font = font(800, 84);
-    ctx.fillText(fit(ctx, periodTitle, W - pad * 2), pad, y);
-
-    // big minutes
-    y += 150;
-    ctx.fillStyle = GREEN;
-    ctx.font = font(800, 150);
-    ctx.fillText(summary.totals.minutes.toLocaleString('pl-PL'), pad, y);
-    ctx.fillStyle = MUTED;
-    ctx.font = font(500, 40);
-    y += 60;
-    ctx.fillText(`minut muzyki · ${formatMinutes(summary.totals.minutes)}`, pad, y);
-
-    // stat tiles
-    y += 60;
-    const tiles = [
-        { value: summary.totals.plays.toLocaleString('pl-PL'), label: 'odtworzeń' },
-        { value: summary.totals.uniqueArtists.toLocaleString('pl-PL'), label: 'artystów' },
-        { value: String(summary.totals.activeDays), label: 'dni z muzyką' },
-    ];
-    const gap = 24;
-    const tileW = (W - pad * 2 - gap * 2) / 3;
-    tiles.forEach((t, i) => {
-        const x = pad + i * (tileW + gap);
-        ctx.fillStyle = CARD;
-        roundRect(ctx, x, y, tileW, 150, 28);
-        ctx.fill();
-        ctx.fillStyle = TEXT;
-        ctx.font = font(800, 56);
-        ctx.fillText(fit(ctx, t.value, tileW - 56), x + 28, y + 75);
+    // masthead
+    ctx.fillStyle = accent;
+    ctx.font = font(900, 40, true);
+    ctx.fillText('SpotiStats', PAD, PAD + 30);
+    if (userName) {
         ctx.fillStyle = MUTED;
         ctx.font = font(500, 30);
-        ctx.fillText(t.label, x + 28, y + 120);
+        ctx.textAlign = 'right';
+        ctx.fillText(ellipsize(ctx, userName, 520), W - PAD, PAD + 30);
+        ctx.textAlign = 'left';
+    }
+
+    // photo block
+    const photoY = PAD + 70;
+    const photoH = 560;
+    if (photo) drawDuotone(ctx, photo, PAD, photoY, W - PAD * 2, photoH, accent);
+    else {
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.18;
+        ctx.fillRect(PAD, photoY, W - PAD * 2, photoH);
+        ctx.globalAlpha = 1;
+    }
+
+    // the name, fitted to the sheet and biting into the photo
+    const name = top?.name ?? periodTitle;
+    let size = 100;
+    ctx.font = font(900, size, true);
+    size = Math.min(300, Math.floor(size * ((W - PAD * 2) / ctx.measureText(name).width) * 0.98));
+    ctx.font = font(900, size, true);
+    if (ctx.measureText(name).width > W - PAD * 2) size = Math.max(60, size * ((W - PAD * 2) / ctx.measureText(name).width));
+    ctx.font = font(900, size, true);
+    const nameBaseline = photoY + photoH + size * 0.42;
+    ctx.fillStyle = PAPER;
+    ctx.fillText(name, PAD - size * 0.02, nameBaseline);
+
+    // period line
+    let y = nameBaseline + 78;
+    ctx.fillStyle = accent;
+    ctx.font = font(800, 50, true);
+    ctx.fillText(`${periodTitle} · ${top ? `${top.plays} ${plural(top.plays, 'odtworzenie', 'odtworzenia', 'odtworzeń')}` : ''}`, PAD, y);
+
+    // numbers
+    y += 40;
+    ctx.strokeStyle = LINE;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(PAD, y);
+    ctx.lineTo(W - PAD, y);
+    ctx.stroke();
+    const figures = [
+        { value: formatMinutes(summary.totals.minutes), label: 'muzyki' },
+        { value: summary.totals.plays.toLocaleString('pl-PL'), label: 'odtworzeń' },
+        { value: summary.totals.uniqueArtists.toLocaleString('pl-PL'), label: 'artystów' },
+    ];
+    const colW = (W - PAD * 2) / 3;
+    figures.forEach((f, i) => {
+        const x = PAD + i * colW;
+        ctx.fillStyle = PAPER;
+        ctx.font = font(800, 64, true);
+        ctx.fillText(ellipsize(ctx, f.value, colW - 24), x, y + 84);
+        ctx.fillStyle = MUTED;
+        ctx.font = font(500, 28);
+        ctx.fillText(f.label, x, y + 124);
     });
 
-    // top artists
-    y += 230;
-    ctx.fillStyle = TEXT;
-    ctx.font = font(700, 44);
-    ctx.fillText('Top artyści', pad, y);
-    y += 30;
-    summary.topArtists.slice(0, 5).forEach((a, i) => {
-        y += 72;
-        ctx.fillStyle = i === 0 ? GREEN : MUTED;
-        ctx.font = font(800, 44);
-        ctx.fillText(String(i + 1), pad, y);
-        ctx.fillStyle = TEXT;
-        ctx.font = font(i === 0 ? 700 : 500, 44);
-        ctx.fillText(fit(ctx, a.name, W - pad * 2 - 280), pad + 70, y);
+    // runners-up
+    y += 190;
+    const rest = summary.topArtists.slice(1, 4);
+    rest.forEach((a, i) => {
         ctx.fillStyle = MUTED;
-        ctx.font = font(500, 32);
+        ctx.font = font(800, 40, true);
+        ctx.fillText(String(i + 2), PAD, y + i * 52);
+        ctx.fillStyle = PAPER;
+        ctx.font = font(600, 36);
+        ctx.fillText(ellipsize(ctx, a.name, W - PAD * 2 - 220), PAD + 56, y + i * 52);
+        ctx.fillStyle = MUTED;
+        ctx.font = font(500, 28);
         ctx.textAlign = 'right';
-        ctx.fillText(`${a.plays} odtw.`, W - pad, y);
+        ctx.fillText(`${a.plays}×`, W - PAD, y + i * 52);
         ctx.textAlign = 'left';
     });
 
-    // top track
-    const track = summary.topTracks[0];
-    if (track) {
-        y = Math.max(y + 70, H - 250);
-        ctx.fillStyle = CARD;
-        roundRect(ctx, pad, y, W - pad * 2, 130, 28);
-        ctx.fill();
-        ctx.fillStyle = MUTED;
-        ctx.font = font(500, 28);
-        ctx.fillText('Utwór okresu', pad + 32, y + 48);
-        ctx.fillStyle = TEXT;
-        ctx.font = font(700, 38);
-        ctx.fillText(fit(ctx, `${track.name} — ${track.artist ?? ''}`, W - pad * 2 - 64), pad + 32, y + 98);
-    }
-
     ctx.fillStyle = MUTED;
-    ctx.font = font(500, 26);
-    ctx.textAlign = 'center';
-    ctx.fillText('Wygenerowano w SpotiStats', W / 2, H - 50);
-    ctx.textAlign = 'left';
+    ctx.font = font(500, 24);
+    ctx.fillText('spotistats · dane ze Spotify', PAD, H - 44);
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {

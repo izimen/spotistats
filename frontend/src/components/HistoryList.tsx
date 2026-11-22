@@ -1,5 +1,5 @@
-import { Play, Loader2, Clock } from "lucide-react";
-import { useState } from "react";
+import type { CSSProperties } from "react";
+import { EmptyNote, ListSkeleton } from "@/components/Editorial";
 
 interface HistoryTrack {
     id: string;
@@ -19,132 +19,52 @@ interface HistoryListProps {
     isLoading: boolean;
 }
 
+const dayKey = (d: Date) => d.toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
+
+/** Plays grouped by day, like a diary: date as a heading, then time + track rows. */
 const HistoryList = ({ tracks, isLoading }: HistoryListProps) => {
-    const [hoveredId, setHoveredId] = useState<string | null>(null);
+    if (isLoading) return <ListSkeleton rows={6} />;
+    if (tracks.length === 0) {
+        return <EmptyNote title="Brak odtworzeń w tym okresie">Słuchaj muzyki na Spotify — zapisujemy ją co godzinę.</EmptyNote>;
+    }
 
-    const handleTrackClick = (track: HistoryTrack) => {
-        // Try spotifyUrl first, fallback to search URL
-        if (track.spotifyUrl) {
-            window.open(track.spotifyUrl, '_blank');
-        } else {
-            // Fallback: open Spotify search for track + artist
-            const query = encodeURIComponent(`${track.title} ${track.artist}`);
-            window.open(`https://open.spotify.com/search/${query}`, '_blank');
-        }
-    };
+    const groups: { day: string; items: HistoryTrack[] }[] = [];
+    for (const t of tracks) {
+        const day = dayKey(t.playedAtDate);
+        const last = groups[groups.length - 1];
+        if (last?.day === day) last.items.push(t);
+        else groups.push({ day, items: [t] });
+    }
 
-    const handleArtistClick = (e: React.MouseEvent, track: HistoryTrack) => {
-        e.stopPropagation(); // Prevent track click
-        // Open Spotify search for artist
-        const query = encodeURIComponent(track.artist);
-        window.open(`https://open.spotify.com/search/${query}`, '_blank');
-    };
-
+    let row = 0;
     return (
-        <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/20 p-6">
-            <div className="absolute -top-16 -left-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
-
-            <div className="relative flex items-center gap-4 mb-6">
-                <div className="relative">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/30">
-                        <Clock className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="absolute inset-0 rounded-xl bg-primary/20 blur-lg -z-10" />
-                </div>
-                <div>
-                    <h2 className="text-xl font-bold text-foreground">Ostatnio słuchane</h2>
-                    <p className="text-sm text-muted-foreground">Twoja historia słuchania</p>
-                </div>
-            </div>
-
-            <div className="relative space-y-2">
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    </div>
-                ) : tracks.length > 0 ? (
-                    tracks.map((track, index) => (
-                        <div
-                            key={track.id}
-                            className={`
-                      group relative flex items-center gap-4 p-3 rounded-xl
-                      bg-gradient-to-r from-transparent to-transparent
-                      hover:from-secondary/50 hover:to-primary/5
-                      border border-transparent hover:border-border/50
-                      transition-all duration-300 cursor-pointer
-                      opacity-0 animate-slide-up
-                    `}
-                            style={{ animationDelay: `${700 + index * 40}ms` }}
-                            onMouseEnter={() => setHoveredId(track.id)}
-                            onMouseLeave={() => setHoveredId(null)}
-                            onClick={() => handleTrackClick(track)}
-                        >
-                            {/* Track number */}
-                            <div className="w-8 flex-shrink-0 text-center">
-                                <span className={`
-                        text-sm font-semibold tabular-nums
-                        ${index < 3 ? 'text-primary' : 'text-muted-foreground'}
-                      `}>
-                                    {index + 1}
-                                </span>
-                            </div>
-
-                            {/* Album art */}
-                            <div className="relative flex-shrink-0">
-                                <div className="w-12 h-12 rounded-lg overflow-hidden ring-1 ring-border group-hover:ring-primary/50 transition-all duration-300">
-                                    <img
-                                        src={track.image}
-                                        alt={track.title}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                    />
-                                </div>
-
-                                {/* Play overlay */}
-                                <div className={`
-                        absolute inset-0 flex items-center justify-center
-                        bg-background/70 backdrop-blur-sm rounded-lg
-                        transition-all duration-300
-                        ${hoveredId === track.id ? 'opacity-100' : 'opacity-0'}
-                      `}>
-                                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                                        <Play className="w-3.5 h-3.5 text-primary-foreground fill-primary-foreground ml-0.5" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Track info */}
-                            <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-foreground truncate group-hover:text-primary transition-colors duration-300">
-                                    {track.title}
-                                </h3>
-                                <p
-                                    className="text-sm text-muted-foreground truncate hover:text-primary hover:underline cursor-pointer transition-colors"
-                                    onClick={(e) => handleArtistClick(e, track)}
-                                >
-                                    {track.artist}
-                                </p>
-                            </div>
-
-                            {/* Duration - fixed width for alignment */}
-                            <div className="w-12 flex-shrink-0 text-right hidden sm:block">
-                                <span className="text-sm text-muted-foreground tabular-nums">
-                                    {track.duration}
-                                </span>
-                            </div>
-
-                            {/* Time ago - fixed width for alignment */}
-                            <div className="w-24 flex-shrink-0 text-right">
-                                <span className="text-xs text-muted-foreground">
-                                    {track.playedAt}
-                                </span>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-center text-muted-foreground py-8">Brak historii słuchania</p>
-                )}
-            </div>
+        <div className="space-y-10">
+            {groups.map(g => (
+                <section key={g.day} aria-label={g.day}>
+                    <h3 className="type-head mb-2 text-[20px] first-letter:uppercase text-muted-foreground">{g.day}</h3>
+                    <ol>
+                        {g.items.map(t => {
+                            const url = t.spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(`${t.title} ${t.artist}`)}`;
+                            const i = row++;
+                            return (
+                                <li key={t.id} className="row-in border-b border-border" style={{ "--i": i } as CSSProperties}>
+                                    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 py-3 hover:bg-card/60" title="Otwórz w Spotify">
+                                        <time dateTime={t.playedAtDate.toISOString()} className="w-[5ch] shrink-0 tabular-nums text-sm text-muted-foreground">
+                                            {t.playedAtDate.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}
+                                        </time>
+                                        <img src={t.image} alt="" loading="lazy" width={44} height={44} className="h-11 w-11 shrink-0 rounded-sm object-cover" />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate font-semibold text-foreground">{t.title}</span>
+                                            <span className="block truncate text-sm text-muted-foreground">{t.artist}</span>
+                                        </span>
+                                        <span className="shrink-0 tabular-nums text-sm text-muted-foreground" title="Czas słuchania">{t.duration}</span>
+                                    </a>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                </section>
+            ))}
         </div>
     );
 };

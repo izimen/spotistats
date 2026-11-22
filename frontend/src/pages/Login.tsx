@@ -1,107 +1,65 @@
 /**
- * Login Page - Premium Spotify OAuth authentication
+ * Login — the wordmark as a poster, one Spotify action.
  */
-import { Music, Headphones, BarChart3, Users, Sparkles } from "lucide-react";
-import AnimatedBackground from "@/components/AnimatedBackground";
+import { useSearchParams } from "react-router-dom";
+
+const ERRORS: Record<string, string> = {
+    access_denied: "Logowanie przerwane w Spotify. Spróbuj jeszcze raz.",
+    exchange_failed: "Nie udało się dokończyć logowania. Spróbuj jeszcze raz.",
+    verification_failed: "Nie udało się potwierdzić logowania. Spróbuj jeszcze raz.",
+    callback_failed: "Spotify nie przyjęło logowania. Jeśli to się powtarza, poproś właściciela aplikacji o dodanie Twojego konta.",
+};
+
+const SpotifyMark = () => (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 fill-current">
+        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.52 17.34c-.24.36-.66.48-1.02.24-2.82-1.74-6.36-2.1-10.56-1.14-.42.12-.78-.18-.9-.54-.12-.42.18-.78.54-.9 4.56-1.02 8.52-.6 11.64 1.32.42.18.48.66.3 1.02zm1.44-3.3c-.3.42-.84.6-1.26.3-3.24-1.98-8.16-2.58-11.94-1.38-.48.12-1.02-.12-1.14-.6-.12-.48.12-1.02.6-1.14C9.6 9.9 15 10.56 18.72 12.84c.36.18.54.78.24 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.3c-.6.18-1.2-.18-1.38-.72-.18-.6.18-1.2.72-1.38 4.26-1.26 11.28-1.02 15.72 1.62.54.3.72 1.02.42 1.56-.3.42-1.02.6-1.56.3z" />
+    </svg>
+);
 
 const Login = () => {
+    const [params] = useSearchParams();
+    const error = params.get("error");
+
     const handleLogin = () => {
-        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = import.meta.env.VITE_API_URL || "";
         window.location.href = `${apiUrl}/auth/login`;
     };
 
-    const features = [
-        {
-            icon: BarChart3,
-            title: "Statystyki",
-            description: "Szczegółowe dane o Twoim słuchaniu"
-        },
-        {
-            icon: Users,
-            title: "Top Artyści",
-            description: "Sprawdź kogo słuchasz najczęściej"
-        },
-        {
-            icon: Headphones,
-            title: "Top Utwory",
-            description: "Twoje ulubione piosenki"
-        }
-    ];
-
     return (
-        <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center safe-top safe-bottom">
-            <AnimatedBackground />
+        <main className="flex min-h-screen flex-col justify-between bg-background px-5 py-8 sm:px-10 lg:px-16">
+            <p className="text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
 
-            {/* Gradient orbs */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" />
-            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-
-            <div className="relative z-10 text-center px-4 py-8 max-w-lg mx-auto opacity-0 animate-fade-in">
-                {/* Logo */}
-                <div className="mb-10">
-                    <div className="inline-flex items-center justify-center mb-6">
-                        <div className="relative">
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center shadow-2xl shadow-primary/30 animate-float">
-                                <Music className="w-10 h-10 text-primary-foreground" />
-                            </div>
-                            {/* Glow ring */}
-                            <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl -z-10 scale-110" />
-                        </div>
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-3">
-                        Spoti<span className="text-gradient">Stats</span>
-                    </h1>
-                    <p className="text-lg text-muted-foreground max-w-md mx-auto">
-                        Odkryj swoje statystyki słuchania muzyki na Spotify
+            <div className="py-12">
+                <h1 className="type-poster text-[clamp(4.5rem,21vw,17rem)] text-primary">
+                    SpotiStats
+                </h1>
+                <div className="mt-10 grid gap-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                    <p className="max-w-[46ch] text-lg text-muted-foreground">
+                        Twoi top artyści i utwory, historia słuchania zapisywana co godzinę i podsumowanie każdego miesiąca.
                     </p>
-                </div>
-
-                {/* Features - refined cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
-                    {features.map((feature, index) => (
-                        <div
-                            key={feature.title}
-                            className="group p-4 rounded-xl bg-card/50 border border-border/30 backdrop-blur-sm hover:bg-card/80 hover:border-primary/30 transition-all duration-300 hover:-translate-y-0.5 opacity-0 animate-slide-up"
-                            style={{ animationDelay: `${200 + index * 100}ms` }}
+                    <div>
+                        {error && (
+                            <p role="alert" className="mb-4 max-w-[40ch] border-l-2 border-warn pl-3 text-sm text-foreground">
+                                {ERRORS[error] ?? "Nie udało się zalogować. Spróbuj jeszcze raz."}
+                            </p>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleLogin}
+                            className="touch-target inline-flex items-center gap-3 rounded-full bg-spotify px-7 py-3 text-base font-bold text-ink hover:brightness-110"
                         >
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
-                                <feature.icon className="w-5 h-5 text-primary" />
-                            </div>
-                            <h3 className="font-semibold text-foreground text-sm">{feature.title}</h3>
-                            <p className="text-xs text-muted-foreground mt-1">{feature.description}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Login Button - premium styling */}
-                <button
-                    onClick={handleLogin}
-                    className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-primary text-primary-foreground font-semibold text-lg shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] active:scale-100 transition-all duration-300 opacity-0 animate-slide-up"
-                    style={{ animationDelay: '500ms' }}
-                >
-                    {/* Spotify icon */}
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                    </svg>
-                    <span>Zaloguj się przez Spotify</span>
-
-                    {/* Shine effect */}
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                </button>
-
-                <p className="mt-5 text-sm text-muted-foreground opacity-0 animate-fade-in" style={{ animationDelay: '600ms' }}>
-                    Wymagane konto Spotify • Bezpieczne logowanie OAuth
-                </p>
-
-                {/* Decorative sparkles */}
-                <div className="absolute top-1/4 left-1/4 opacity-0 animate-fade-in" style={{ animationDelay: '800ms' }}>
-                    <Sparkles className="w-4 h-4 text-primary/60 animate-bounce-subtle" />
-                </div>
-                <div className="absolute bottom-1/3 right-1/3 opacity-0 animate-fade-in" style={{ animationDelay: '1000ms' }}>
-                    <Sparkles className="w-3 h-3 text-primary/40 animate-bounce-subtle" style={{ animationDelay: '0.5s' }} />
+                            <SpotifyMark />
+                            Zaloguj się przez Spotify
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <p className="max-w-[70ch] text-sm text-muted-foreground">
+                Potrzebujesz konta Spotify, dodanego przez właściciela aplikacji. Logujesz się na stronie Spotify, nie widzimy Twojego hasła.
+                SpotiStats nie jest powiązany ze Spotify.
+            </p>
+        </main>
     );
 };
 

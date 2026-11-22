@@ -4,8 +4,6 @@
  */
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Music, Loader2, CheckCircle, XCircle } from "lucide-react";
-import AnimatedBackground from "@/components/AnimatedBackground";
 import { authAPI, api } from "@/lib/api";
 
 const Callback = () => {
@@ -71,30 +69,14 @@ const Callback = () => {
     }, [navigate, searchParams]);
 
     return (
-        <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
-            <AnimatedBackground />
-
-            <div className="relative z-10 text-center">
-                <div className="inline-flex items-center gap-3 mb-6">
-                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center ${status === 'loading' ? 'animate-pulse' : ''}`}>
-                        {status === 'loading' && <Music className="w-8 h-8 text-primary-foreground" />}
-                        {status === 'success' && <CheckCircle className="w-8 h-8 text-primary-foreground" />}
-                        {status === 'error' && <XCircle className="w-8 h-8 text-primary-foreground" />}
-                    </div>
-                </div>
-
-                <h2 className="text-2xl font-bold text-foreground mb-4">
-                    {status === 'loading' && 'Logowanie...'}
-                    {status === 'success' && 'Logowanie udane'}
-                    {status === 'error' && 'Błąd'}
-                </h2>
-
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                    {status === 'loading' && <Loader2 className="w-5 h-5 animate-spin" />}
-                    <span>{message}</span>
-                </div>
-            </div>
-        </div>
+        <main className="flex min-h-screen flex-col justify-center bg-background px-5 sm:px-10 lg:px-16" aria-live="polite">
+            <h1 className={`type-poster text-[clamp(4rem,16vw,12rem)] ${status === 'error' ? 'text-warn' : 'text-foreground'} ${status === 'loading' ? 'motion-safe:animate-pulse' : ''}`}>
+                {status === 'loading' && 'Logowanie…'}
+                {status === 'success' && 'Gotowe'}
+                {status === 'error' && 'Nie wyszło'}
+            </h1>
+            <p className="mt-6 max-w-[50ch] text-lg text-muted-foreground">{message}</p>
+        </main>
     );
 };
 
