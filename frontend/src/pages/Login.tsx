@@ -1,9 +1,8 @@
 /**
- * Login — three animated concepts while we pick one (?v=1|2|3).
- * The switcher is only rendered in dev / preview builds.
+ * Login — a record slides out of the SpotiStats sleeve and plays.
  */
 import { useSearchParams } from "react-router-dom";
-import { EqualizerLogin, VinylLogin, WallLogin } from "@/components/login/LoginVariants";
+import VinylLogin from "@/components/login/VinylLogin";
 
 const ERRORS: Record<string, string> = {
     access_denied: "Logowanie przerwane w Spotify. Spróbuj jeszcze raz.",
@@ -12,20 +11,9 @@ const ERRORS: Record<string, string> = {
     callback_failed: "Spotify nie przyjęło logowania. Jeśli to się powtarza, poproś właściciela aplikacji o dodanie Twojego konta.",
 };
 
-const VARIANTS = {
-    "1": { name: "Equalizer", Component: EqualizerLogin },
-    "2": { name: "Winyl", Component: VinylLogin },
-    "3": { name: "Afisz", Component: WallLogin },
-} as const;
-type VariantKey = keyof typeof VARIANTS;
-
-const showSwitcher = import.meta.env.DEV || import.meta.env.VITE_PREVIEW_MODE === "true";
-
 const Login = () => {
-    const [params, setParams] = useSearchParams();
+    const [params] = useSearchParams();
     const error = params.get("error");
-    const v = (params.get("v") ?? "1") as VariantKey;
-    const { Component } = VARIANTS[v] ?? VARIANTS["1"];
 
     const handleLogin = () => {
         const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -38,30 +26,7 @@ const Login = () => {
         </p>
     ) : null;
 
-    return (
-        <>
-            <Component error={errorNode} onLogin={handleLogin} />
-            {showSwitcher && (
-                <nav aria-label="Wariant ekranu logowania" className="fixed right-3 top-3 z-50 flex gap-1 border border-border bg-background/90 p-1 text-sm backdrop-blur">
-                    {(Object.keys(VARIANTS) as VariantKey[]).map(key => (
-                        <button
-                            key={key}
-                            type="button"
-                            aria-pressed={key === v}
-                            onClick={() => {
-                                const next = new URLSearchParams(params);
-                                next.set("v", key);
-                                setParams(next, { replace: true });
-                            }}
-                            className={`px-3 py-1.5 font-semibold ${key === v ? "bg-foreground text-ink" : "text-muted-foreground hover:text-foreground"}`}
-                        >
-                            {key}. {VARIANTS[key].name}
-                        </button>
-                    ))}
-                </nav>
-            )}
-        </>
-    );
+    return <VinylLogin error={errorNode} onLogin={handleLogin} />;
 };
 
 export default Login;

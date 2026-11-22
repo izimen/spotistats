@@ -1,5 +1,5 @@
 import { type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
-import "./login.css";
+import "./vinyl.css";
 
 export interface LoginVariantProps {
     error: ReactNode;
@@ -43,69 +43,7 @@ const Pitch = ({ className = "" }: { className?: string }) => (
 );
 
 /* ------------------------------------------------------------------ */
-/* 1. Equalizer — the wordmark itself is the level meter               */
-/* ------------------------------------------------------------------ */
-const WORD = "SpotiStats";
-
-export const EqualizerLogin = ({ error, onLogin }: LoginVariantProps) => {
-    const bars = Array.from({ length: 64 }, (_, i) => i);
-    return (
-        <main className="eq-stage flex min-h-[100svh] flex-col justify-between bg-background px-5 py-8 sm:px-10 lg:px-16">
-            <p className="text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
-
-            <div className="pt-[10svh] pb-10 sm:py-10">
-                <h1 aria-label={WORD} className="type-poster flex flex-wrap text-[33vw] leading-[0.82] text-primary sm:text-[clamp(4.25rem,19vw,16rem)]">
-                    {WORD.split("").map((ch, i) => (
-                        <span
-                            key={i}
-                            aria-hidden="true"
-                            data-ch={ch}
-                            className="eq-letter"
-                            style={{
-                                "--d": `${0.55 + rnd(i) * 0.8}s`,
-                                "--delay": `${-rnd(i, 3) * 2}s`,
-                                "--lo": `${Math.round(55 + rnd(i, 5) * 35)}%`,
-                                "--hi": `${Math.round(rnd(i, 7) * 18)}%`,
-                                "--mid": `${Math.round(25 + rnd(i, 8) * 30)}%`,
-                            } as CSSProperties}
-                        >
-                            {ch}
-                        </span>
-                    )).flatMap((el, i) => (i === 4 ? [el, <span key="br" aria-hidden="true" className="basis-full sm:hidden" />] : [el]))}
-                </h1>
-
-                {/* spectrum: a quiet echo of the wordmark */}
-                <div aria-hidden="true" className="mt-6 flex h-16 items-end gap-[3px] sm:h-20">
-                    {bars.map(i => (
-                        <span
-                            key={i}
-                            className={`eq-bar h-full flex-1 ${i % 11 === 4 ? "bg-primary" : "bg-foreground/15"}`}
-                            style={{
-                                "--d": `${0.45 + rnd(i, 2) * 0.8}s`,
-                                "--delay": `${-rnd(i, 9) * 1.5}s`,
-                                "--lo": (0.06 + rnd(i, 4) * 0.2).toFixed(2),
-                                "--hi": (0.35 + rnd(i, 6) * 0.65).toFixed(2),
-                            } as CSSProperties}
-                        />
-                    ))}
-                </div>
-
-                <div className="mt-10 grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                    <Pitch />
-                    <div>
-                        {error}
-                        <LoginButton onLogin={onLogin} />
-                    </div>
-                </div>
-            </div>
-
-            <Fineprint />
-        </main>
-    );
-};
-
-/* ------------------------------------------------------------------ */
-/* 2. Vinyl — a loop: the record slides out of the poster sleeve, the  */
+/* Vinyl — a loop: the record slides out of the poster sleeve, the  */
 /*    needle drops and notes rise for 20 s, then it rests inside 3 s   */
 /* ------------------------------------------------------------------ */
 const LABEL_TEXT = "SpotiStats  ✦  Twoja muzyka w liczbach  ✦  ";
@@ -180,7 +118,7 @@ const DroppingHeadline = () => {
     );
 };
 
-export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
+const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
     const [phase, setPhase] = useState<Phase>(() => (prefersReducedMotion() ? "playing" : "in"));
     const [clicked, setClicked] = useState(false);
     const started = useRef(false);
@@ -295,55 +233,4 @@ export const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
     );
 };
 
-/* ------------------------------------------------------------------ */
-/* 3. Poster wall — rows of what the app shows, flyposted and moving   */
-/* ------------------------------------------------------------------ */
-const ROWS: { items: string[]; tone: "paper" | "accent" | "outline"; d: number; reverse?: boolean }[] = [
-    { items: ["Top artyści", "Top utwory", "Gatunki"], tone: "paper", d: 38 },
-    { items: ["2 417 minut", "318 odtworzeń", "41 dni z muzyką"], tone: "accent", d: 46, reverse: true },
-    { items: ["Historia", "Podsumowanie", "Złote godziny"], tone: "outline", d: 34 },
-    { items: ["Piątek, 22:00", "Twoja godzina", "Seria 12 dni"], tone: "paper", d: 52, reverse: true },
-];
-
-const toneClass = { paper: "text-foreground", accent: "text-primary", outline: "wall-outline" } as const;
-
-export const WallLogin = ({ error, onLogin }: LoginVariantProps) => (
-    <main className="wall-stage flex min-h-[100svh] flex-col bg-background">
-        <div aria-hidden="true" className="flex flex-1 flex-col justify-center gap-[1.2vw] overflow-hidden py-6">
-            {ROWS.map((row, r) => {
-                const run = [...row.items, ...row.items];
-                return (
-                    <div key={r} className="wall-track" style={{ "--d": `${row.d}s`, "--dir": row.reverse ? "reverse" : "normal" } as CSSProperties}>
-                        {[0, 1].map(half => (
-                            <div key={half} className="flex shrink-0 items-center">
-                                {run.map((t, i) => (
-                                    <span key={i} className="flex items-center">
-                                        <span className={`type-poster whitespace-nowrap px-[2.2vw] text-[clamp(4.25rem,10vw,8rem)] leading-[0.9] ${toneClass[row.tone]}`}>
-                                            {t}
-                                        </span>
-                                        <span className={`h-[1.6vw] min-h-2 w-[1.6vw] min-w-2 shrink-0 ${r % 2 ? "bg-foreground/30" : "bg-primary"}`} />
-                                    </span>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                );
-            })}
-        </div>
-
-        {/* name and action read as one line; the explanation sits underneath */}
-        <section className="border-t border-border px-5 py-7 sm:px-10 lg:px-16">
-            <div className="flex flex-wrap items-center gap-x-10 gap-y-5">
-                <h1 className="type-poster text-[clamp(3.25rem,8vw,5.5rem)] leading-[0.85] text-primary">SpotiStats</h1>
-                <div>
-                    {error}
-                    <LoginButton onLogin={onLogin} />
-                </div>
-            </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2 md:gap-12">
-                <Pitch className="!text-base" />
-                <Fineprint />
-            </div>
-        </section>
-    </main>
-);
+export default VinylLogin;
