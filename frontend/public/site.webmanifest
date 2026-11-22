@@ -1,0 +1,14 @@
+{
+  "name": "SpotiStats",
+  "short_name": "SpotiStats",
+  "description": "Twoja muzyka w liczbach. Historia słuchania ze Spotify zapisywana co godzinę.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#16111D",
+  "theme_color": "#16111D",
+  "lang": "pl",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

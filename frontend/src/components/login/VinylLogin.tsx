@@ -1,5 +1,6 @@
 import { type CSSProperties, Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import "./vinyl.css";
+import Logo from "@/components/Logo";
 
 export interface LoginVariantProps {
     error: ReactNode;
@@ -143,7 +144,13 @@ const VinylLogin = ({ error, onLogin }: LoginVariantProps) => {
 
     return (
         <main data-phase={phase} data-playing={clicked} className="vinyl-stage relative flex min-h-[100svh] flex-col overflow-hidden bg-background px-5 py-8 sm:px-10 lg:px-16">
-            <p className="relative z-10 text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
+            <p className="relative z-10 flex items-center gap-3 text-sm text-muted-foreground">
+                <Logo className="h-8 w-11" />
+                <span>
+                    <span className="block font-bold text-foreground">SpotiStats</span>
+                    Statystyki słuchania ze Spotify
+                </span>
+            </p>
 
             <div className="relative grid flex-1 items-center gap-10 py-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
                 {/* sleeve + record + arm share one 155:100 box so the SVG arm lines up with the disc */}

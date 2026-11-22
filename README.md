@@ -1,36 +1,55 @@
-# 🎵 SpotiStats
+<p align="center">
+  <img src="docs/brand/banner.png" alt="SpotiStats — Twoja muzyka w liczbach" width="720" />
+</p>
 
-> Your personal Spotify listening analytics dashboard — track your music habits, discover trends, and explore your taste in music.
+<p align="center">
+  Personal Spotify listening stats: history collected every hour, top artists and tracks, monthly summaries and a shareable poster card.
+</p>
 
-![Spotify Stats](https://img.shields.io/badge/Spotify-Statistics-1DB954?style=for-the-badge&logo=spotify&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)
-![Node.js](https://img.shields.io/badge/Node.js-22-339933?style=flat-square&logo=node.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react" alt="React 18" />
+  <img src="https://img.shields.io/badge/Node.js-22-339933?style=flat-square&logo=node.js" alt="Node.js 22" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript" alt="TypeScript 5" />
+  <img src="https://img.shields.io/badge/Cloud%20Run-europe--central2-4285F4?style=flat-square&logo=googlecloud" alt="Cloud Run" />
+</p>
 
-## ✨ Features
+## Screenshots
 
-- 🎤 **Top Artists & Tracks** — See your most played artists and songs across different time ranges
-- 📊 **Listening Statistics** — Detailed analytics with charts and insights
-- 🕐 **Listening History** — Extended history beyond Spotify's 50-track limit
-- 📥 **GDPR Data Import** — Import your full streaming history from Spotify's data export
-- 🔮 **Insights** — Listener profile from your real plays (variety, repeats, loyalty, discoveries, night/weekend share), peak hours (in your local time), listening prediction, Discovery Roulette
-- 🎁 **Summary (Wrapped on demand)** — Any month or year: minutes, plays, artists and active days vs the previous period, top 10 artists/tracks, first-time artists, longest streak, busiest day
-- 📅 **Listening Calendar** — GitHub-style heatmap of the last 12 months with current and longest streak
-- 🖼️ **Share Card & CSV Export** — PNG card with your summary, full history as CSV (Excel-safe UTF-8, formula-injection protected)
-- 👤 **Profile Overview** — Your Spotify profile with personalized stats
-- 🌙 **Dark Mode** — Beautiful Spotify-inspired dark theme
+| Login | Teraz (dashboard) |
+|---|---|
+| ![Login: a record slides out of the SpotiStats sleeve](docs/screenshots/login.jpg) | ![Dashboard: the #1 artist as a gig poster](docs/screenshots/dashboard.jpg) |
 
-## 🏗️ Tech Stack
+| Mobile | Share card |
+|---|---|
+| <img src="docs/screenshots/mobile.jpg" alt="Mobile dashboard" width="300" /> | <img src="docs/screenshots/share-card.jpg" alt="Monthly share card" width="360" /> |
+
+## Features
+
+- **Hourly history collection.** Spotify's API only remembers your last 50 plays; SpotiStats saves them every hour (Cloud Scheduler), keeps collecting after you log out, detects gaps and estimates real listening time from the gap between plays.
+- **Teraz.** Your #1 artist as a gig poster, key numbers, top lists, the week in bars, genres and what you just played.
+- **Topki.** Top artists and tracks for 4 weeks, 6 months or a year.
+- **Historia.** Listener profile, golden hours, listening calendar with streaks, prediction and discovery roulette.
+- **Podsumowanie.** Any month or year on demand: minutes, plays, artists and active days vs the previous period, first-time artists, longest streak.
+- **Share card and CSV.** A 1080×1350 poster PNG of your month and your full history as an Excel-safe CSV.
+- **Konto.** Collection status, last sync, export, stop collecting, delete account.
+- **GDPR import.** Load Spotify's extended streaming history to see years before you joined.
+- **Your colours.** The accent is taken from your #1 artist's photo (contrast-checked), so the app looks different for everyone.
+
+## Design
+
+A "gig poster" look: one variable typeface ([Archivo](https://fonts.google.com/specimen/Archivo), width 62–125), a plum-ink ground, warm paper text, 4 px corners, no cards or gradients. The login screen is a record that slides out of the SpotiStats sleeve and plays. Details in [UI_DESIGN_SYSTEM.md](./UI_DESIGN_SYSTEM.md); logo files in [docs/brand](./docs/brand).
+
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | React 18, TypeScript, Vite, TailwindCSS, Recharts |
-| **Backend** | Node.js, Express, Prisma ORM |
-| **Database** | PostgreSQL (Supabase compatible) |
-| **Auth** | OAuth 2.0 + PKCE, JWT in HttpOnly Cookies |
-| **Security** | Helmet, Rate Limiting, AES-256-GCM token encryption |
-| **Observability** | Prometheus metrics, Sentry error tracking |
-| **Resilience** | Circuit breaker, request timeout, jitter backoff |
+| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
+| **Backend** | Node.js 22, Express, Prisma ORM |
+| **Database** | PostgreSQL (Supabase) |
+| **Hosting** | Google Cloud Run, Cloud Scheduler (hourly sync), GitHub Actions deploy |
+| **Auth** | OAuth 2.0 + PKCE, JWT in HttpOnly cookies, rotating refresh tokens |
+| **Security** | Helmet, CSP, CSRF double-submit, rate limiting, AES-256-GCM token encryption |
+| **Observability** | Prometheus metrics, Sentry, Cloud Monitoring alert policies ([docs/monitoring](./docs/monitoring)) |
 
 ## 🚀 Quick Start
 
@@ -103,7 +122,7 @@ npm run dev
 
 ### 5. Open the App
 
-Visit `http://localhost:8080` and login with Spotify! 🎉
+Visit `http://localhost:8080` and log in with Spotify. To work on the UI without a backend, run `VITE_PREVIEW_MODE=true npm run dev` in `frontend/` (mock data).
 
 ## 📁 Project Structure
 
@@ -121,7 +140,8 @@ spotistats/
     └── src/
         ├── pages/          # Main views
         ├── components/     # Reusable UI
-        └── api/            # API client
+        ├── lib/            # API client, accent colour, share card
+        └── hooks/          # Data hooks (TanStack Query)
 ```
 
 ## 🔐 API Endpoints
@@ -135,7 +155,9 @@ All API endpoints use versioned paths: `/api/v1/*`
 | `GET` | `/auth/login` | Initiate Spotify OAuth |
 | `GET` | `/auth/callback` | OAuth callback handler |
 | `GET` | `/auth/me` | Get current user |
-| `POST` | `/auth/logout` | End session |
+| `POST` | `/auth/logout` | End session (collection keeps running) |
+| `POST` | `/auth/disconnect` | Stop background collection |
+| `DELETE` | `/auth/me` | Delete account and all stored history |
 | `GET` | `/api/v1/stats/top-artists` | Top artists (`time_range`, `limit` ≤ 50, cached 24 h) |
 | `GET` | `/api/v1/stats/top-tracks` | Top tracks |
 | `GET` | `/api/v1/stats/top-albums` | Top albums (derived from top tracks) |
@@ -202,5 +224,5 @@ MIT
 ---
 
 <p align="center">
-  Built with 💚 using the <a href="https://developer.spotify.com/documentation/web-api">Spotify Web API</a>
+  Built on the <a href="https://developer.spotify.com/documentation/web-api">Spotify Web API</a>. SpotiStats is not affiliated with Spotify AB.
 </p>
