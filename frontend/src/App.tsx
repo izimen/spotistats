@@ -3,18 +3,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 // Lazy load pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./pages/Login"));
 const Callback = lazy(() => import("./pages/Callback"));
-const TopArtists = lazy(() => import("./pages/TopArtists"));
-const TopTracks = lazy(() => import("./pages/TopTracks"));
+const Top = lazy(() => import("./pages/Top"));
 const History = lazy(() => import("./pages/History"));
 const Summary = lazy(() => import("./pages/Summary"));
-const Profile = lazy(() => import("./pages/Profile"));
+const Account = lazy(() => import("./pages/Account"));
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -82,8 +80,8 @@ const queryClient = new QueryClient({
 });
 
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-background">
-    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+  <div className="flex min-h-screen items-center justify-center bg-background" role="status" aria-label="Ładowanie">
+    <span className="type-poster text-[48px] text-primary">SS</span>
   </div>
 );
 
@@ -102,11 +100,14 @@ const App = () => (
             {/* Main routes with layout */}
             <Route element={<MainLayout />}>
               <Route path="/" element={<Index />} />
-              <Route path="/top-artists" element={<TopArtists />} />
-              <Route path="/top-tracks" element={<TopTracks />} />
+              <Route path="/top" element={<Top />} />
               <Route path="/history" element={<History />} />
               <Route path="/summary" element={<Summary />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/konto" element={<Account />} />
+              {/* old addresses */}
+              <Route path="/top-artists" element={<Navigate to="/top" replace />} />
+              <Route path="/top-tracks" element={<Navigate to="/top?typ=utwory" replace />} />
+              <Route path="/profile" element={<Navigate to="/konto" replace />} />
 
             </Route>
 
