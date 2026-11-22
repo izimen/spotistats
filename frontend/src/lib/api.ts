@@ -244,6 +244,11 @@ export const authAPI = {
         localStorage.removeItem(TOKEN_KEY);
         return api.post('/auth/logout');
     },
+    /** Delete the account and all stored listening history */
+    deleteAccount: () => {
+        localStorage.removeItem(TOKEN_KEY);
+        return api.delete('/auth/me');
+    },
     /** Stop hourly history collection and forget the Spotify grant (also logs out) */
     disconnect: () => {
         localStorage.removeItem(TOKEN_KEY);

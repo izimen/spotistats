@@ -23,6 +23,11 @@ function getSmallestImage(images) {
     return images[2]?.url || images[1]?.url || images[0]?.url || null;
 }
 
+/** Largest image (640px) - for full-bleed hero artwork and colour extraction */
+function getLargestImage(images) {
+    return images?.[0]?.url || null;
+}
+
 // Time range labels for frontend
 const TIME_RANGE_LABELS = {
     short_term: 'Last 4 Weeks',
@@ -83,6 +88,7 @@ async function getTopArtists(req, res, next) {
             popularity: artist.popularity,
             followers: artist.followers?.total || 0,
             image: getSmallestImage(artist.images),
+            imageLarge: getLargestImage(artist.images),
             spotifyUrl: artist.external_urls?.spotify
         }));
 
@@ -124,6 +130,7 @@ async function getTopTracks(req, res, next) {
                 id: track.album?.id,
                 name: track.album?.name,
                 image: getSmallestImage(track.album?.images),
+                imageLarge: getLargestImage(track.album?.images),
                 releaseDate: track.album?.release_date || null
             },
             duration: track.duration_ms,

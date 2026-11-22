@@ -10,6 +10,13 @@ export const MOCK_USER = {
     image: "https://i.pravatar.cc/150?u=spotistats",
     product: "premium",
     country: "PL",
+    spotifyId: "jan.kowalski",
+    avatarUrl: null,
+    collectionEnabled: true,
+    lastSyncAt: new Date(Date.now() - 23 * 60 * 1000).toISOString(),
+    lastGapDetectedAt: null,
+    syncFailureCount: 0,
+    createdAt: "2025-12-22T07:00:00.000Z",
 };
 
 export const MOCK_TOP_ARTISTS = [

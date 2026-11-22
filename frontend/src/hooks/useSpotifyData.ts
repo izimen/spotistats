@@ -30,12 +30,20 @@ export interface SpotifyUser {
     avatarUrl: string | null;
     country: string | null;
     product: string | null;
+    /** Background collection (hourly sync) */
+    collectionEnabled?: boolean;
+    lastSyncAt?: string | null;
+    lastGapDetectedAt?: string | null;
+    syncFailureCount?: number;
+    createdAt?: string;
 }
 
 export interface SpotifyArtist {
     rank: number;
     name: string;
     image: string | null;
+    /** 640px image (hero artwork / accent colour) */
+    imageLarge?: string | null;
     genres: string[];
     spotifyUrl: string | null;
     popularity?: number;
@@ -48,7 +56,7 @@ export interface SpotifyTrack {
     name: string;
     artists?: { id?: string; name: string }[];
     artist?: string;
-    album?: { id?: string; name?: string; image?: string | null; releaseDate?: string | null };
+    album?: { id?: string; name?: string; image?: string | null; imageLarge?: string | null; releaseDate?: string | null };
     duration?: number;
     popularity?: number;
     previewUrl?: string | null;

@@ -1,290 +1,143 @@
-import { Music, Headphones, Clock, TrendingUp, Cake, Mic2, Loader2, Sparkles, Info, X } from "lucide-react";
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import StatsCard from "@/components/StatsCard";
-import TopArtistCard from "@/components/TopArtistCard";
-import TopTrackCard from "@/components/TopTrackCard";
-// Lazy load heavy chart components (Recharts ~50KB)
-const ListeningChart = lazy(() => import("@/components/ListeningChart"));
-const GenreChart = lazy(() => import("@/components/GenreChart"));
+import { AxiosError } from "axios";
+import Poster from "@/components/Poster";
+import WeekBars from "@/components/WeekBars";
 import RecentlyPlayed from "@/components/RecentlyPlayed";
-import TimeRangeFilter, { type TimeRange } from "@/components/TimeRangeFilter";
+import GenreList from "@/components/GenreChart";
+import TimeRangeFilter, { type TimeRange, timeRangeLabel } from "@/components/TimeRangeFilter";
+import { Section, Figure, FigureRow, ChartRow, EmptyNote, ListSkeleton, Skeleton } from "@/components/Editorial";
 import { useUser, useTopArtists, useTopTracks, mapTimeRange } from "@/hooks/useSpotifyData";
 import { calculateTopGenres } from "@/lib/genreUtils";
-import { calculateListeningAge, getAgeDescription } from "@/lib/listeningAge";
-import { AxiosError } from "axios";
+import { calculateListeningAge } from "@/lib/listeningAge";
+import { formatDuration } from "@/lib/format";
 
-// Chart loading fallback
-const ChartSkeleton = () => (
-  <div className="h-[300px] rounded-2xl border border-border/40 bg-card animate-pulse flex items-center justify-center">
-    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-  </div>
-);
+const RANGE_PHRASE: Record<TimeRange, string> = {
+  week: "z ostatnich 4 tygodni",
+  month: "z ostatnich 6 miesięcy",
+  year: "z ostatniego roku",
+};
 
-// Local types for raw API response shapes (differ from hook's display types)
-// Used by formatters: calculateTopGenres needs genres[], calculateListeningAge needs album.releaseDate
-interface RawArtist {
-  name: string;
-  image?: string;
-  popularity?: number;
-  genres?: string[];
-  spotifyUrl?: string | null;
-}
-
-interface RawTrack {
-  name: string;
-  artists?: { name: string }[];
-  artist?: string;
-  album?: { image?: string | null; releaseDate?: string | null };
-  duration?: number;
-  previewUrl?: string | null;
-  spotifyUrl?: string | null;
-}
-
-const ONBOARDING_DISMISSED_KEY = 'spotistats_onboarding_dismissed';
+const monthYear = () =>
+  new Date().toLocaleDateString("pl-PL", { month: "long", year: "numeric" });
 
 const Index = () => {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
-  const [onboardingDismissed, setOnboardingDismissed] = useState(
-    () => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true'
-  );
   const apiTimeRange = mapTimeRange(timeRange);
 
-  const { data: user, isLoading: userLoading, error: userError } = useUser();
-  const { data: allArtists, isLoading: artistsLoading } = useTopArtists(apiTimeRange, 20);
-  const { data: allTracks, isLoading: tracksLoading } = useTopTracks(apiTimeRange, 50);
-  // Recently played is fetched by <RecentlyPlayed/> itself; a second useRecentlyPlayed(50) here
-  // used a different cache key, doubled the Spotify calls and held back the whole dashboard.
+  const { data: user, error: userError } = useUser();
+  const { data: artists, isLoading: artistsLoading } = useTopArtists(apiTimeRange, 20);
+  const { data: tracks, isLoading: tracksLoading } = useTopTracks(apiTimeRange, 50);
 
   useEffect(() => {
-    if (userError && (userError as AxiosError)?.response?.status === 401) {
-      navigate('/login');
-    }
+    if (userError && (userError as AxiosError)?.response?.status === 401) navigate("/login");
   }, [userError, navigate]);
 
-  const formattedArtists = (allArtists?.slice(0, 5) || []).map((artist: RawArtist, index: number) => ({
-    rank: index + 1,
-    name: artist.name,
-    image: artist.image || "/assets/default-album.svg",
-    streams: artist.popularity?.toString() || "0",
-    spotifyUrl: artist.spotifyUrl
-  }));
-
-  const formattedTracks = (allTracks?.slice(0, 5) || []).map((track: RawTrack, index: number) => ({
-    rank: index + 1,
-    title: track.name,
-    artist: track.artists?.[0]?.name || track.artist,
-    image: track.album?.image || "/assets/default-album.svg",
-    duration: track.duration ? `${Math.floor(track.duration / 60000)}:${String(Math.floor((track.duration % 60000) / 1000)).padStart(2, '0')}` : "3:00",
-    previewUrl: track.previewUrl,
-    spotifyUrl: track.spotifyUrl
-  }));
-
-  const listeningAge = calculateListeningAge(allTracks || []);
-  const ageDescription = getAgeDescription(listeningAge);
-  const { topGenreName: topGenre } = calculateTopGenres(allArtists);
-  const isLoading = userLoading || artistsLoading || tracksLoading;
-
-  const getTimeLabel = () => {
-    return timeRange === "week" ? "4 Tygodnie" : timeRange === "month" ? "6 Miesięcy" : "1 Rok";
-  };
-
-  if (userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
-            <div className="absolute inset-0 w-10 h-10 rounded-full bg-primary/20 blur-xl" />
-          </div>
-          <p className="text-muted-foreground text-sm">Ładowanie danych...</p>
-        </div>
-      </div>
-    );
-  }
+  const top = artists?.[0];
+  const topTrack = tracks?.[0];
+  const age = calculateListeningAge(tracks || []);
+  const { topGenreName } = calculateTopGenres(artists || []);
+  const firstName = user?.displayName?.split(" ")[0];
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <section className="opacity-0 animate-fade-in">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-1">
-              Witaj <span className="text-gradient">{user?.displayName || 'Użytkowniku'}</span>
-            </h1>
-            <p className="text-muted-foreground">
-              Sprawdź swoje statystyki słuchania muzyki
-            </p>
-          </div>
-          <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
-        </div>
-      </section>
+    <div className="space-y-16 md:space-y-20">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <p className="text-muted-foreground">
+          {firstName ? `Cześć, ${firstName}.` : "Cześć."} Twoja muzyka {RANGE_PHRASE[timeRange]}.
+        </p>
+        <TimeRangeFilter value={timeRange} onChange={setTimeRange} />
+      </div>
 
-      {/* UX-001: Onboarding banner for first-time users */}
-      {!onboardingDismissed && !artistsLoading && (!allArtists || allArtists.length === 0) && (
-        <section className="opacity-0 animate-fade-in" style={{ animationDelay: "100ms" }}>
-          <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <button
-              onClick={() => { setOnboardingDismissed(true); localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true'); }}
-              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Zamknij"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Info className="w-5 h-5 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold text-foreground">Witaj w SpotiStats!</h3>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>Twoje statystyki sluchania pojawia sie automatycznie — wystarczy, ze sluchasz muzyki na Spotify.</p>
-                  <p>Mozesz tez zaimportowac pelna historie sluchania z pliku JSON (Spotify Extended History) w zakladce <strong>Historia</strong>.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+      {artistsLoading ? (
+        <Skeleton className="h-[420px] w-full" />
+      ) : top ? (
+        <Poster
+          kicker={`Najczęściej słuchany artysta ${RANGE_PHRASE[timeRange]}`}
+          name={top.name}
+          image={top.imageLarge || top.image}
+          dateLine={age ? `Słuchasz jak ${age}-latek · ${monthYear()}` : monthYear()}
+          href={top.spotifyUrl}
+        />
+      ) : (
+        <EmptyNote title="Jeszcze nic tu nie ma">
+          Statystyki pojawią się, gdy posłuchasz muzyki na Spotify. Starszą historię możesz wgrać z eksportu danych Spotify.
+        </EmptyNote>
       )}
 
-      {/* Stats Grid - Clean 4-column layout */}
-      <section className="relative">
-        {/* Subtle ambient glow */}
-        <div className="absolute -top-20 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none" />
+      <FigureRow>
+        <Figure
+          label="Utwór numer jeden"
+          value={topTrack?.name || "—"}
+          note={topTrack?.artists?.[0]?.name || topTrack?.artist}
+        />
+        <Figure label="Najczęstszy gatunek" value={topGenreName || "—"} note={timeRangeLabel(timeRange)} />
+        <Figure
+          label="Wiek Twojej muzyki"
+          value={age ? `${age} lat` : "—"}
+          note="Jak ktoś, kto miał 20 lat, gdy wyszły Twoje utwory"
+        />
+        <Figure label="Artyści na liście" value={artists?.length ?? "—"} note="Twoje top 20 według Spotify" />
+      </FigureRow>
 
-        <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Top Artysta"
-            value={formattedArtists[0]?.name || "-"}
-            subtitle={getTimeLabel()}
-            icon={Mic2}
-            delay={100}
-            variant="primary"
-            tooltip="Pobieramy top 50 artystów z API Spotify dla wybranego okresu (Tydzień/Miesiąc/Rok). Ten kafelek pokazuje #1 z tej listy."
-          />
-          <StatsCard
-            title="Top Utwór"
-            value={formattedTracks[0]?.title || "-"}
-            subtitle={formattedTracks[0]?.artist || getTimeLabel()}
-            icon={Music}
-            delay={150}
-            variant="default"
-            tooltip="Pobieramy top 50 utworów z API Spotify dla wybranego okresu. Ten kafelek pokazuje #1 z tej listy."
-          />
-          <StatsCard
-            title="Wiek słuchania"
-            value={listeningAge ? `${listeningAge} lat` : "-"}
-            subtitle={ageDescription}
-            icon={Cake}
-            delay={200}
-            variant="accent"
-            tooltip="Średni rok wydania Twoich top 50 utworów z wybranego okresu. Im nowsze utwory słuchasz, tym 'młodszy' wiek."
-          />
-          <StatsCard
-            title="Top Gatunek"
-            value={topGenre}
-            subtitle={getTimeLabel()}
-            icon={TrendingUp}
-            delay={250}
-            variant="default"
-            tooltip="Zliczamy gatunki wszystkich top 50 artystów z wybranego okresu i wybieramy najczęściej występujący."
-          />
-        </div>
-      </section>
-
-      {/* Charts Row */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <Suspense fallback={<ChartSkeleton />}>
-            <ListeningChart />
-          </Suspense>
-        </div>
-        <div className="lg:col-span-1">
-          <Suspense fallback={<ChartSkeleton />}>
-            <GenreChart artists={allArtists} timeRange={timeRange} />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Top Content Row */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Top Tracks Section */}
-        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-border/40 bg-card p-5 flex flex-col opacity-0 animate-fade-in" style={{ animationDelay: "400ms" }}>
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-transparent" />
-
-          <div className="relative flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="icon-container-sm">
-                <Music className="w-4 h-4 text-primary" />
-              </div>
-              <h2 className="text-lg font-bold text-foreground">Top Utwory</h2>
-            </div>
-            <a href="/top-tracks" className="text-sm text-primary hover:underline font-medium">
-              Zobacz wszystko
-            </a>
-          </div>
-
-          <div className="relative space-y-2 flex-1">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : formattedTracks.length > 0 ? (
-              formattedTracks.map((track, index) => (
-                <TopTrackCard
-                  key={`${track.title}-${index}`}
-                  {...track}
-                  delay={index * 80 + 500}
+      <div className="grid gap-16 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-14">
+        <Section title="Top utwory" action={{ to: "/top?typ=utwory", label: "Cała lista" }}>
+          {tracksLoading ? (
+            <ListSkeleton />
+          ) : tracks && tracks.length > 0 ? (
+            <ol>
+              {tracks.slice(0, 5).map((t, i) => (
+                <ChartRow
+                  key={t.id || `${t.name}-${i}`}
+                  index={i}
+                  rank={i + 1}
+                  image={t.album?.image}
+                  title={t.name}
+                  subtitle={t.artists?.map(a => a.name).join(", ") || t.artist}
+                  value={t.duration ? formatDuration(t.duration) : undefined}
+                  href={t.spotifyUrl}
                 />
-              ))
-            ) : (
-              <div className="text-center py-8 space-y-2">
-                <p className="text-muted-foreground">Brak danych do wyswietlenia</p>
-                <p className="text-sm text-muted-foreground/70">Zacznij sluchac muzyki na Spotify, a statystyki pojawia sie tutaj automatycznie</p>
-              </div>
-            )}
-          </div>
-        </div>
+              ))}
+            </ol>
+          ) : (
+            <EmptyNote title="Brak utworów w tym okresie" />
+          )}
+        </Section>
 
-        {/* Top Artists Section */}
-        <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-card p-5 flex flex-col h-full opacity-0 animate-fade-in" style={{ animationDelay: "450ms" }}>
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] via-transparent to-transparent" />
-
-          <div className="relative flex items-center gap-3 mb-5">
-            <div className="icon-container-sm">
-              <Mic2 className="w-4 h-4 text-primary" />
-            </div>
-            <h2 className="text-lg font-bold text-foreground">Top Artyści</h2>
-          </div>
-
-          <div className="relative space-y-2 flex-1">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : formattedArtists.length > 0 ? (
-              formattedArtists.map((artist, index) => (
-                <TopArtistCard
-                  key={`${artist.name}-${index}`}
-                  {...artist}
-                  delay={index * 80 + 550}
+        <Section title="Top artyści" action={{ to: "/top", label: "Cała lista" }}>
+          {artistsLoading ? (
+            <ListSkeleton />
+          ) : artists && artists.length > 0 ? (
+            <ol>
+              {artists.slice(0, 5).map((a, i) => (
+                <ChartRow
+                  key={`${a.name}-${i}`}
+                  index={i}
+                  rank={i + 1}
+                  image={a.image}
+                  round
+                  title={a.name}
+                  subtitle={a.genres?.slice(0, 2).join(", ") || undefined}
+                  href={a.spotifyUrl}
                 />
-              ))
-            ) : (
-              <div className="text-center py-8 space-y-2">
-                <p className="text-muted-foreground">Brak danych do wyswietlenia</p>
-                <p className="text-sm text-muted-foreground/70">Zacznij sluchac muzyki na Spotify, a statystyki pojawia sie tutaj automatycznie</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+              ))}
+            </ol>
+          ) : (
+            <EmptyNote title="Brak artystów w tym okresie" />
+          )}
+        </Section>
+      </div>
 
-      {/* Recently Played */}
-      <section>
-        <RecentlyPlayed />
-      </section>
+      <div className="grid gap-16 lg:grid-cols-2 lg:gap-14">
+        <Section title="Ten tydzień" note="Odtworzenia zapisane przez SpotiStats">
+          <WeekBars />
+        </Section>
+        <Section title="Gatunki" note={`Na podstawie top 20 artystów, ${timeRangeLabel(timeRange).toLowerCase()}`}>
+          <GenreList artists={artists} />
+        </Section>
+      </div>
+
+      <RecentlyPlayed />
     </div>
   );
 };
