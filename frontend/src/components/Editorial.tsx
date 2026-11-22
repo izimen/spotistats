@@ -45,13 +45,22 @@ export const Section = ({
 );
 
 /** A figure: label on top, big number, optional note. Use inside a <dl>-like grid. */
-export const Figure = ({ label, value, note, emphasis = false }: { label: string; value: ReactNode; note?: ReactNode; emphasis?: boolean }) => (
+export const Figure = ({ label, value, note, emphasis = false }: { label: string; value: ReactNode; note?: ReactNode; emphasis?: boolean }) => {
+    // words (titles, names) get the narrower width and may take two lines; numbers stay on one
+    const isText = typeof value === "string" && !/\d/.test(value);
+    return (
     <div className="min-w-0">
         <dt className="text-sm text-muted-foreground">{label}</dt>
-        <dd className={`type-figure mt-2 truncate text-[clamp(1.75rem,5vw,2.75rem)] ${emphasis ? "text-primary" : "text-foreground"}`}>{value}</dd>
+        <dd
+            className={`mt-2 text-[clamp(1.75rem,5vw,2.75rem)] ${isText ? "type-head line-clamp-2 [overflow-wrap:normal] [hyphens:manual]" : "type-figure truncate"} ${emphasis ? "text-primary" : "text-foreground"}`}
+            title={typeof value === "string" ? value : undefined}
+        >
+            {value}
+        </dd>
         {note && <dd className="mt-1.5 text-sm text-muted-foreground">{note}</dd>}
     </div>
-);
+    );
+};
 
 export const FigureRow = ({ children, className = "" }: { children: ReactNode; className?: string }) => (
     <dl className={`grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-4 ${className}`}>{children}</dl>
@@ -80,7 +89,7 @@ export const ChartRow = ({
     const content = (
         <>
             <span
-                className={`type-rank w-[2.2ch] shrink-0 text-right text-[40px] sm:text-[48px] ${rank <= 3 ? "text-primary" : "text-muted-foreground/60"}`}
+                className={`type-rank w-[2.2ch] shrink-0 text-right text-[40px] sm:text-[48px] ${rank <= 3 ? "text-primary" : "text-muted-foreground"}`}
                 aria-label={`Miejsce ${rank}`}
             >
                 {rank}

@@ -107,10 +107,45 @@ export async function drawShareCard(canvas: HTMLCanvasElement, summary: PeriodSu
         ctx.textAlign = 'left';
     }
 
+    // the name, fitted to the sheet and biting into the photo; long names go on two lines
+    const name = top?.name ?? periodTitle;
+    const maxW = W - PAD * 2;
+    const fitSize = (lines: string[]) => {
+        ctx.font = font(900, 100, true);
+        const widest = Math.max(...lines.map(l => ctx.measureText(l).width));
+        return Math.floor(100 * (maxW / widest) * 0.98);
+    };
+    let lines = [name];
+    let size = Math.min(300, fitSize(lines));
+    const words = name.split(/\s+/);
+    if (size < 170 && words.length > 1) {
+        // best split = the one whose longer half is shortest
+        let best = lines, bestSize = size;
+        for (let i = 1; i < words.length; i++) {
+            const candidate = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
+            const candidateSize = Math.min(260, fitSize(candidate));
+            if (candidateSize > bestSize) { best = candidate; bestSize = candidateSize; }
+        }
+        lines = best;
+        size = bestSize;
+    }
+    size = Math.max(48, size);
     // photo block
     const photoY = PAD + 70;
-    const photoH = 560;
-    if (photo) drawDuotone(ctx, photo, PAD, photoY, W - PAD * 2, photoH, accent);
+    const photoH = lines.length > 1 ? 440 : 560;
+    // keep ~534px under the name's baseline for the date line, figures, runners-up and footer
+    const maxBaseline = H - 534;
+    const heightCap = (maxBaseline - photoY - photoH) / (0.42 + 0.86 * (lines.length - 1));
+    size = Math.max(48, Math.min(size, Math.floor(heightCap)));
+    if (photo) {
+        drawDuotone(ctx, photo, PAD, photoY, W - PAD * 2, photoH, accent);
+        // same fade as the app hero, so the name stays legible over the photo
+        const fade = ctx.createLinearGradient(0, photoY + photoH * 0.55, 0, photoY + photoH);
+        fade.addColorStop(0, 'rgba(22, 17, 29, 0)');
+        fade.addColorStop(1, 'rgba(22, 17, 29, 0.85)');
+        ctx.fillStyle = fade;
+        ctx.fillRect(PAD, photoY + photoH * 0.55, W - PAD * 2, photoH * 0.45);
+    }
     else {
         ctx.fillStyle = accent;
         ctx.globalAlpha = 0.18;
@@ -118,17 +153,13 @@ export async function drawShareCard(canvas: HTMLCanvasElement, summary: PeriodSu
         ctx.globalAlpha = 1;
     }
 
-    // the name, fitted to the sheet and biting into the photo
-    const name = top?.name ?? periodTitle;
-    let size = 100;
     ctx.font = font(900, size, true);
-    size = Math.min(300, Math.floor(size * ((W - PAD * 2) / ctx.measureText(name).width) * 0.98));
-    ctx.font = font(900, size, true);
-    if (ctx.measureText(name).width > W - PAD * 2) size = Math.max(60, size * ((W - PAD * 2) / ctx.measureText(name).width));
-    ctx.font = font(900, size, true);
-    const nameBaseline = photoY + photoH + size * 0.42;
+    const lineGap = size * 0.86;
+    const nameBaseline = photoY + photoH + size * 0.42 + lineGap * (lines.length - 1);
     ctx.fillStyle = PAPER;
-    ctx.fillText(name, PAD - size * 0.02, nameBaseline);
+    lines.forEach((line, i) => {
+        ctx.fillText(line, PAD - size * 0.02, nameBaseline - lineGap * (lines.length - 1 - i));
+    });
 
     // period line
     let y = nameBaseline + 78;

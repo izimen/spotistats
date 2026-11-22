@@ -26,12 +26,12 @@ const Login = () => {
     };
 
     return (
-        <main className="flex min-h-screen flex-col justify-between bg-background px-5 py-8 sm:px-10 lg:px-16">
+        <main className="flex min-h-[100svh] flex-col justify-between bg-background px-5 py-8 sm:px-10 lg:px-16">
             <p className="text-sm text-muted-foreground">Statystyki słuchania ze Spotify</p>
 
-            <div className="py-12">
-                <h1 className="type-poster text-[clamp(4.5rem,21vw,17rem)] text-primary">
-                    SpotiStats
+            <div className="flex-1 pt-[12svh] pb-12 sm:flex-none sm:py-12">
+                <h1 className="type-poster text-[30vw] text-primary sm:text-[clamp(4.5rem,21vw,17rem)]">
+                    <span className="block sm:inline">Spoti</span><span className="block sm:inline">Stats</span>
                 </h1>
                 <div className="mt-10 grid gap-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
                     <p className="max-w-[46ch] text-lg text-muted-foreground">

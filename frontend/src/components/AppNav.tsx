@@ -34,7 +34,7 @@ const AppNav = () => (
                             to={to}
                             end={end}
                             className={({ isActive }) =>
-                                `relative flex flex-col items-center gap-1 px-1 py-3 text-[11px] wdth-75 font-semibold transition-colors ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                                `relative flex flex-col items-center gap-1 px-1 py-3 text-[12px] wdth-75 font-semibold transition-colors ${isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                                 }`
                             }
                         >
@@ -66,7 +66,7 @@ const AppNav = () => (
                             to={to}
                             end={end}
                             className={({ isActive }) =>
-                                `relative flex flex-1 flex-col items-center justify-center gap-1 text-[10.5px] wdth-75 font-semibold ${isActive ? "text-foreground" : "text-muted-foreground"
+                                `relative flex flex-1 flex-col items-center justify-center gap-1 text-[11px] wdth-75 font-semibold ${isActive ? "text-foreground" : "text-muted-foreground"
                                 }`
                             }
                         >
@@ -77,7 +77,7 @@ const AppNav = () => (
                                         className={`absolute top-0 left-3 right-3 h-[3px] ${isActive ? "bg-primary" : "bg-transparent"}`}
                                     />
                                     <Icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 1.75} aria-hidden="true" />
-                                    <span className="max-w-full truncate px-0.5">{label === "Podsumowanie" ? "Podsum." : label}</span>
+                                    <span className="max-w-full truncate px-0.5">{label}</span>
                                 </>
                             )}
                         </NavLink>

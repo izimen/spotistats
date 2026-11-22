@@ -7,6 +7,7 @@ const ORDER = ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"];
 const SHORT: Record<string, string> = {
     "Poniedziałek": "Pn", "Poniedzialek": "Pn", "Wtorek": "Wt", "Środa": "Śr", "Sroda": "Śr",
     "Czwartek": "Cz", "Piątek": "Pt", "Piatek": "Pt", "Sobota": "Sb", "Niedziela": "Nd",
+    "Pon": "Pn", "Czw": "Cz", "Sob": "Sb", "Ndz": "Nd",
 };
 const ON_DAY: Record<string, string> = {
     Pn: "w poniedziałek", Wt: "we wtorek", Śr: "w środę", Cz: "w czwartek", Pt: "w piątek", Sb: "w sobotę", Nd: "w niedzielę",

@@ -47,6 +47,8 @@ const Top = () => {
                 controls={
                     <>
                         <Segmented
+                            size="lg"
+                            className="basis-full md:basis-auto"
                             label="Rodzaj listy"
                             value={kind}
                             onChange={setKind}

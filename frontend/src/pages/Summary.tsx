@@ -23,7 +23,7 @@ function Change({ value, vs }: { value: number | null; vs: string }) {
   const color = value === 0 ? "text-muted-foreground" : up ? "text-primary" : "text-warn";
   return (
     <span className={`text-sm font-semibold ${color}`}>
-      {up ? "+" : ""}{value}% <span className="font-normal text-muted-foreground">vs {vs}</span>
+      {up ? "+" : ""}{value}% <span className="hidden font-normal text-muted-foreground min-[400px]:inline">vs {vs}</span>
     </span>
   );
 }
@@ -79,7 +79,8 @@ const Summary = () => {
   const { data: summary, isLoading, isFetching, isError } = usePeriodSummary(period.from, period.to);
 
   const title = periodLabel(period);
-  const vs = previousPeriodLabel(period);
+  // "październik 2026" -> "październik" when it's the same year as the shown period
+  const vs = previousPeriodLabel(period).replace(new RegExp(` ${period.from.slice(0, 4)}$`), "");
   const isCurrent = isCurrentOrFuture(period);
   const firstDataDate = summary?.dataRange.first ? toLocalDateString(new Date(summary.dataRange.first)) : null;
   const canGoBack = !firstDataDate || period.from > firstDataDate;
@@ -194,6 +195,7 @@ const Summary = () => {
             <Stat label="Odtworzenia" value={(totals?.plays ?? 0).toLocaleString("pl-PL")} change={summary?.change.plays ?? null} vs={vs} />
             <Stat label="Artyści" value={(totals?.uniqueArtists ?? 0).toLocaleString("pl-PL")} change={summary?.change.uniqueArtists ?? null} vs={vs} />
             <Stat label="Dni z muzyką" value={`${totals?.activeDays ?? 0}/${summary?.period.days ?? "–"}`} change={summary?.change.activeDays ?? null} vs={vs} />
+            <p className="col-span-2 -mt-4 text-sm text-muted-foreground min-[400px]:hidden">Zmiany względem: {vs}</p>
           </dl>
         )}
 

@@ -1,4 +1,4 @@
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * The gig poster: a duotone of the #1 artist (ink shadows, accent highlights) with their
@@ -57,7 +57,8 @@ const Poster = ({
     return (
         <section ref={boxRef} aria-label="Twój numer jeden" className="relative">
             <div className="grid items-end gap-6 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-                <div className="md:pb-[clamp(5rem,11vw,9.5rem)]">
+                {/* sits 8px above the visible top of the name, which overlaps the photo by ~0.34em */}
+                <div className="md:pb-[var(--kicker-pb)]" style={{ "--kicker-pb": size ? `${Math.round(size * 0.34 + 10)}px` : "8rem" } as CSSProperties}>
                     <p className="text-base text-muted-foreground">{kicker}</p>
                     {href && (
                         <a
@@ -72,6 +73,8 @@ const Poster = ({
                 </div>
                 <div className="duotone aspect-[4/3] w-full md:aspect-[5/4]">
                     {image && <img src={image} alt="" />}
+                    {/* keeps the name legible where it crosses the photo */}
+                    <div aria-hidden="true" className="absolute inset-x-0 bottom-0 z-10 h-[45%] bg-gradient-to-b from-transparent to-ink/85" />
                 </div>
             </div>
             <h1

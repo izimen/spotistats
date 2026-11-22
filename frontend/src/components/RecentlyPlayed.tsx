@@ -8,6 +8,8 @@ interface RecentTrackItem {
   name?: string;
   artist?: string;
   albumImage?: string;
+  artists?: { name: string }[];
+  album?: { image?: string | null };
   track?: {
     id?: string;
     name?: string;
@@ -32,8 +34,8 @@ const RecentlyPlayed = () => {
         <ol className="grid gap-x-10 md:grid-cols-2">
           {items.map((item, i) => {
             const title = item.track?.name || item.name || "Nieznany utwór";
-            const artist = item.track?.artists?.[0]?.name || item.artist || "";
-            const image = item.track?.album?.image || item.track?.album?.images?.[0]?.url || item.albumImage;
+            const artist = item.track?.artists?.[0]?.name || item.artists?.[0]?.name || item.artist || "";
+            const image = item.track?.album?.image || item.track?.album?.images?.[0]?.url || item.album?.image || item.albumImage;
             const url = item.track?.spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(`${title} ${artist}`)}`;
             return (
               <li key={`${item.track?.id || title}-${i}`} className="row-in border-b border-border" style={{ "--i": i } as CSSProperties}>
